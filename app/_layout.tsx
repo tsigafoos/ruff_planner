@@ -1,12 +1,15 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import 'react-native-reanimated';
+import '../global.css';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { useAuthStore } from '@/store/authStore';
+import { useThemeStore } from '@/store/themeStore';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -18,41 +21,90 @@ export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
+// Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-    ...FontAwesome.font,
-  });
+  const [appIsReady, setAppIsReady] = useState(false);
+  const { resolvedTheme } = useThemeStore();
+  const { initialized, initialize } = useAuthStore();
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
+  // Initialize auth on mount
   useEffect(() => {
-    if (error) throw error;
-  }, [error]);
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
+    if (!initialized) {
+      initialize();
     }
-  }, [loaded]);
+  }, []);
 
-  if (!loaded) {
-    return null;
+  // Wait for auth to be initialized, then hide splash
+  useEffect(() => {
+    if (!initialized) return;
+
+    async function hideSplash() {
+      await SplashScreen.hideAsync();
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setAppIsReady(true);
+    }
+
+    hideSplash();
+  }, [initialized]);
+
+  // Always show splash screen until app AND auth are ready
+  if (!appIsReady || !initialized) {
+    const isDark = resolvedTheme === 'dark';
+    return (
+      <View style={[styles.splashContainer, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
+        <Text style={[styles.splashText, { color: isDark ? '#F1F5F9' : '#1F2937' }]}>BarkItDone!!</Text>
+      </View>
+    );
   }
 
   return <RootLayoutNav />;
 }
 
+const styles = StyleSheet.create({
+  splashContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  splashText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+});
+
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const { user, loading, initialized } = useAuthStore();
+  const segments = useSegments();
+  const router = useRouter();
+
+  // Handle auth routing - auth is already initialized by RootLayout
+  useEffect(() => {
+    if (!initialized) return;
+
+    const inAuthGroup = segments[0] === 'auth';
+
+    if (!user && !inAuthGroup) {
+      // Redirect to login if not authenticated
+      router.replace('/auth/login');
+    } else if (user && inAuthGroup) {
+      // Redirect to dashboard if authenticated and in auth group
+      router.replace('/(tabs)/dashboard');
+    }
+  }, [user, initialized, segments]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="project/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="profile" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );

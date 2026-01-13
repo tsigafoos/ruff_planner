@@ -1,0 +1,460 @@
+import { useEffect, useState } from 'react';
+import { Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Button from './ui/Button';
+import DatePicker from './ui/DatePicker';
+import Input from './ui/Input';
+import PriorityPicker from './ui/PriorityPicker';
+import { useTheme } from './useTheme';
+
+type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
+
+const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
+  { value: 'to_do', label: 'To Do' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'blocked', label: 'Blocked' },
+  { value: 'on_hold', label: 'On Hold' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+
+interface TaskFormProps {
+  visible: boolean;
+  onClose: () => void;
+  onSubmit: (taskData: any) => Promise<void>;
+  initialData?: any;
+  projects?: any[];
+  labels?: any[];
+}
+
+export default function TaskForm({
+  visible,
+  onClose,
+  onSubmit,
+  initialData,
+  projects = [],
+  labels = [],
+}: TaskFormProps) {
+  const theme = useTheme();
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
+  const [dueDate, setDueDate] = useState<Date | undefined>();
+  const [priority, setPriority] = useState(1);
+  const [status, setStatus] = useState<TaskStatus>('to_do');
+  const [projectId, setProjectId] = useState<string | undefined>();
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  const [completed, setCompleted] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title || '');
+      setDescription(initialData.description || '');
+      setStartDate(initialData.startDate ? new Date(initialData.startDate) : (initialData.start_date ? new Date(initialData.start_date) : new Date()));
+      setDueDate(initialData.dueDate ? new Date(initialData.dueDate) : (initialData.due_date ? new Date(initialData.due_date) : undefined));
+      setPriority(initialData.priority || 1);
+      setProjectId(initialData.projectId);
+      setSelectedLabels(initialData.labelIds || []);
+      const isCompleted = !!(initialData.completed_at || initialData.completedAt || initialData.completed);
+      setCompleted(isCompleted);
+      // Set status from initialData, defaulting based on completed status
+      if (initialData.status) {
+        setStatus(initialData.status);
+      } else if (isCompleted) {
+        setStatus('completed');
+      } else {
+        setStatus('to_do');
+      }
+    } else {
+      setTitle('');
+      setDescription('');
+      setStartDate(new Date()); // Default to current date
+      setDueDate(undefined);
+      setPriority(1);
+      setProjectId(undefined);
+      setSelectedLabels([]);
+      setCompleted(false);
+      setStatus('to_do');
+    }
+  }, [initialData, visible]);
+
+  const handleSubmit = async () => {
+    if (!title.trim()) return;
+    setLoading(true);
+    try {
+      await onSubmit({
+        title,
+        description,
+        startDate: startDate?.toISOString(),
+        dueDate: dueDate?.toISOString(),
+        priority,
+        status,
+        projectId,
+        labelIds: selectedLabels,
+        completed: status === 'completed' || completed,
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error submitting task:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleLabel = (labelId: string) => {
+    setSelectedLabels((prev) =>
+      prev.includes(labelId)
+        ? prev.filter((id) => id !== labelId)
+        : [...prev, labelId]
+    );
+  };
+
+  const isWeb = Platform.OS === 'web';
+
+  return (
+    <Modal
+      visible={visible}
+      animationType={isWeb ? 'fade' : 'slide'}
+      transparent={!isWeb}
+      onRequestClose={onClose}
+    >
+      <View style={[styles.overlay, { backgroundColor: isWeb ? 'rgba(0, 0, 0, 0.5)' : 'transparent' }]}>
+        <View style={[styles.container, { backgroundColor: theme.surface }]}>
+          <View style={[styles.header, { borderBottomColor: theme.border }]}>
+            <Text style={[styles.title, { color: theme.text }]}>
+              {initialData ? 'Edit Task' : 'New Task'}
+            </Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Text style={[styles.closeButtonText, { color: theme.textSecondary }]}>×</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={true}>
+            <Input
+              label="Title"
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Task title"
+              autoFocus
+            />
+
+            <Input
+              label="Description"
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Task description (optional)"
+              multiline
+              numberOfLines={4}
+            />
+
+            <View style={styles.section}>
+              <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>Status</Text>
+              <View style={styles.statusOptions}>
+                {STATUS_OPTIONS.map((option) => {
+                  const isSelected = status === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.statusOption,
+                        {
+                          backgroundColor: isSelected ? theme.primary + '20' : theme.surfaceSecondary,
+                          borderColor: isSelected ? theme.primary : theme.border,
+                        },
+                      ]}
+                      onPress={() => {
+                        setStatus(option.value);
+                        // Auto-set completed when status is 'completed'
+                        if (option.value === 'completed') {
+                          setCompleted(true);
+                        } else if (status === 'completed' && option.value !== 'completed') {
+                          setCompleted(false);
+                        }
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.statusOptionText,
+                          {
+                            color: isSelected ? theme.primary : theme.text,
+                            fontWeight: isSelected ? '600' : '400',
+                          },
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <DatePicker
+              label="Start Date"
+              value={startDate}
+              onChange={setStartDate}
+            />
+            <DatePicker
+              label="Due Date"
+              value={dueDate}
+              onChange={setDueDate}
+            />
+
+            <PriorityPicker
+              label="Priority"
+              value={priority}
+              onChange={setPriority}
+            />
+
+            {projects.length > 0 && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>Project</Text>
+                <View style={styles.options}>
+                  <TouchableOpacity
+                    style={[
+                      styles.option,
+                      {
+                        backgroundColor: !projectId ? theme.primary + '20' : theme.surfaceSecondary,
+                        borderColor: !projectId ? theme.primary : theme.border,
+                      },
+                    ]}
+                    onPress={() => setProjectId(undefined)}
+                  >
+                    <Text
+                      style={[
+                        styles.optionText,
+                        {
+                          color: !projectId ? theme.primary : theme.text,
+                          fontWeight: !projectId ? '600' : '400',
+                        },
+                      ]}
+                    >
+                      No Project
+                    </Text>
+                  </TouchableOpacity>
+                  {projects.map((project) => {
+                    const isSelected = projectId === project.id;
+                    return (
+                      <TouchableOpacity
+                        key={project.id}
+                        style={[
+                          styles.option,
+                          {
+                            backgroundColor: isSelected ? theme.primary + '20' : theme.surfaceSecondary,
+                            borderColor: isSelected ? theme.primary : theme.border,
+                          },
+                        ]}
+                        onPress={() => setProjectId(project.id)}
+                      >
+                        <Text
+                          style={[
+                            styles.optionText,
+                            {
+                              color: isSelected ? theme.primary : theme.text,
+                              fontWeight: isSelected ? '600' : '400',
+                            },
+                          ]}
+                        >
+                          {project.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
+            {labels.length > 0 && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>Labels</Text>
+                <View style={styles.options}>
+                  {labels.map((label) => {
+                    const isSelected = selectedLabels.includes(label.id);
+                    return (
+                      <TouchableOpacity
+                        key={label.id}
+                        style={[
+                          styles.option,
+                          {
+                            backgroundColor: isSelected ? theme.primary + '20' : theme.surfaceSecondary,
+                            borderColor: isSelected ? theme.primary : theme.border,
+                          },
+                        ]}
+                        onPress={() => toggleLabel(label.id)}
+                      >
+                        <Text
+                          style={[
+                            styles.optionText,
+                            {
+                              color: isSelected ? theme.primary : theme.text,
+                              fontWeight: isSelected ? '600' : '400',
+                            },
+                          ]}
+                        >
+                          {label.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
+            {initialData && (
+              <View style={styles.section}>
+                <View style={styles.completedContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.checkbox,
+                      {
+                        borderColor: completed ? theme.primary : theme.border,
+                        backgroundColor: completed ? theme.primary : 'transparent',
+                      },
+                    ]}
+                    onPress={() => {
+                      const newCompleted = !completed;
+                      setCompleted(newCompleted);
+                      if (newCompleted) {
+                        setStatus('completed');
+                      } else if (status === 'completed') {
+                        setStatus('to_do');
+                      }
+                    }}
+                  >
+                    {completed && <Text style={styles.checkmark}>✓</Text>}
+                  </TouchableOpacity>
+                  <Text style={[styles.completedText, { color: theme.text }]}>Completed</Text>
+                </View>
+              </View>
+            )}
+          </ScrollView>
+
+          <View style={[styles.footer, { borderTopColor: theme.border }]}>
+            <Button
+              title="Cancel"
+              onPress={onClose}
+              variant="secondary"
+              style={styles.footerButton}
+            />
+            <Button
+              title={initialData ? 'Update' : 'Create'}
+              onPress={handleSubmit}
+              loading={loading}
+              style={styles.footerButton}
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  container: {
+    width: Platform.OS === 'web' ? 600 : '90%',
+    maxWidth: Platform.OS === 'web' ? 600 : '100%',
+    maxHeight: Platform.OS === 'web' ? '90vh' : '90%',
+    borderRadius: Platform.OS === 'web' ? 12 : 20,
+    overflow: 'hidden',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Platform.OS === 'web' ? 20 : 16,
+    borderBottomWidth: 1,
+  },
+  title: {
+    fontSize: Platform.OS === 'web' ? 18 : 20,
+    fontWeight: '700',
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    fontSize: Platform.OS === 'web' ? 28 : 32,
+    lineHeight: Platform.OS === 'web' ? 28 : 32,
+  },
+  content: {
+    padding: Platform.OS === 'web' ? 20 : 16,
+    maxHeight: Platform.OS === 'web' ? 'calc(90vh - 140px)' : undefined,
+  },
+  section: {
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: Platform.OS === 'web' ? 13 : 14,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  statusOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  statusOption: {
+    paddingHorizontal: Platform.OS === 'web' ? 14 : 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 2,
+    minWidth: Platform.OS === 'web' ? 120 : 100,
+    alignItems: 'center',
+  },
+  statusOptionText: {
+    fontSize: Platform.OS === 'web' ? 13 : 14,
+    fontWeight: '500',
+  },
+  options: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  option: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 2,
+  },
+  optionText: {
+    fontSize: Platform.OS === 'web' ? 13 : 14,
+  },
+  completedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkmark: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  completedText: {
+    fontSize: Platform.OS === 'web' ? 13 : 16,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    padding: Platform.OS === 'web' ? 20 : 16,
+    borderTopWidth: 1,
+  },
+  footerButton: {
+    minWidth: 100,
+  },
+});

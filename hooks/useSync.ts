@@ -1,0 +1,69 @@
+import { useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabase/client';
+import { sync } from '../lib/supabase/sync';
+import { useSyncStore } from '../store/syncStore';
+import { useAuthStore } from '../store/authStore';
+
+export function useSync() {
+  const { user } = useAuthStore();
+  const { syncing, setSyncing } = useSyncStore();
+
+  const performSync = useCallback(async () => {
+    if (!user?.id || syncing) return;
+    
+    try {
+      setSyncing(true);
+      await sync(user.id);
+    } catch (error) {
+      console.error('Sync failed:', error);
+    } finally {
+      setSyncing(false);
+    }
+  }, [user?.id, syncing, setSyncing]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Initial sync
+    performSync();
+
+    // Set up realtime subscriptions
+    const tasksChannel = supabase
+      .channel('tasks-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${user.id}` },
+        () => {
+          performSync();
+        }
+      )
+      .subscribe();
+
+    const projectsChannel = supabase
+      .channel('projects-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'projects', filter: `user_id=eq.${user.id}` },
+        () => {
+          performSync();
+        }
+      )
+      .subscribe();
+
+    const labelsChannel = supabase
+      .channel('labels-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'labels', filter: `user_id=eq.${user.id}` },
+        () => {
+          performSync();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      tasksChannel.unsubscribe();
+      projectsChannel.unsubscribe();
+      labelsChannel.unsubscribe();
+    };
+  }, [user?.id, performSync]);
+
+  return { performSync, syncing };
+}

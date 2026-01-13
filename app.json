@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ruff_planner",
-    "slug": "ruff_planner",
+    "name": "BarkItDone",
+    "slug": "barkitdone",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
