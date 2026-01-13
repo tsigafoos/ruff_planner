@@ -24,26 +24,24 @@ const STATUS_LANES: { key: TaskStatus; label: string }[] = [
   { key: 'cancelled', label: 'Cancelled' },
 ];
 
-// Lane backgrounds and strokes with HSL(225, 2%, L%)
-const getLaneColors = (index: number, isDark: boolean) => {
-  if (isDark) {
-    // Dark mode: backgrounds 5% → 30%, strokes add 10 to L
-    const bgLightness = 5 + (index * 5);
-    const strokeLightness = bgLightness + 10;
-    return {
-      background: `hsl(225, 2%, ${bgLightness}%)`,
-      stroke: `hsl(225, 2%, ${strokeLightness}%)`,
-    };
-  } else {
-    // Light mode: backgrounds 95% → 70%, strokes subtract 10 from L
-    const bgLightness = 95 - (index * 5);
-    const strokeLightness = bgLightness - 10;
-    return {
-      background: `hsl(225, 2%, ${bgLightness}%)`,
-      stroke: `hsl(225, 2%, ${strokeLightness}%)`,
-    };
-  }
-};
+// Fixed lane colors - Light mode HSL(225, 2%, 95%→70%), Dark mode HSL(225, 2%, 5%→30%)
+const LIGHT_LANE_COLORS = [
+  { background: 'hsl(225, 2%, 95%)', stroke: 'hsl(225, 2%, 85%)' },
+  { background: 'hsl(225, 2%, 90%)', stroke: 'hsl(225, 2%, 80%)' },
+  { background: 'hsl(225, 2%, 85%)', stroke: 'hsl(225, 2%, 75%)' },
+  { background: 'hsl(225, 2%, 80%)', stroke: 'hsl(225, 2%, 70%)' },
+  { background: 'hsl(225, 2%, 75%)', stroke: 'hsl(225, 2%, 65%)' },
+  { background: 'hsl(225, 2%, 70%)', stroke: 'hsl(225, 2%, 60%)' },
+];
+
+const DARK_LANE_COLORS = [
+  { background: 'hsl(225, 2%, 5%)', stroke: 'hsl(225, 2%, 15%)' },
+  { background: 'hsl(225, 2%, 10%)', stroke: 'hsl(225, 2%, 20%)' },
+  { background: 'hsl(225, 2%, 15%)', stroke: 'hsl(225, 2%, 25%)' },
+  { background: 'hsl(225, 2%, 20%)', stroke: 'hsl(225, 2%, 30%)' },
+  { background: 'hsl(225, 2%, 25%)', stroke: 'hsl(225, 2%, 35%)' },
+  { background: 'hsl(225, 2%, 30%)', stroke: 'hsl(225, 2%, 40%)' },
+];
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -53,7 +51,8 @@ export default function DashboardScreen() {
   const { labels, fetchLabels } = useLabelStore();
   const theme = useTheme();
   const { resolvedTheme } = useThemeStore();
-  const isDark = resolvedTheme === 'dark';
+  // Detect dark mode by checking if background is dark (lightness < 50%)
+  const isDark = theme.background === '#0f0f11' || resolvedTheme === 'dark';
   
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [taskFormVisible, setTaskFormVisible] = useState(false);
@@ -428,7 +427,7 @@ export default function DashboardScreen() {
           >
             {STATUS_LANES.map((lane, index) => {
               const laneTasks = tasksByStatus[lane.key] || [];
-              const laneColors = getLaneColors(index, isDark);
+              const laneColors = isDark ? DARK_LANE_COLORS[index] : LIGHT_LANE_COLORS[index];
               
               return (
                 <View 
