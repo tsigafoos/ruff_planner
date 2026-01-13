@@ -81,7 +81,8 @@ export default function ProjectForm({
       const teamRoles = stakeholders.trim() ? stakeholders.split('\n').filter(line => line.trim()).map(name => ({ name: name.trim() })) : [];
       const risksList = risks.trim() ? risks.split('\n').filter(line => line.trim()) : [];
 
-      await onSubmit({
+      // Build the update object - only include fields that are actually edited
+      const projectData: any = {
         name,
         color,
         icon,
@@ -93,17 +94,23 @@ export default function ProjectForm({
         risks: risksList,
         startDate: startDate?.toISOString(),
         endDate: endDate?.toISOString(),
-        // Set empty defaults for removed fields
-        scopeIn: null,
-        scopeOut: null,
-        deliverables: [],
-        milestones: [],
-        resources: {},
-        dependencies: [],
-        assumptions: [],
-        documentation: [],
-        teamManagement: null,
-      });
+      };
+
+      // When creating a new project, set defaults for other fields
+      // When editing, don't overwrite existing data like resources, documentation, etc.
+      if (!initialData) {
+        projectData.scopeIn = null;
+        projectData.scopeOut = null;
+        projectData.deliverables = [];
+        projectData.milestones = [];
+        projectData.resources = [];
+        projectData.dependencies = [];
+        projectData.assumptions = [];
+        projectData.documentation = [];
+        projectData.teamManagement = null;
+      }
+
+      await onSubmit(projectData);
       onClose();
     } catch (error) {
       console.error('Error submitting project:', error);

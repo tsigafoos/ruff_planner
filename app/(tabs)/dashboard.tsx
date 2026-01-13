@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useLabelStore } from '@/store/labelStore';
 import TaskCard from '@/components/TaskCard';
 import TaskForm from '@/components/TaskForm';
+import ProjectForm from '@/components/ProjectForm';
 import { useTheme } from '@/components/useTheme';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { format } from 'date-fns';
@@ -25,12 +26,14 @@ const STATUS_LANES: { key: TaskStatus; label: string }[] = [
 export default function DashboardScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const { tasks, loading: tasksLoading, fetchTasks, updateTask } = useTaskStore();
-  const { projects, loading: projectsLoading, fetchProjects } = useProjectStore();
+  const { tasks, loading: tasksLoading, fetchTasks, createTask, updateTask } = useTaskStore();
+  const { projects, loading: projectsLoading, fetchProjects, createProject } = useProjectStore();
   const { labels, fetchLabels } = useLabelStore();
   const theme = useTheme();
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [taskFormVisible, setTaskFormVisible] = useState(false);
+  const [newTaskFormVisible, setNewTaskFormVisible] = useState(false);
+  const [projectFormVisible, setProjectFormVisible] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [projectTasks, setProjectTasks] = useState<{ [projectId: string]: any[] }>({});
 
@@ -89,6 +92,34 @@ export default function DashboardScreen() {
     }
   };
 
+  const handleCreateTask = async (taskData: any) => {
+    if (!user?.id) return;
+    try {
+      await createTask({
+        ...taskData,
+        userId: user.id,
+      });
+      setNewTaskFormVisible(false);
+      fetchTasks(user.id);
+    } catch (error) {
+      console.error('Error creating task:', error);
+    }
+  };
+
+  const handleCreateProject = async (projectData: any) => {
+    if (!user?.id) return;
+    try {
+      await createProject({
+        ...projectData,
+        userId: user.id,
+      });
+      setProjectFormVisible(false);
+      fetchProjects(user.id);
+    } catch (error) {
+      console.error('Error creating project:', error);
+    }
+  };
+
   const handleCloseTaskForm = () => {
     setTaskFormVisible(false);
     setSelectedTask(null);
@@ -137,6 +168,15 @@ export default function DashboardScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Projects</Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: theme.primary }]}
+              onPress={() => setProjectFormVisible(true)}
+            >
+              <FontAwesome name="plus" size={14} color="#ffffff" />
+              <Text style={styles.actionButtonText}>New Project</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {projectsLoading ? (
@@ -228,7 +268,15 @@ export default function DashboardScreen() {
             })}
           </View>
         ) : (
-          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No projects yet</Text>
+          <View style={styles.emptyState}>
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No projects yet</Text>
+            <TouchableOpacity
+              style={[styles.emptyButton, { borderColor: theme.primary }]}
+              onPress={() => setProjectFormVisible(true)}
+            >
+              <Text style={[styles.emptyButtonText, { color: theme.primary }]}>Create your first project</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -236,6 +284,15 @@ export default function DashboardScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Tasks</Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: theme.primary }]}
+              onPress={() => setNewTaskFormVisible(true)}
+            >
+              <FontAwesome name="plus" size={14} color="#ffffff" />
+              <Text style={styles.actionButtonText}>Add Task</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {tasksLoading ? (
@@ -284,6 +341,7 @@ export default function DashboardScreen() {
         )}
       </View>
 
+      {/* Edit Task Form */}
       <TaskForm
         visible={taskFormVisible}
         onClose={handleCloseTaskForm}
@@ -291,6 +349,22 @@ export default function DashboardScreen() {
         initialData={selectedTask}
         projects={projects}
         labels={labels}
+      />
+
+      {/* New Task Form */}
+      <TaskForm
+        visible={newTaskFormVisible}
+        onClose={() => setNewTaskFormVisible(false)}
+        onSubmit={handleCreateTask}
+        projects={projects}
+        labels={labels}
+      />
+
+      {/* Project Form */}
+      <ProjectForm
+        visible={projectFormVisible}
+        onClose={() => setProjectFormVisible(false)}
+        onSubmit={handleCreateProject}
       />
     </ScrollView>
   );
@@ -302,22 +376,43 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 32,
-    paddingHorizontal: Platform.OS === 'web' ? 24 : 16,
+    paddingHorizontal: Platform.OS === 'web' ? 40 : 16,
     paddingTop: 24,
   },
   sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: Platform.OS === 'web' ? 18 : 24,
+    fontSize: Platform.OS === 'web' ? 20 : 24,
     fontWeight: '700',
+    letterSpacing: -0.015,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  actionButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   projectsList: {
     gap: 12,
   },
   projectItem: {
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 16,
   },
   projectRow: {
@@ -340,7 +435,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   projectMetaText: {
-    fontSize: Platform.OS === 'web' ? 12 : 14,
+    fontSize: Platform.OS === 'web' ? 13 : 14,
   },
   projectActions: {
     flexDirection: 'row',
@@ -348,16 +443,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   expandButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   openButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   openButtonText: {
     fontSize: Platform.OS === 'web' ? 13 : 14,
@@ -383,6 +478,7 @@ const styles = StyleSheet.create({
     fontSize: Platform.OS === 'web' ? 12 : 13,
     fontWeight: '600',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   projectTaskRow: {
     flexDirection: 'row',
@@ -391,19 +487,19 @@ const styles = StyleSheet.create({
   },
   tableCellText: {
     flex: 1,
-    fontSize: Platform.OS === 'web' ? 13 : 14,
+    fontSize: Platform.OS === 'web' ? 14 : 14,
   },
   lanesContainer: {
     flexGrow: 0,
   },
   lanesContent: {
-    paddingRight: Platform.OS === 'web' ? 24 : 16,
+    paddingRight: Platform.OS === 'web' ? 40 : 16,
   },
   lane: {
     width: Platform.OS === 'web' ? 300 : 280,
     marginRight: 16,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
     maxHeight: Platform.OS === 'web' ? '70vh' : 600,
   },
   laneHeader: {
@@ -418,7 +514,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   laneCount: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
@@ -444,5 +540,20 @@ const styles = StyleSheet.create({
     fontSize: Platform.OS === 'web' ? 14 : 16,
     textAlign: 'center',
     paddingVertical: 32,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyButton: {
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderRadius: 10,
+  },
+  emptyButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

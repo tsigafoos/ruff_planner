@@ -20,7 +20,6 @@ import {
   subWeeks,
   addDays,
   subDays,
-  startOfDay,
 } from 'date-fns';
 
 type ViewMode = 'day' | 'week' | 'month';
@@ -93,7 +92,7 @@ export default function CalendarScreen() {
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     return (
-      <ScrollView style={styles.monthContainer} contentContainerStyle={styles.monthContainerContent}>
+      <View style={styles.monthContainer}>
         <View style={styles.weekDayRow}>
           {weekDays.map((day) => (
             <View key={day} style={[styles.weekDayCell, { borderBottomColor: theme.border }]}>
@@ -116,8 +115,8 @@ export default function CalendarScreen() {
                   styles.dayCell,
                   { borderColor: theme.border },
                   !isCurrentMonth && { opacity: 0.3 },
-                  isToday && { backgroundColor: theme.primary + '20', borderColor: theme.primary },
-                  isSelected && { backgroundColor: theme.primary + '10' },
+                  isToday && { backgroundColor: theme.primary + '15', borderColor: theme.primary },
+                  isSelected && { backgroundColor: theme.primary + '08' },
                 ]}
                 onPress={() => setSelectedDate(day)}
               >
@@ -125,7 +124,7 @@ export default function CalendarScreen() {
                   style={[
                     styles.dayNumber,
                     { color: isCurrentMonth ? theme.text : theme.textTertiary },
-                    isToday && { color: theme.primary, fontWeight: 'bold' },
+                    isToday && { color: theme.primary, fontWeight: '700' },
                   ]}
                 >
                   {format(day, 'd')}
@@ -150,7 +149,7 @@ export default function CalendarScreen() {
             );
           })}
         </View>
-      </ScrollView>
+      </View>
     );
   };
 
@@ -177,7 +176,7 @@ export default function CalendarScreen() {
                   styles.weekDayColumn,
                   { borderColor: theme.border, backgroundColor: theme.surface },
                   isToday && { borderColor: theme.primary, borderWidth: 2 },
-                  isSelected && { backgroundColor: theme.primary + '10' },
+                  isSelected && { backgroundColor: theme.primary + '08' },
                 ]}
                 onPress={() => setSelectedDate(day)}
               >
@@ -189,7 +188,7 @@ export default function CalendarScreen() {
                     style={[
                       styles.weekDayNumber,
                       { color: theme.text },
-                      isToday && { color: theme.primary, fontWeight: 'bold' },
+                      isToday && { color: theme.primary, fontWeight: '700' },
                     ]}
                   >
                     {format(day, 'd')}
@@ -199,7 +198,7 @@ export default function CalendarScreen() {
                   {dayTasks.map((task: any) => (
                     <View
                       key={task.id}
-                      style={[styles.weekEvent, { backgroundColor: theme.accent + '20', borderLeftColor: theme.accent }]}
+                      style={[styles.weekEvent, { backgroundColor: theme.accent + '15', borderLeftColor: theme.accent }]}
                     >
                       <Text style={[styles.weekEventText, { color: theme.text }]} numberOfLines={2}>
                         {task.title}
@@ -209,7 +208,7 @@ export default function CalendarScreen() {
                   {dayProjects.map((project: any) => (
                     <View
                       key={project.id}
-                      style={[styles.weekEvent, { backgroundColor: theme.primary + '20', borderLeftColor: theme.primary }]}
+                      style={[styles.weekEvent, { backgroundColor: theme.primary + '15', borderLeftColor: theme.primary }]}
                     >
                       <Text style={[styles.weekEventText, { color: theme.text }]} numberOfLines={2}>
                         {project.name}
@@ -241,7 +240,7 @@ export default function CalendarScreen() {
         <View style={styles.dayContent}>
           {dayTasks.length > 0 && (
             <View style={styles.daySection}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>Tasks ({dayTasks.length})</Text>
+              <Text style={[styles.daySectionTitle, { color: theme.text }]}>Tasks ({dayTasks.length})</Text>
               {dayTasks.map((task: any) => (
                 <View
                   key={task.id}
@@ -260,7 +259,7 @@ export default function CalendarScreen() {
 
           {dayProjects.length > 0 && (
             <View style={styles.daySection}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              <Text style={[styles.daySectionTitle, { color: theme.text }]}>
                 Projects ({dayProjects.length})
               </Text>
               {dayProjects.map((project: any) => (
@@ -304,90 +303,99 @@ export default function CalendarScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <View style={styles.headerTop}>
-          <View style={styles.viewModeSelector}>
-            <TouchableOpacity
-              style={[
-                styles.viewModeButton,
-                { backgroundColor: theme.surfaceSecondary },
-                viewMode === 'day' && { backgroundColor: theme.primary, borderColor: theme.primary },
-              ]}
-              onPress={() => setViewMode('day')}
-            >
-              <Text
-                style={[
-                  styles.viewModeText,
-                  { color: viewMode === 'day' ? theme.sidebarTextActive : theme.text },
-                ]}
+      {/* Centered Calendar Container */}
+      <View style={styles.calendarWrapper}>
+        <View style={[styles.calendarContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          {/* Header */}
+          <View style={[styles.header, { borderBottomColor: theme.border }]}>
+            <View style={styles.headerTop}>
+              <View style={styles.viewModeSelector}>
+                <TouchableOpacity
+                  style={[
+                    styles.viewModeButton,
+                    { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
+                    viewMode === 'day' && { backgroundColor: theme.primary, borderColor: theme.primary },
+                  ]}
+                  onPress={() => setViewMode('day')}
+                >
+                  <Text
+                    style={[
+                      styles.viewModeText,
+                      { color: viewMode === 'day' ? '#ffffff' : theme.text },
+                    ]}
+                  >
+                    Day
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.viewModeButton,
+                    { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
+                    viewMode === 'week' && { backgroundColor: theme.primary, borderColor: theme.primary },
+                  ]}
+                  onPress={() => setViewMode('week')}
+                >
+                  <Text
+                    style={[
+                      styles.viewModeText,
+                      { color: viewMode === 'week' ? '#ffffff' : theme.text },
+                    ]}
+                  >
+                    Week
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.viewModeButton,
+                    { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
+                    viewMode === 'month' && { backgroundColor: theme.primary, borderColor: theme.primary },
+                  ]}
+                  onPress={() => setViewMode('month')}
+                >
+                  <Text
+                    style={[
+                      styles.viewModeText,
+                      { color: viewMode === 'month' ? '#ffffff' : theme.text },
+                    ]}
+                  >
+                    Month
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.todayButton, { backgroundColor: theme.primary }]}
+                onPress={goToToday}
               >
-                Day
+                <Text style={styles.todayButtonText}>Today</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.headerBottom}>
+              <TouchableOpacity onPress={() => navigateDate('prev')} style={styles.navButton}>
+                <FontAwesome name="chevron-left" size={18} color={theme.text} />
+              </TouchableOpacity>
+
+              <Text style={[styles.headerTitle, { color: theme.text }]}>
+                {viewMode === 'month'
+                  ? format(currentDate, 'MMMM yyyy')
+                  : viewMode === 'week'
+                  ? `${format(startOfWeek(currentDate), 'MMM d')} - ${format(endOfWeek(currentDate), 'MMM d, yyyy')}`
+                  : format(currentDate, 'MMMM d, yyyy')}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.viewModeButton,
-                { backgroundColor: theme.surfaceSecondary },
-                viewMode === 'week' && { backgroundColor: theme.primary, borderColor: theme.primary },
-              ]}
-              onPress={() => setViewMode('week')}
-            >
-              <Text
-                style={[
-                  styles.viewModeText,
-                  { color: viewMode === 'week' ? theme.sidebarTextActive : theme.text },
-                ]}
-              >
-                Week
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.viewModeButton,
-                { backgroundColor: theme.surfaceSecondary },
-                viewMode === 'month' && { backgroundColor: theme.primary, borderColor: theme.primary },
-              ]}
-              onPress={() => setViewMode('month')}
-            >
-              <Text
-                style={[
-                  styles.viewModeText,
-                  { color: viewMode === 'month' ? theme.sidebarTextActive : theme.text },
-                ]}
-              >
-                Month
-              </Text>
-            </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => navigateDate('next')} style={styles.navButton}>
+                <FontAwesome name="chevron-right" size={18} color={theme.text} />
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <TouchableOpacity
-            style={[styles.todayButton, { backgroundColor: theme.primary }]}
-            onPress={goToToday}
-          >
-            <Text style={[styles.todayButtonText, { color: theme.sidebarTextActive }]}>Today</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.headerBottom}>
-          <TouchableOpacity onPress={() => navigateDate('prev')} style={styles.navButton}>
-            <FontAwesome name="chevron-left" size={20} color={theme.text} />
-          </TouchableOpacity>
-
-          <Text style={[styles.headerTitle, { color: theme.text }]}>
-            {viewMode === 'month'
-              ? format(currentDate, 'MMMM yyyy')
-              : viewMode === 'week'
-              ? `${format(startOfWeek(currentDate), 'MMM d')} - ${format(endOfWeek(currentDate), 'MMM d, yyyy')}`
-              : format(currentDate, 'MMMM d, yyyy')}
-          </Text>
-
-          <TouchableOpacity onPress={() => navigateDate('next')} style={styles.navButton}>
-            <FontAwesome name="chevron-right" size={20} color={theme.text} />
-          </TouchableOpacity>
+          {/* Calendar Content */}
+          <View style={styles.calendarContent}>
+            {renderView()}
+          </View>
         </View>
       </View>
-
-      {renderView()}
     </View>
   );
 }
@@ -396,40 +404,54 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  calendarWrapper: {
+    flex: 1,
+    padding: Platform.OS === 'web' ? 40 : 16,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  calendarContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 1000 : '100%',
+    borderWidth: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+    flex: Platform.OS === 'web' ? undefined : 1,
+  },
   header: {
-    padding: Platform.OS === 'web' ? 20 : 16,
-    paddingBottom: 12,
+    padding: Platform.OS === 'web' ? 24 : 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   viewModeSelector: {
     flexDirection: 'row',
     gap: 8,
   },
   viewModeButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'transparent',
   },
   viewModeText: {
     fontSize: 14,
     fontWeight: '600',
   },
   todayButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 8,
   },
   todayButtonText: {
     fontSize: 14,
     fontWeight: '600',
+    color: '#ffffff',
   },
   headerBottom: {
     flexDirection: 'row',
@@ -437,14 +459,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   navButton: {
-    padding: 8,
+    padding: 12,
+    borderRadius: 8,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: -0.015,
+  },
+  calendarContent: {
+    flex: 1,
   },
   monthContainer: {
     flex: 1,
+    padding: Platform.OS === 'web' ? 16 : 8,
   },
   weekDayRow: {
     flexDirection: 'row',
@@ -460,6 +488,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   monthGrid: {
     flexDirection: 'row',
@@ -467,7 +496,7 @@ const styles = StyleSheet.create({
   },
   dayCell: {
     width: '14.28%',
-    aspectRatio: 1,
+    aspectRatio: Platform.OS === 'web' ? 1.2 : 1,
     borderWidth: 1,
     padding: 8,
     alignItems: 'flex-start',
@@ -494,11 +523,13 @@ const styles = StyleSheet.create({
   weekContainer: {
     flexDirection: 'row',
     minHeight: 400,
+    padding: Platform.OS === 'web' ? 16 : 8,
   },
   weekDayColumn: {
-    width: Platform.OS === 'web' ? 200 : 120,
+    width: Platform.OS === 'web' ? 140 : 120,
     borderWidth: 1,
-    borderRightWidth: 0,
+    borderRadius: 8,
+    marginRight: 8,
   },
   weekDayHeader: {
     padding: 12,
@@ -522,7 +553,7 @@ const styles = StyleSheet.create({
   weekEvent: {
     padding: 8,
     marginBottom: 4,
-    borderRadius: 4,
+    borderRadius: 6,
     borderLeftWidth: 3,
   },
   weekEventText: {
@@ -538,7 +569,8 @@ const styles = StyleSheet.create({
   },
   dayDateText: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    letterSpacing: -0.015,
   },
   dayContent: {
     padding: 20,
@@ -546,7 +578,7 @@ const styles = StyleSheet.create({
   daySection: {
     marginBottom: 24,
   },
-  sectionTitle: {
+  daySectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 12,
@@ -554,7 +586,7 @@ const styles = StyleSheet.create({
   dayItem: {
     padding: 16,
     marginBottom: 8,
-    borderRadius: 8,
+    borderRadius: 10,
     borderLeftWidth: 4,
   },
   dayItemTitle: {
@@ -564,6 +596,7 @@ const styles = StyleSheet.create({
   },
   dayItemDescription: {
     fontSize: 14,
+    lineHeight: 20,
   },
   emptyState: {
     padding: 40,

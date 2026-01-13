@@ -30,7 +30,7 @@ export const useThemeStore = create<ThemeStore>((set, get) => {
       
       // Update document class for web
       if (Platform.OS === 'web' && typeof document !== 'undefined') {
-        document.documentElement.classList.remove('light', 'dark');
+        document.documentElement.classList.remove('light', 'dark', 'light-theme', 'dark-theme');
         document.documentElement.classList.add(resolved);
       }
     },
@@ -40,55 +40,57 @@ export const useThemeStore = create<ThemeStore>((set, get) => {
       set({ themeMode: newTheme, resolvedTheme: newTheme });
       
       if (Platform.OS === 'web' && typeof document !== 'undefined') {
-        document.documentElement.classList.remove('light', 'dark');
+        document.documentElement.classList.remove('light', 'dark', 'light-theme', 'dark-theme');
         document.documentElement.classList.add(newTheme);
       }
     },
   };
 });
 
-// Supabase-inspired theme colors
+// Minimalist modern theme colors matching CSS variables
 export const themes = {
-        light: {
-          background: '#FFFFFF',
-          surface: '#FFFFFF',
-          surfaceSecondary: '#F9FAFB',
-          border: '#E5E7EB',
-          borderLight: '#F3F4F6',
-          text: '#1F2937',
-          textSecondary: '#6B7280',
-          textTertiary: '#9CA3AF',
-          primary: '#10B981', // Green accent like Supabase
-          primaryHover: '#059669',
-          accent: '#3B82F6',
-          success: '#10B981',
-          warning: '#F59E0B',
-          error: '#EF4444',
-          sidebar: '#F9FAFB',
-          sidebarHover: '#F3F4F6',
-          sidebarActive: '#10B981',
-          sidebarText: '#6B7280',
-          sidebarTextActive: '#1F2937',
-        },
+  light: {
+    background: '#ffffff',
+    surface: '#ffffff',
+    surfaceSecondary: '#f8f9fc',
+    surfaceTertiary: '#f0f1f5',
+    border: '#e2e2e7',
+    borderLight: '#f0f1f5',
+    text: '#1a1a1a',
+    textSecondary: '#4a4a4a',
+    textTertiary: '#717171',
+    primary: '#0066ff',
+    primaryHover: '#0055d4',
+    accent: '#0066ff',
+    success: '#10b981',
+    warning: '#f59e0b',
+    error: '#ef4444',
+    sidebar: '#f8f9fc',
+    sidebarHover: '#f0f1f5',
+    sidebarActive: '#0066ff',
+    sidebarText: '#4a4a4a',
+    sidebarTextActive: '#1a1a1a',
+  },
   dark: {
-    background: '#0F172A',
-    surface: '#1E293B',
-    surfaceSecondary: '#334155',
-    border: '#334155',
-    borderLight: '#475569',
-    text: '#F1F5F9',
-    textSecondary: '#CBD5E1',
-    textTertiary: '#94A3B8',
-    primary: '#10B981',
-    primaryHover: '#059669',
-    accent: '#3B82F6',
-    success: '#10B981',
-    warning: '#F59E0B',
-    error: '#EF4444',
-    sidebar: '#0F172A',
-    sidebarHover: '#1E293B',
-    sidebarActive: '#10B981',
-    sidebarText: '#94A3B8',
-    sidebarTextActive: '#FFFFFF',
+    background: '#0f0f11',
+    surface: '#16161a',
+    surfaceSecondary: '#16161a',
+    surfaceTertiary: '#222228',
+    border: '#2a2a32',
+    borderLight: '#333340',
+    text: '#f0f0f5',
+    textSecondary: '#c7c7d1',
+    textTertiary: '#8f8fa3',
+    primary: '#4d9aff',
+    primaryHover: '#3d7fe6',
+    accent: '#4d9aff',
+    success: '#10b981',
+    warning: '#f59e0b',
+    error: '#ef4444',
+    sidebar: '#0f0f11',
+    sidebarHover: '#16161a',
+    sidebarActive: '#4d9aff',
+    sidebarText: '#8f8fa3',
+    sidebarTextActive: '#ffffff',
   },
 };

@@ -12,7 +12,6 @@ interface WebLayoutProps {
 const navItems = [
   { name: 'Dashboard', route: '/(tabs)/dashboard', icon: 'home' },
   { name: 'Calendar', route: '/(tabs)/calendar', icon: 'calendar' },
-  { name: 'Tasks', route: '/(tabs)/tasks', icon: 'list' },
   { name: 'Projects', route: '/(tabs)/projects', icon: 'folder' },
 ];
 
@@ -31,6 +30,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
   useEffect(() => {
     // Initialize theme class on mount
     if (typeof document !== 'undefined') {
+      document.documentElement.classList.remove('light', 'dark', 'light-theme', 'dark-theme');
       document.documentElement.classList.add(resolvedTheme);
     }
   }, [resolvedTheme]);
@@ -70,7 +70,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                   style={[
                     styles.navItem,
                     { 
-                      backgroundColor: isActive ? theme.sidebarHover : 'transparent',
+                      backgroundColor: isActive ? theme.surfaceTertiary || theme.sidebarHover : 'transparent',
                       justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                       paddingHorizontal: sidebarCollapsed ? 12 : 20,
                     },
@@ -88,6 +88,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                         styles.navText,
                         {
                           color: isActive ? theme.sidebarTextActive : theme.sidebarText,
+                          fontWeight: isActive ? '600' : '500',
                         },
                       ]}
                     >
@@ -99,9 +100,12 @@ export default function WebLayout({ children }: WebLayoutProps) {
             })}
           </View>
 
-          <View style={styles.sidebarFooter}>
+          <View style={[styles.sidebarFooter, { borderTopColor: theme.border }]}>
             <TouchableOpacity
-              style={[styles.themeToggle, { justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }]}
+              style={[
+                styles.themeToggle,
+                { justifyContent: sidebarCollapsed ? 'center' : 'flex-start' },
+              ]}
               onPress={toggleTheme}
             >
               <FontAwesome
@@ -111,7 +115,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
               />
               {!sidebarCollapsed && (
                 <Text style={[styles.themeToggleText, { color: theme.sidebarText }]}>
-                  {resolvedTheme === 'dark' ? 'Light' : 'Dark'}
+                  {resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                 </Text>
               )}
             </TouchableOpacity>
@@ -139,31 +143,24 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   sidebar: {
-    width: 144, // 40% smaller: 240 * 0.6 = 144
+    width: 180,
     borderRightWidth: 1,
     flexDirection: 'column',
     justifyContent: 'space-between',
-    transition: 'width 0.2s ease',
   },
   sidebarHeader: {
     padding: 20,
     paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end', // Right align collapse button
+    justifyContent: 'flex-end',
   },
   sidebarHeaderSpacer: {
-    flex: 1, // Pushes collapse button to the right
-  },
-  sidebarTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: -0.5,
     flex: 1,
   },
   collapseButton: {
-    padding: 4,
-    borderRadius: 4,
+    padding: 6,
+    borderRadius: 6,
   },
   navSection: {
     flex: 1,
@@ -176,27 +173,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 12,
     marginHorizontal: 8,
-    borderRadius: 6,
+    marginBottom: 4,
+    borderRadius: 8,
   },
   navText: {
     fontSize: 14,
-    fontWeight: '500',
   },
   sidebarFooter: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   themeToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
+    gap: 10,
+    paddingVertical: 10,
     paddingHorizontal: 12,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   themeToggleText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
   },
   content: {

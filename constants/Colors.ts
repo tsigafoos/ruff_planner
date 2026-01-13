@@ -1,19 +1,30 @@
-const tintColorLight = '#3B82F6'; // Blue accent
-const tintColorDark = '#60A5FA';
+// Minimalist modern theme colors matching CSS variables
+const tintColorLight = '#0066ff'; // Blue accent
+const tintColorDark = '#4d9aff';
 
 export default {
   light: {
-    text: '#000',
-    background: '#fff',
+    text: '#1a1a1a',
+    textSecondary: '#4a4a4a',
+    textTertiary: '#717171',
+    background: '#ffffff',
+    backgroundAlt: '#f8f9fc',
+    surface: '#ffffff',
     tint: tintColorLight,
-    tabIconDefault: '#ccc',
+    border: '#e2e2e7',
+    tabIconDefault: '#717171',
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#fff',
-    background: '#000',
+    text: '#f0f0f5',
+    textSecondary: '#c7c7d1',
+    textTertiary: '#8f8fa3',
+    background: '#0f0f11',
+    backgroundAlt: '#16161a',
+    surface: '#16161a',
     tint: tintColorDark,
-    tabIconDefault: '#ccc',
+    border: '#2a2a32',
+    tabIconDefault: '#8f8fa3',
     tabIconSelected: tintColorDark,
   },
 };

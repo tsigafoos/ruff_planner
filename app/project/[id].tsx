@@ -113,10 +113,12 @@ export default function ProjectDetailScreen() {
     try {
       console.log('Updating project with:', updates);
       await updateProject(id, updates);
+      // Close form first, then refresh
+      setProjectFormVisible(false);
       await fetchProjects(user.id);
     } catch (error) {
       console.error('Error updating project:', error);
-      throw error; // Re-throw to let caller handle it
+      // Don't re-throw - let form handle error display
     }
   };
 

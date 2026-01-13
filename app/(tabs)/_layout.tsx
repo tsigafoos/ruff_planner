@@ -26,8 +26,8 @@ export default function TabLayout() {
         tabBarStyle: isWeb
           ? { display: 'none' } // Hide tab bar on web
           : {
-              backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#FFFFFF',
-              borderTopColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB',
+              backgroundColor: colorScheme === 'dark' ? '#16161a' : '#ffffff',
+              borderTopColor: colorScheme === 'dark' ? '#2a2a32' : '#e2e2e7',
             },
       }}>
       <Tabs.Screen
@@ -45,17 +45,35 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="tasks"
-        options={{
-          title: 'Tasks',
-          tabBarIcon: ({ color }) => <TabBarIcon name="list" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="projects"
         options={{
           title: 'Projects',
           tabBarIcon: ({ color }) => <TabBarIcon name="folder" color={color} />,
+        }}
+      />
+      {/* Hidden tabs - kept for routing but not shown in tab bar */}
+      <Tabs.Screen
+        name="tasks"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      <Tabs.Screen
+        name="today"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      <Tabs.Screen
+        name="upcoming"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      <Tabs.Screen
+        name="labels"
+        options={{
+          href: null, // Hide from tab bar
         }}
       />
     </Tabs>
