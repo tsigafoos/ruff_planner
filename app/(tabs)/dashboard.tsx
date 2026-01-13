@@ -9,8 +9,9 @@ import TaskCard from '@/components/TaskCard';
 import TaskForm from '@/components/TaskForm';
 import ProjectForm from '@/components/ProjectForm';
 import { useTheme } from '@/components/useTheme';
+import { useThemeStore } from '@/store/themeStore';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths } from 'date-fns';
 
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
 
@@ -23,6 +24,21 @@ const STATUS_LANES: { key: TaskStatus; label: string }[] = [
   { key: 'cancelled', label: 'Cancelled' },
 ];
 
+// Grayscale backgrounds for lanes
+const getLaneBackground = (index: number, isDark: boolean) => {
+  if (isDark) {
+    // Dark mode: 85% down to 60% (lighter grays)
+    const lightness = 85 - (index * 5);
+    return `hsl(0, 0%, ${lightness}%)`;
+  } else {
+    // Light mode: 15% up to 40% (darker grays) - but we want light grays, so invert
+    // 15% gray = quite dark, 40% = medium
+    // Actually user wants light grays, so: 85% down to 60% (100 - 15 = 85, 100 - 40 = 60)
+    const lightness = 100 - (15 + (index * 5));
+    return `hsl(0, 0%, ${lightness}%)`;
+  }
+};
+
 export default function DashboardScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
@@ -30,12 +46,18 @@ export default function DashboardScreen() {
   const { projects, loading: projectsLoading, fetchProjects, createProject } = useProjectStore();
   const { labels, fetchLabels } = useLabelStore();
   const theme = useTheme();
+  const { resolvedTheme } = useThemeStore();
+  const isDark = resolvedTheme === 'dark';
+  
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [taskFormVisible, setTaskFormVisible] = useState(false);
   const [newTaskFormVisible, setNewTaskFormVisible] = useState(false);
   const [projectFormVisible, setProjectFormVisible] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [projectTasks, setProjectTasks] = useState<{ [projectId: string]: any[] }>({});
+  
+  // Mini calendar state
+  const [calendarDate, setCalendarDate] = useState(new Date());
 
   useEffect(() => {
     if (user?.id) {
@@ -45,7 +67,7 @@ export default function DashboardScreen() {
     }
   }, [user?.id]);
 
-  // Derive task status (for now, completed_at = completed, otherwise to_do)
+  // Derive task status
   const getTaskStatus = (task: any): TaskStatus => {
     if (task.completed_at || task.completedAt) return 'completed';
     return task.status || 'to_do';
@@ -58,6 +80,17 @@ export default function DashboardScreen() {
     acc[status].push(task);
     return acc;
   }, {} as Record<TaskStatus, any[]>);
+
+  // Get tasks for a specific date (for mini calendar)
+  const getTasksForDate = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return tasks.filter((task: any) => {
+      const dueDate = task.due_date || task.dueDate;
+      if (!dueDate) return false;
+      const taskDate = format(new Date(dueDate), 'yyyy-MM-dd');
+      return taskDate === dateStr && !(task.completed_at || task.completedAt);
+    });
+  };
 
   const handleEditTask = (task: any) => {
     const normalizedTask = {
@@ -134,10 +167,8 @@ export default function DashboardScreen() {
       });
     } else {
       setExpandedProjects(prev => new Set(prev).add(projectId));
-      // Fetch tasks for this project if not already loaded
       if (!projectTasks[projectId] && user?.id) {
         try {
-          // We'll need to get tasks by project - for now use filtered tasks
           const projectTasksList = tasks.filter((t: any) => (t.project_id || t.projectId) === projectId);
           setProjectTasks(prev => ({ ...prev, [projectId]: projectTasksList }));
         } catch (error) {
@@ -158,126 +189,205 @@ export default function DashboardScreen() {
   };
 
   const getUserEmail = (userId: string) => {
-    // For now, just show user ID. In the future, could fetch user details
     return userId === user?.id ? user.email || 'You' : userId;
+  };
+
+  // Mini Calendar Component
+  const renderMiniCalendar = () => {
+    const monthStart = startOfMonth(calendarDate);
+    const monthEnd = endOfMonth(calendarDate);
+    const calendarStart = startOfWeek(monthStart);
+    const calendarEnd = endOfWeek(monthEnd);
+    const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+    const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+    return (
+      <View style={[styles.miniCalendar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={[styles.miniCalendarHeader, { borderBottomColor: theme.border }]}>
+          <TouchableOpacity onPress={() => setCalendarDate(subMonths(calendarDate, 1))}>
+            <FontAwesome name="chevron-left" size={12} color={theme.textSecondary} />
+          </TouchableOpacity>
+          <Text style={[styles.miniCalendarTitle, { color: theme.text }]}>
+            {format(calendarDate, 'MMM yyyy')}
+          </Text>
+          <TouchableOpacity onPress={() => setCalendarDate(addMonths(calendarDate, 1))}>
+            <FontAwesome name="chevron-right" size={12} color={theme.textSecondary} />
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.miniCalendarWeekDays}>
+          {weekDays.map((day, idx) => (
+            <Text key={idx} style={[styles.miniCalendarWeekDay, { color: theme.textTertiary }]}>{day}</Text>
+          ))}
+        </View>
+        
+        <View style={styles.miniCalendarGrid}>
+          {days.map((day, index) => {
+            const isCurrentMonth = isSameMonth(day, calendarDate);
+            const isToday = isSameDay(day, new Date());
+            const dayTasks = getTasksForDate(day);
+            const hasTasks = dayTasks.length > 0;
+
+            return (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.miniCalendarDay,
+                  !isCurrentMonth && { opacity: 0.3 },
+                  isToday && { backgroundColor: theme.primary + '20', borderRadius: 4 },
+                ]}
+                onPress={() => router.push('/(tabs)/calendar')}
+              >
+                <Text
+                  style={[
+                    styles.miniCalendarDayText,
+                    { color: isCurrentMonth ? theme.text : theme.textTertiary },
+                    isToday && { color: theme.primary, fontWeight: '700' },
+                  ]}
+                >
+                  {format(day, 'd')}
+                </Text>
+                {hasTasks && (
+                  <View style={[styles.miniCalendarDot, { backgroundColor: theme.primary }]} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        
+        <TouchableOpacity 
+          style={[styles.miniCalendarLink, { borderTopColor: theme.border }]}
+          onPress={() => router.push('/(tabs)/calendar')}
+        >
+          <Text style={[styles.miniCalendarLinkText, { color: theme.primary }]}>View Full Calendar</Text>
+          <FontAwesome name="arrow-right" size={12} color={theme.primary} />
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Projects List Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Projects</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: theme.primary }]}
-              onPress={() => setProjectFormVisible(true)}
-            >
-              <FontAwesome name="plus" size={14} color="#ffffff" />
-              <Text style={styles.actionButtonText}>New Project</Text>
-            </TouchableOpacity>
+      {/* Projects and Mini Calendar Row */}
+      <View style={styles.topSection}>
+        {/* Projects List Section */}
+        <View style={styles.projectsSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Projects</Text>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: theme.primary }]}
+                onPress={() => setProjectFormVisible(true)}
+              >
+                <FontAwesome name="plus" size={14} color="#ffffff" />
+                <Text style={styles.actionButtonText}>New Project</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
 
-        {projectsLoading ? (
-          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Loading projects...</Text>
-        ) : projects.length > 0 ? (
-          <View style={styles.projectsList}>
-            {projects.map((project: any) => {
-              const isExpanded = expandedProjects.has(project.id);
-              const projectTasksList = projectTasks[project.id] || tasks.filter((t: any) => (t.project_id || t.projectId) === project.id);
-              const projectTeam = project.team_roles ? (Array.isArray(project.team_roles) ? project.team_roles : []) : [];
-              const teamDisplay = projectTeam.length > 0 ? `${projectTeam.length} member${projectTeam.length !== 1 ? 's' : ''}` : 'No team';
+          {projectsLoading ? (
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Loading projects...</Text>
+          ) : projects.length > 0 ? (
+            <View style={styles.projectsList}>
+              {projects.map((project: any) => {
+                const isExpanded = expandedProjects.has(project.id);
+                const projectTasksList = projectTasks[project.id] || tasks.filter((t: any) => (t.project_id || t.projectId) === project.id);
+                const projectTeam = project.team_roles ? (Array.isArray(project.team_roles) ? project.team_roles : []) : [];
+                const teamDisplay = projectTeam.length > 0 ? `${projectTeam.length} member${projectTeam.length !== 1 ? 's' : ''}` : 'No team';
 
-              return (
-                <View key={project.id} style={[styles.projectItem, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                  <View style={styles.projectRow}>
-                    <View style={styles.projectInfo}>
-                      <Text style={[styles.projectName, { color: theme.text }]}>{project.name}</Text>
-                      <View style={styles.projectMeta}>
-                        <Text style={[styles.projectMetaText, { color: theme.textSecondary }]}>
-                          Initiated: {formatDate(project.created_at || project.createdAt)}
-                        </Text>
-                        <Text style={[styles.projectMetaText, { color: theme.textSecondary }]}>•</Text>
-                        <Text style={[styles.projectMetaText, { color: theme.textSecondary }]}>{teamDisplay}</Text>
+                return (
+                  <View key={project.id} style={[styles.projectItem, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                    <View style={styles.projectRow}>
+                      <View style={styles.projectInfo}>
+                        <Text style={[styles.projectName, { color: theme.text }]}>{project.name}</Text>
+                        <View style={styles.projectMeta}>
+                          <Text style={[styles.projectMetaText, { color: theme.textSecondary }]}>
+                            {formatDate(project.created_at || project.createdAt)}
+                          </Text>
+                          <Text style={[styles.projectMetaText, { color: theme.textSecondary }]}>•</Text>
+                          <Text style={[styles.projectMetaText, { color: theme.textSecondary }]}>{teamDisplay}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.projectActions}>
+                        <TouchableOpacity
+                          style={[styles.expandButton, { backgroundColor: theme.surfaceSecondary }]}
+                          onPress={() => toggleProjectExpanded(project.id)}
+                        >
+                          <FontAwesome 
+                            name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+                            size={14} 
+                            color={theme.textSecondary} 
+                          />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.openButton, { backgroundColor: theme.primary }]}
+                          onPress={() => router.push(`/project/${project.id}`)}
+                        >
+                          <Text style={[styles.openButtonText, { color: '#FFFFFF' }]}>Open</Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
-                    <View style={styles.projectActions}>
-                      <TouchableOpacity
-                        style={[styles.expandButton, { backgroundColor: theme.surfaceSecondary }]}
-                        onPress={() => toggleProjectExpanded(project.id)}
-                      >
-                        <FontAwesome 
-                          name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-                          size={14} 
-                          color={theme.textSecondary} 
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.openButton, { backgroundColor: theme.primary }]}
-                        onPress={() => router.push(`/project/${project.id}`)}
-                      >
-                        <Text style={[styles.openButtonText, { color: '#FFFFFF' }]}>Open</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
 
-                  {isExpanded && (
-                    <View style={styles.projectTasksContainer}>
-                      {projectTasksList.length > 0 ? (
-                        <View style={styles.projectTasksTable}>
-                          <View style={[styles.projectTasksHeader, { borderBottomColor: theme.border }]}>
-                            <Text style={[styles.tableHeaderText, { color: theme.textSecondary }]}>Name</Text>
-                            <Text style={[styles.tableHeaderText, { color: theme.textSecondary }]}>Owner</Text>
-                            <Text style={[styles.tableHeaderText, { color: theme.textSecondary }]}>Status</Text>
-                            <Text style={[styles.tableHeaderText, { color: theme.textSecondary }]}>Due Date</Text>
+                    {isExpanded && (
+                      <View style={[styles.projectTasksContainer, { borderTopColor: theme.border }]}>
+                        {projectTasksList.length > 0 ? (
+                          <View style={styles.projectTasksTable}>
+                            <View style={[styles.projectTasksHeader, { borderBottomColor: theme.border }]}>
+                              <Text style={[styles.tableHeaderText, { color: theme.textSecondary }]}>Name</Text>
+                              <Text style={[styles.tableHeaderText, { color: theme.textSecondary }]}>Owner</Text>
+                              <Text style={[styles.tableHeaderText, { color: theme.textSecondary }]}>Status</Text>
+                              <Text style={[styles.tableHeaderText, { color: theme.textSecondary }]}>Due Date</Text>
+                            </View>
+                            {projectTasksList.map((task: any) => {
+                              const taskStatus = getTaskStatus(task);
+                              const dueDate = task.due_date || task.dueDate;
+                              const ownerId = task.user_id || task.userId;
+                              return (
+                                <TouchableOpacity
+                                  key={task.id}
+                                  style={[styles.projectTaskRow, { borderBottomColor: theme.border }]}
+                                  onPress={() => handleEditTask(task)}
+                                >
+                                  <Text style={[styles.tableCellText, { color: theme.text }]} numberOfLines={1}>
+                                    {task.title}
+                                  </Text>
+                                  <Text style={[styles.tableCellText, { color: theme.textSecondary }]} numberOfLines={1}>
+                                    {getUserEmail(ownerId)}
+                                  </Text>
+                                  <Text style={[styles.tableCellText, { color: theme.textSecondary }]}>
+                                    {STATUS_LANES.find(l => l.key === taskStatus)?.label || 'To Do'}
+                                  </Text>
+                                  <Text style={[styles.tableCellText, { color: theme.textSecondary }]}>
+                                    {dueDate ? formatDate(dueDate) : '-'}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
                           </View>
-                          {projectTasksList.map((task: any) => {
-                            const taskStatus = getTaskStatus(task);
-                            const dueDate = task.due_date || task.dueDate;
-                            const ownerId = task.user_id || task.userId;
-                            return (
-                              <TouchableOpacity
-                                key={task.id}
-                                style={[styles.projectTaskRow, { borderBottomColor: theme.border }]}
-                                onPress={() => handleEditTask(task)}
-                              >
-                                <Text style={[styles.tableCellText, { color: theme.text }]} numberOfLines={1}>
-                                  {task.title}
-                                </Text>
-                                <Text style={[styles.tableCellText, { color: theme.textSecondary }]} numberOfLines={1}>
-                                  {getUserEmail(ownerId)}
-                                </Text>
-                                <Text style={[styles.tableCellText, { color: theme.textSecondary }]}>
-                                  {STATUS_LANES.find(l => l.key === taskStatus)?.label || 'To Do'}
-                                </Text>
-                                <Text style={[styles.tableCellText, { color: theme.textSecondary }]}>
-                                  {dueDate ? formatDate(dueDate) : '-'}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
-                      ) : (
-                        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No tasks in this project</Text>
-                      )}
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-          </View>
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No projects yet</Text>
-            <TouchableOpacity
-              style={[styles.emptyButton, { borderColor: theme.primary }]}
-              onPress={() => setProjectFormVisible(true)}
-            >
-              <Text style={[styles.emptyButtonText, { color: theme.primary }]}>Create your first project</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+                        ) : (
+                          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No tasks in this project</Text>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No projects yet</Text>
+              <TouchableOpacity
+                style={[styles.emptyButton, { borderColor: theme.primary }]}
+                onPress={() => setProjectFormVisible(true)}
+              >
+                <Text style={[styles.emptyButtonText, { color: theme.primary }]}>Create your first project</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Mini Calendar */}
+        {Platform.OS === 'web' && renderMiniCalendar()}
       </View>
 
       {/* Task Lanes Section */}
@@ -304,14 +414,25 @@ export default function DashboardScreen() {
             style={styles.lanesContainer}
             contentContainerStyle={styles.lanesContent}
           >
-            {STATUS_LANES.map((lane) => {
+            {STATUS_LANES.map((lane, index) => {
               const laneTasks = tasksByStatus[lane.key] || [];
+              const laneBackground = getLaneBackground(index, isDark);
+              
               return (
-                <View key={lane.key} style={[styles.lane, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <View 
+                  key={lane.key} 
+                  style={[
+                    styles.lane, 
+                    { 
+                      backgroundColor: laneBackground,
+                      borderColor: theme.border,
+                    }
+                  ]}
+                >
                   <View style={[styles.laneHeader, { borderBottomColor: theme.border }]}>
-                    <Text style={[styles.laneTitle, { color: theme.text }]}>{lane.label}</Text>
-                    <View style={[styles.laneCount, { backgroundColor: theme.surfaceSecondary }]}>
-                      <Text style={[styles.laneCountText, { color: theme.textSecondary }]}>{laneTasks.length}</Text>
+                    <Text style={[styles.laneTitle, { color: isDark ? theme.text : '#1a1a1a' }]}>{lane.label}</Text>
+                    <View style={[styles.laneCount, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' }]}>
+                      <Text style={[styles.laneCountText, { color: isDark ? theme.text : '#1a1a1a' }]}>{laneTasks.length}</Text>
                     </View>
                   </View>
                   <ScrollView 
@@ -330,7 +451,7 @@ export default function DashboardScreen() {
                       ))
                     ) : (
                       <View style={styles.laneEmpty}>
-                        <Text style={[styles.laneEmptyText, { color: theme.textTertiary }]}>No tasks</Text>
+                        <Text style={[styles.laneEmptyText, { color: isDark ? theme.textTertiary : '#717171' }]}>No tasks</Text>
                       </View>
                     )}
                   </ScrollView>
@@ -374,6 +495,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  topSection: {
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    paddingHorizontal: Platform.OS === 'web' ? 40 : 16,
+    paddingTop: 24,
+    gap: 24,
+  },
+  projectsSection: {
+    flex: 1,
+    marginBottom: Platform.OS === 'web' ? 0 : 24,
+  },
   section: {
     marginBottom: 32,
     paddingHorizontal: Platform.OS === 'web' ? 40 : 16,
@@ -407,6 +538,70 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  // Mini Calendar Styles
+  miniCalendar: {
+    width: Platform.OS === 'web' ? 280 : '100%',
+    borderWidth: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  miniCalendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+  },
+  miniCalendarTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  miniCalendarWeekDays: {
+    flexDirection: 'row',
+    paddingHorizontal: 8,
+    paddingTop: 8,
+  },
+  miniCalendarWeekDay: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  miniCalendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 8,
+  },
+  miniCalendarDay: {
+    width: '14.28%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  miniCalendarDayText: {
+    fontSize: 12,
+  },
+  miniCalendarDot: {
+    position: 'absolute',
+    bottom: 2,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  miniCalendarLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 12,
+    borderTopWidth: 1,
+  },
+  miniCalendarLinkText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  // Project styles
   projectsList: {
     gap: 12,
   },
@@ -462,7 +657,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.1)',
   },
   projectTasksTable: {
     width: '100%',
@@ -489,6 +683,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: Platform.OS === 'web' ? 14 : 14,
   },
+  // Lane styles
   lanesContainer: {
     flexGrow: 0,
   },
@@ -496,11 +691,11 @@ const styles = StyleSheet.create({
     paddingRight: Platform.OS === 'web' ? 40 : 16,
   },
   lane: {
-    width: Platform.OS === 'web' ? 300 : 280,
+    width: Platform.OS === 'web' ? 280 : 260,
     marginRight: 16,
     borderWidth: 1,
     borderRadius: 10,
-    maxHeight: Platform.OS === 'web' ? '70vh' : 600,
+    maxHeight: Platform.OS === 'web' ? '60vh' : 500,
   },
   laneHeader: {
     padding: 12,
