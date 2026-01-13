@@ -31,10 +31,12 @@ const STATUS_LANES: { key: TaskStatus; label: string }[] = [
 // Grayscale backgrounds for lanes
 const getLaneBackground = (index: number, isDark: boolean) => {
   if (isDark) {
-    const lightness = 85 - (index * 5);
+    // Dark mode: 95% down to 70% (To Do=95, In Progress=90, Blocked=85, On Hold=80, Completed=75, Cancelled=70)
+    const lightness = 95 - (index * 5);
     return `hsl(0, 0%, ${lightness}%)`;
   } else {
-    const lightness = 100 - (15 + (index * 5));
+    // Light mode: 75% down to 50% (shifted down 10% from previous 85%→60%)
+    const lightness = 75 - (index * 5);
     return `hsl(0, 0%, ${lightness}%)`;
   }
 };

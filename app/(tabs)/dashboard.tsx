@@ -27,14 +27,12 @@ const STATUS_LANES: { key: TaskStatus; label: string }[] = [
 // Grayscale backgrounds for lanes
 const getLaneBackground = (index: number, isDark: boolean) => {
   if (isDark) {
-    // Dark mode: 85% down to 60% (lighter grays)
-    const lightness = 85 - (index * 5);
+    // Dark mode: 95% down to 70% (To Do=95, In Progress=90, Blocked=85, On Hold=80, Completed=75, Cancelled=70)
+    const lightness = 95 - (index * 5);
     return `hsl(0, 0%, ${lightness}%)`;
   } else {
-    // Light mode: 15% up to 40% (darker grays) - but we want light grays, so invert
-    // 15% gray = quite dark, 40% = medium
-    // Actually user wants light grays, so: 85% down to 60% (100 - 15 = 85, 100 - 40 = 60)
-    const lightness = 100 - (15 + (index * 5));
+    // Light mode: 75% down to 50% (shifted down 10% from previous 85%→60%)
+    const lightness = 75 - (index * 5);
     return `hsl(0, 0%, ${lightness}%)`;
   }
 };
@@ -288,7 +286,12 @@ export default function DashboardScreen() {
           {projectsLoading ? (
             <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Loading projects...</Text>
           ) : projects.length > 0 ? (
-            <View style={styles.projectsList}>
+            <ScrollView 
+              style={[styles.projectsListContainer, { borderColor: theme.border }]} 
+              showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}
+            >
+              <View style={styles.projectsList}>
               {projects.map((project: any) => {
                 const isExpanded = expandedProjects.has(project.id);
                 const projectTasksList = projectTasks[project.id] || tasks.filter((t: any) => (t.project_id || t.projectId) === project.id);
@@ -372,7 +375,8 @@ export default function DashboardScreen() {
                   </View>
                 );
               })}
-            </View>
+              </View>
+            </ScrollView>
           ) : (
             <View style={styles.emptyState}>
               <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No projects yet</Text>
@@ -500,10 +504,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Platform.OS === 'web' ? 40 : 16,
     paddingTop: 24,
     gap: 24,
+    alignItems: Platform.OS === 'web' ? 'flex-start' : undefined,
   },
   projectsSection: {
     flex: 1,
     marginBottom: Platform.OS === 'web' ? 0 : 24,
+    maxHeight: Platform.OS === 'web' ? 420 : undefined,
   },
   section: {
     marginBottom: 32,
@@ -602,8 +608,16 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   // Project styles
+  projectsListContainer: {
+    flex: 1,
+    maxHeight: Platform.OS === 'web' ? 360 : undefined,
+    borderWidth: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
   projectsList: {
     gap: 12,
+    padding: 12,
   },
   projectItem: {
     borderWidth: 1,
