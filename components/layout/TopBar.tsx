@@ -63,7 +63,7 @@ export default function TopBar() {
             style={styles.navItem}
             onPress={toggleAccountMenu}
           >
-            <FontAwesome name="user" size={16} color={theme.textSecondary} />
+            <FontAwesome name="user-o" size={15} color={theme.textSecondary} />
             <Text style={[styles.navText, { color: theme.textSecondary }]}>Account</Text>
             <FontAwesome 
               name={accountMenuOpen ? "chevron-up" : "chevron-down"} 
@@ -82,7 +82,7 @@ export default function TopBar() {
                   console.log('Account Settings clicked');
                 }}
               >
-                <FontAwesome name="cog" size={14} color={theme.textSecondary} />
+                <FontAwesome name="cog" size={13} color={theme.textSecondary} />
                 <Text style={[styles.dropdownItemText, { color: theme.text }]}>Account Settings</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -92,7 +92,7 @@ export default function TopBar() {
                   handleSignOut();
                 }}
               >
-                <FontAwesome name="sign-out" size={14} color={theme.error} />
+                <FontAwesome name="sign-out" size={13} color={theme.error} />
                 <Text style={[styles.dropdownItemText, { color: theme.error }]}>Sign Out</Text>
               </TouchableOpacity>
             </View>
@@ -106,7 +106,7 @@ export default function TopBar() {
             console.log('Team clicked');
           }}
         >
-          <FontAwesome name="users" size={16} color={theme.textSecondary} />
+            <FontAwesome name="users" size={15} color={theme.textSecondary} />
           <Text style={[styles.navText, { color: theme.textSecondary }]}>Team</Text>
         </TouchableOpacity>
 
@@ -115,7 +115,7 @@ export default function TopBar() {
             style={styles.navItem}
             onPress={toggleProfileMenu}
           >
-            <FontAwesome name="id-card" size={16} color={theme.textSecondary} />
+            <FontAwesome name="id-card-o" size={15} color={theme.textSecondary} />
             <Text style={[styles.navText, { color: theme.textSecondary }]}>Profile</Text>
             <FontAwesome 
               name={profileMenuOpen ? "chevron-up" : "chevron-down"} 
@@ -133,7 +133,7 @@ export default function TopBar() {
                   router.push('/profile');
                 }}
               >
-                <FontAwesome name="user-circle" size={14} color={theme.textSecondary} />
+                <FontAwesome name="user-circle-o" size={13} color={theme.textSecondary} />
                 <Text style={[styles.dropdownItemText, { color: theme.text }]}>View Profile</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -144,7 +144,7 @@ export default function TopBar() {
                   // TODO: Open edit mode when navigating to profile
                 }}
               >
-                <FontAwesome name="edit" size={14} color={theme.textSecondary} />
+                <FontAwesome name="pencil" size={13} color={theme.textSecondary} />
                 <Text style={[styles.dropdownItemText, { color: theme.text }]}>Edit Profile</Text>
               </TouchableOpacity>
             </View>
@@ -158,7 +158,7 @@ export default function TopBar() {
             console.log('Management clicked');
           }}
         >
-          <FontAwesome name="cog" size={16} color={theme.textSecondary} />
+            <FontAwesome name="cog" size={15} color={theme.textSecondary} />
           <Text style={[styles.navText, { color: theme.textSecondary }]}>Management</Text>
         </TouchableOpacity>
       </View>
@@ -189,8 +189,8 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: -0.5,
+    fontWeight: '600',
+    letterSpacing: -0.015,
   },
   navSection: {
     flexDirection: 'row',
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   },
   navText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '450',
   },
   chevron: {
     marginLeft: 4,
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   },
   dropdownItemText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '450',
   },
   rightSection: {
     flexDirection: 'row',

@@ -24,16 +24,24 @@ const STATUS_LANES: { key: TaskStatus; label: string }[] = [
   { key: 'cancelled', label: 'Cancelled' },
 ];
 
-// Grayscale backgrounds for lanes
-const getLaneBackground = (index: number, isDark: boolean) => {
+// Lane backgrounds and strokes with HSL(225, 2%, L%)
+const getLaneColors = (index: number, isDark: boolean) => {
   if (isDark) {
-    // Dark mode: 95% down to 70% (To Do=95, In Progress=90, Blocked=85, On Hold=80, Completed=75, Cancelled=70)
-    const lightness = 95 - (index * 5);
-    return `hsl(0, 0%, ${lightness}%)`;
+    // Dark mode: backgrounds 5% → 30%, strokes add 10 to L
+    const bgLightness = 5 + (index * 5);
+    const strokeLightness = bgLightness + 10;
+    return {
+      background: `hsl(225, 2%, ${bgLightness}%)`,
+      stroke: `hsl(225, 2%, ${strokeLightness}%)`,
+    };
   } else {
-    // Light mode: 75% down to 50% (shifted down 10% from previous 85%→60%)
-    const lightness = 75 - (index * 5);
-    return `hsl(0, 0%, ${lightness}%)`;
+    // Light mode: backgrounds 95% → 70%, strokes subtract 10 from L
+    const bgLightness = 95 - (index * 5);
+    const strokeLightness = bgLightness - 10;
+    return {
+      background: `hsl(225, 2%, ${bgLightness}%)`,
+      stroke: `hsl(225, 2%, ${strokeLightness}%)`,
+    };
   }
 };
 
@@ -203,13 +211,13 @@ export default function DashboardScreen() {
       <View style={[styles.miniCalendar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={[styles.miniCalendarHeader, { borderBottomColor: theme.border }]}>
           <TouchableOpacity onPress={() => setCalendarDate(subMonths(calendarDate, 1))}>
-            <FontAwesome name="chevron-left" size={12} color={theme.textSecondary} />
+            <FontAwesome name="angle-left" size={14} color={theme.textSecondary} />
           </TouchableOpacity>
           <Text style={[styles.miniCalendarTitle, { color: theme.text }]}>
             {format(calendarDate, 'MMM yyyy')}
           </Text>
           <TouchableOpacity onPress={() => setCalendarDate(addMonths(calendarDate, 1))}>
-            <FontAwesome name="chevron-right" size={12} color={theme.textSecondary} />
+            <FontAwesome name="angle-right" size={14} color={theme.textSecondary} />
           </TouchableOpacity>
         </View>
         
@@ -258,7 +266,7 @@ export default function DashboardScreen() {
           onPress={() => router.push('/(tabs)/calendar')}
         >
           <Text style={[styles.miniCalendarLinkText, { color: theme.primary }]}>View Full Calendar</Text>
-          <FontAwesome name="arrow-right" size={12} color={theme.primary} />
+          <FontAwesome name="angle-right" size={14} color={theme.primary} />
         </TouchableOpacity>
       </View>
     );
@@ -277,7 +285,7 @@ export default function DashboardScreen() {
                 style={[styles.actionButton, { backgroundColor: theme.primary }]}
                 onPress={() => setProjectFormVisible(true)}
               >
-                <FontAwesome name="plus" size={14} color="#ffffff" />
+                <FontAwesome name="plus" size={12} color="#ffffff" />
                 <Text style={styles.actionButtonText}>New Project</Text>
               </TouchableOpacity>
             </View>
@@ -403,7 +411,7 @@ export default function DashboardScreen() {
               style={[styles.actionButton, { backgroundColor: theme.primary }]}
               onPress={() => setNewTaskFormVisible(true)}
             >
-              <FontAwesome name="plus" size={14} color="#ffffff" />
+              <FontAwesome name="plus" size={12} color="#ffffff" />
               <Text style={styles.actionButtonText}>Add Task</Text>
             </TouchableOpacity>
           </View>
@@ -420,7 +428,7 @@ export default function DashboardScreen() {
           >
             {STATUS_LANES.map((lane, index) => {
               const laneTasks = tasksByStatus[lane.key] || [];
-              const laneBackground = getLaneBackground(index, isDark);
+              const laneColors = getLaneColors(index, isDark);
               
               return (
                 <View 
@@ -428,8 +436,8 @@ export default function DashboardScreen() {
                   style={[
                     styles.lane, 
                     { 
-                      backgroundColor: laneBackground,
-                      borderColor: theme.border,
+                      backgroundColor: laneColors.background,
+                      borderColor: laneColors.stroke,
                     }
                   ]}
                 >
@@ -541,8 +549,8 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
   },
   // Mini Calendar Styles
   miniCalendar: {

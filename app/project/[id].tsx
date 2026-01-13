@@ -28,16 +28,24 @@ const STATUS_LANES: { key: TaskStatus; label: string }[] = [
   { key: 'cancelled', label: 'Cancelled' },
 ];
 
-// Grayscale backgrounds for lanes
-const getLaneBackground = (index: number, isDark: boolean) => {
+// Lane backgrounds and strokes with HSL(225, 2%, L%)
+const getLaneColors = (index: number, isDark: boolean) => {
   if (isDark) {
-    // Dark mode: 95% down to 70% (To Do=95, In Progress=90, Blocked=85, On Hold=80, Completed=75, Cancelled=70)
-    const lightness = 95 - (index * 5);
-    return `hsl(0, 0%, ${lightness}%)`;
+    // Dark mode: backgrounds 5% → 30%, strokes add 10 to L
+    const bgLightness = 5 + (index * 5);
+    const strokeLightness = bgLightness + 10;
+    return {
+      background: `hsl(225, 2%, ${bgLightness}%)`,
+      stroke: `hsl(225, 2%, ${strokeLightness}%)`,
+    };
   } else {
-    // Light mode: 75% down to 50% (shifted down 10% from previous 85%→60%)
-    const lightness = 75 - (index * 5);
-    return `hsl(0, 0%, ${lightness}%)`;
+    // Light mode: backgrounds 95% → 70%, strokes subtract 10 from L
+    const bgLightness = 95 - (index * 5);
+    const strokeLightness = bgLightness - 10;
+    return {
+      background: `hsl(225, 2%, ${bgLightness}%)`,
+      stroke: `hsl(225, 2%, ${strokeLightness}%)`,
+    };
   }
 };
 
@@ -195,7 +203,7 @@ export default function ProjectDetailScreen() {
       >
         {STATUS_LANES.map((lane, index) => {
           const laneTasks = tasksByStatus[lane.key] || [];
-          const laneBackground = getLaneBackground(index, isDark);
+          const laneColors = getLaneColors(index, isDark);
           
           return (
             <View 
@@ -203,8 +211,8 @@ export default function ProjectDetailScreen() {
               style={[
                 styles.lane, 
                 { 
-                  backgroundColor: laneBackground,
-                  borderColor: theme.border,
+                  backgroundColor: laneColors.background,
+                  borderColor: laneColors.stroke,
                 }
               ]}
             >
@@ -245,14 +253,14 @@ export default function ProjectDetailScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: theme.surfaceSecondary }]}>
-          <FontAwesome name="arrow-left" size={16} color={theme.text} />
+        <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: theme.surfaceSecondary, borderWidth: 1, borderColor: theme.border }]}>
+          <FontAwesome name="angle-left" size={18} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <View style={[styles.projectIcon, { backgroundColor: (project.color || theme.primary) + '15' }]}>
+          <View style={[styles.projectIcon, { backgroundColor: (project.color || theme.primary) + '12' }]}>
             <FontAwesome
-              name={(project.icon || 'folder') as any}
-              size={20}
+              name={(project.icon || 'folder-o') as any}
+              size={18}
               color={project.color || theme.primary}
             />
           </View>
@@ -276,7 +284,7 @@ export default function ProjectDetailScreen() {
               style={[styles.actionButton, { borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}
               onPress={() => setNewTaskFormVisible(true)}
             >
-              <FontAwesome name="plus" size={14} color={theme.text} />
+              <FontAwesome name="plus" size={12} color={theme.text} />
               <Text style={[styles.actionButtonText, { color: theme.text }]}>Add Task</Text>
             </TouchableOpacity>
           )}
@@ -285,7 +293,7 @@ export default function ProjectDetailScreen() {
               style={[styles.actionButton, { borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}
               onPress={() => setResourcesVisible(true)}
             >
-              <FontAwesome name="folder-open" size={14} color={theme.text} />
+              <FontAwesome name="folder-open-o" size={12} color={theme.text} />
               <Text style={[styles.actionButtonText, { color: theme.text }]}>Resources</Text>
             </TouchableOpacity>
           )}
@@ -293,7 +301,7 @@ export default function ProjectDetailScreen() {
             style={[styles.actionButton, { borderColor: theme.primary, backgroundColor: theme.primary }]}
             onPress={() => setProjectFormVisible(true)}
           >
-            <FontAwesome name="edit" size={14} color="#ffffff" />
+            <FontAwesome name="pencil" size={12} color="#ffffff" />
             <Text style={[styles.actionButtonText, { color: '#ffffff' }]}>Edit Project</Text>
           </TouchableOpacity>
         </View>
@@ -389,9 +397,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -402,9 +410,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   projectIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -413,9 +421,9 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.OS === 'web' ? 22 : 24,
-    fontWeight: '700',
+    fontWeight: '600',
     letterSpacing: -0.015,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   headerMeta: {
     flexDirection: 'row',
@@ -423,15 +431,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   projectTypeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
   },
   projectTypeText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   subtitle: {
     fontSize: 14,
@@ -444,15 +452,15 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
     borderWidth: 1,
   },
   actionButtonText: {
-    fontWeight: '600',
-    fontSize: 14,
+    fontWeight: '500',
+    fontSize: 13,
   },
   errorText: {
     fontSize: 16,
