@@ -1,4 +1,5 @@
 import AgileDashboard from '@/components/dashboards/AgileDashboard';
+import MaintenanceDashboard from '@/components/dashboards/MaintenanceDashboard';
 import WaterfallDashboard from '@/components/dashboards/WaterfallDashboard';
 import WebLayout from '@/components/layout/WebLayout';
 import ProjectForm from '@/components/ProjectForm';
@@ -286,7 +287,9 @@ export default function ProjectDetailScreen() {
     );
   }
 
-  const isAgile = project.project_type === 'agile';
+  const projectType = project.project_type || project.projectType || 'waterfall';
+  const isAgile = projectType === 'agile';
+  const isMaintenance = projectType === 'maintenance';
   const incompleteTasks = tasks.filter((task: any) => !(task.completed_at || task.completedAt));
 
   // Task Lanes Component
@@ -415,13 +418,21 @@ export default function ProjectDetailScreen() {
           <View style={styles.headerText}>
             <Text style={[styles.title, { color: theme.text }]}>{project.name}</Text>
             <View style={styles.headerMeta}>
-              <View style={[styles.projectTypeBadge, { backgroundColor: theme.primary + '15' }]}>
-                <Text style={[styles.projectTypeText, { color: theme.primary }]}>
-                  {project.project_type === 'agile' ? 'Agile' : 'Waterfall'}
+              <View style={[
+                styles.projectTypeBadge, 
+                { 
+                  backgroundColor: isMaintenance ? '#FEF3C7' : theme.primary + '15' 
+                }
+              ]}>
+                <Text style={[
+                  styles.projectTypeText, 
+                  { color: isMaintenance ? '#F59E0B' : theme.primary }
+                ]}>
+                  {isMaintenance ? 'Maintenance' : isAgile ? 'Agile' : 'Waterfall'}
                 </Text>
               </View>
               <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-                {incompleteTasks.length} active task{incompleteTasks.length !== 1 ? 's' : ''}
+                {incompleteTasks.length} {isMaintenance ? 'open issue' : 'active task'}{incompleteTasks.length !== 1 ? 's' : ''}
               </Text>
             </View>
           </View>
@@ -495,7 +506,25 @@ export default function ProjectDetailScreen() {
         </View>
       ) : (
         <ScrollView style={styles.mainContent} showsVerticalScrollIndicator={true}>
-          {isAgile ? (
+          {isMaintenance ? (
+            <MaintenanceDashboard
+              project={project}
+              tasks={tasks}
+              onProjectUpdate={handleProjectUpdate}
+              onTaskClick={handleEditTask}
+              onTaskStatusChange={async (taskId, newStatus) => {
+                await updateTask(taskId, { 
+                  status: newStatus,
+                  completed: newStatus === 'completed',
+                });
+                // Refresh tasks to update UI
+                if (user?.id && id) {
+                  await fetchTasksByProject(id, user.id);
+                }
+              }}
+              onAddTask={() => setNewTaskFormVisible(true)}
+            />
+          ) : isAgile ? (
             <AgileDashboard
               project={project}
               tasks={tasks}
@@ -522,8 +551,8 @@ export default function ProjectDetailScreen() {
             />
           )}
           
-          {/* Task Lanes - Below Dashboard */}
-          {renderTaskLanes()}
+          {/* Task Lanes - Below Dashboard (skip for Maintenance which has its own issue list) */}
+          {!isMaintenance && renderTaskLanes()}
         </ScrollView>
       )}
 
