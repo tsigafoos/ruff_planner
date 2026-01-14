@@ -325,6 +325,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
             project_phase: taskData.projectPhase || null, // Agile phase (null for Waterfall)
             assignee_id: taskData.assigneeId || null,
             blocked_by: taskData.blockedBy || [],
+            category: taskData.category || null, // Maintenance category (null for non-maintenance)
             completed_at: (taskData.completed || taskData.status === 'completed') ? new Date().toISOString() : null,
           })
           .select()
@@ -354,6 +355,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           task.projectPhase = taskData.projectPhase || undefined; // Agile phase (undefined for Waterfall)
           task.assigneeId = taskData.assigneeId || undefined;
           task.blockedBy = JSON.stringify(taskData.blockedBy || []);
+          task.category = taskData.category || undefined; // Maintenance category (undefined for non-maintenance)
           if (taskData.completed || taskData.status === 'completed') {
             task.completedAt = Date.now();
           }
@@ -386,6 +388,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         if (updates.projectPhase !== undefined) updateData.project_phase = updates.projectPhase;
         if (updates.assigneeId !== undefined) updateData.assignee_id = updates.assigneeId;
         if (updates.blockedBy !== undefined) updateData.blocked_by = updates.blockedBy;
+        if (updates.category !== undefined) updateData.category = updates.category;
         if (updates.completed !== undefined) {
           updateData.completed_at = updates.completed ? new Date().toISOString() : null;
         } else if (updates.status === 'completed') {
@@ -423,6 +426,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           if (updates.projectPhase !== undefined) taskRecord.projectPhase = updates.projectPhase;
           if (updates.assigneeId !== undefined) taskRecord.assigneeId = updates.assigneeId;
           if (updates.blockedBy !== undefined) taskRecord.blockedBy = JSON.stringify(updates.blockedBy);
+          if (updates.category !== undefined) taskRecord.category = updates.category;
           if (updates.completed !== undefined) {
             taskRecord.completedAt = updates.completed ? Date.now() : undefined;
           } else if (updates.status === 'completed') {

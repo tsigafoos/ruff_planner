@@ -23,7 +23,7 @@ export default function ProjectForm({
   const [name, setName] = useState('');
   const [color, setColor] = useState('#3B82F6');
   const [icon, setIcon] = useState('folder');
-  const [projectType, setProjectType] = useState<'waterfall' | 'agile'>('waterfall');
+  const [projectType, setProjectType] = useState<'waterfall' | 'agile' | 'maintenance'>('waterfall');
   const [loading, setLoading] = useState(false);
 
   // Key questions at top
@@ -45,7 +45,7 @@ export default function ProjectForm({
       setName(initialData.name || '');
       setColor(initialData.color || '#3B82F6');
       setIcon(initialData.icon || 'folder');
-      setProjectType(initialData.project_type || initialData.projectType || 'waterfall');
+      setProjectType((initialData.project_type || initialData.projectType || 'waterfall') as 'waterfall' | 'agile' | 'maintenance');
       setStartDate(initialData.start_date ? new Date(initialData.start_date) : (initialData.startDate ? new Date(initialData.startDate) : undefined));
       setEndDate(initialData.end_date ? new Date(initialData.end_date) : (initialData.endDate ? new Date(initialData.endDate) : undefined));
       
@@ -140,7 +140,8 @@ export default function ProjectForm({
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={true}>
-            {/* Key Questions Section */}
+            {/* Key Questions Section - only for Waterfall and Agile */}
+            {projectType !== 'maintenance' && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>Key Questions</Text>
               
@@ -244,6 +245,7 @@ export default function ProjectForm({
                 />
               </View>
             </View>
+            )}
 
             {/* Basic Information Section */}
             <View style={styles.section}>
@@ -269,6 +271,7 @@ export default function ProjectForm({
                     ]}
                     onPress={() => setProjectType('waterfall')}
                   >
+                    <FontAwesome name="list-ol" size={14} color={projectType === 'waterfall' ? theme.primary : theme.textSecondary} style={{ marginBottom: 4 }} />
                     <Text
                       style={[
                         styles.typeOptionText,
@@ -280,6 +283,7 @@ export default function ProjectForm({
                     >
                       Waterfall
                     </Text>
+                    <Text style={[styles.typeOptionHint, { color: theme.textTertiary }]}>Sequential phases</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
@@ -291,6 +295,7 @@ export default function ProjectForm({
                     ]}
                     onPress={() => setProjectType('agile')}
                   >
+                    <FontAwesome name="refresh" size={14} color={projectType === 'agile' ? theme.primary : theme.textSecondary} style={{ marginBottom: 4 }} />
                     <Text
                       style={[
                         styles.typeOptionText,
@@ -302,6 +307,31 @@ export default function ProjectForm({
                     >
                       Agile
                     </Text>
+                    <Text style={[styles.typeOptionHint, { color: theme.textTertiary }]}>Iterative sprints</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.typeOption,
+                      {
+                        backgroundColor: projectType === 'maintenance' ? theme.primary + '20' : theme.surfaceSecondary,
+                        borderColor: projectType === 'maintenance' ? theme.primary : theme.border,
+                      },
+                    ]}
+                    onPress={() => setProjectType('maintenance')}
+                  >
+                    <FontAwesome name="wrench" size={14} color={projectType === 'maintenance' ? theme.primary : theme.textSecondary} style={{ marginBottom: 4 }} />
+                    <Text
+                      style={[
+                        styles.typeOptionText,
+                        {
+                          color: projectType === 'maintenance' ? theme.primary : theme.text,
+                          fontWeight: projectType === 'maintenance' ? '600' : '400',
+                        },
+                      ]}
+                    >
+                      Maintenance
+                    </Text>
+                    <Text style={[styles.typeOptionHint, { color: theme.textTertiary }]}>Issue tracking</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -476,6 +506,10 @@ const styles = StyleSheet.create({
   typeOptionText: {
     fontSize: Platform.OS === 'web' ? 13 : 14,
     fontWeight: '500',
+  },
+  typeOptionHint: {
+    fontSize: Platform.OS === 'web' ? 10 : 11,
+    marginTop: 2,
   },
   colorSection: {
     marginBottom: 24,
