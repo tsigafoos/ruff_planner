@@ -3,8 +3,10 @@
 -- Run this in Supabase SQL Editor
 
 -- ============================================
--- TEAMS TABLE
+-- STEP 1: CREATE ALL TABLES FIRST (no policies yet)
 -- ============================================
+
+-- TEAMS TABLE
 CREATE TABLE IF NOT EXISTS teams (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
@@ -14,10 +16,59 @@ CREATE TABLE IF NOT EXISTS teams (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Enable RLS
-ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
+-- TEAM MEMBERS TABLE
+CREATE TABLE IF NOT EXISTS team_members (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  team_id UUID REFERENCES teams(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'member', 'guest')),
+  joined_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(team_id, user_id)
+);
 
--- Team policies
+-- TEAM INVITES TABLE
+CREATE TABLE IF NOT EXISTS team_invites (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  team_id UUID REFERENCES teams(id) ON DELETE CASCADE NOT NULL,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('admin', 'member', 'guest')),
+  token TEXT UNIQUE NOT NULL,
+  invited_by UUID REFERENCES auth.users(id) NOT NULL,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'expired', 'revoked')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '7 days')
+);
+
+-- PROJECT SHARES TABLE
+CREATE TABLE IF NOT EXISTS project_shares (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
+  team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
+  shared_with_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('viewer', 'commenter', 'editor', 'co_owner')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  -- Either team_id or shared_with_user_id must be set, but not both
+  CONSTRAINT share_target_check CHECK (
+    (team_id IS NOT NULL AND shared_with_user_id IS NULL) OR
+    (team_id IS NULL AND shared_with_user_id IS NOT NULL)
+  ),
+  UNIQUE(project_id, team_id),
+  UNIQUE(project_id, shared_with_user_id)
+);
+
+-- ============================================
+-- STEP 2: ENABLE RLS ON ALL TABLES
+-- ============================================
+ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE project_shares ENABLE ROW LEVEL SECURITY;
+
+-- ============================================
+-- STEP 3: CREATE POLICIES (now that all tables exist)
+-- ============================================
+
+-- TEAMS POLICIES
 CREATE POLICY "Users can view teams they belong to" ON teams
   FOR SELECT USING (
     owner_id = auth.uid() OR
@@ -33,22 +84,7 @@ CREATE POLICY "Team owners can update their teams" ON teams
 CREATE POLICY "Team owners can delete their teams" ON teams
   FOR DELETE USING (owner_id = auth.uid());
 
--- ============================================
--- TEAM MEMBERS TABLE
--- ============================================
-CREATE TABLE IF NOT EXISTS team_members (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  team_id UUID REFERENCES teams(id) ON DELETE CASCADE NOT NULL,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'member', 'guest')),
-  joined_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(team_id, user_id)
-);
-
--- Enable RLS
-ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
-
--- Team member policies
+-- TEAM MEMBERS POLICIES
 CREATE POLICY "Team members can view other members" ON team_members
   FOR SELECT USING (
     team_id IN (SELECT team_id FROM team_members WHERE user_id = auth.uid())
@@ -80,25 +116,7 @@ CREATE POLICY "Team owners/admins can remove members" ON team_members
     user_id = auth.uid() -- Users can leave teams
   );
 
--- ============================================
--- TEAM INVITES TABLE
--- ============================================
-CREATE TABLE IF NOT EXISTS team_invites (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  team_id UUID REFERENCES teams(id) ON DELETE CASCADE NOT NULL,
-  email TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('admin', 'member', 'guest')),
-  token TEXT UNIQUE NOT NULL,
-  invited_by UUID REFERENCES auth.users(id) NOT NULL,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'expired', 'revoked')),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '7 days')
-);
-
--- Enable RLS
-ALTER TABLE team_invites ENABLE ROW LEVEL SECURITY;
-
--- Invite policies
+-- TEAM INVITES POLICIES
 CREATE POLICY "Team owners/admins can view invites" ON team_invites
   FOR SELECT USING (
     team_id IN (
@@ -137,29 +155,7 @@ CREATE POLICY "Team owners/admins can delete invites" ON team_invites
 CREATE POLICY "Anyone can view invite by token" ON team_invites
   FOR SELECT USING (true);
 
--- ============================================
--- PROJECT SHARES TABLE
--- ============================================
-CREATE TABLE IF NOT EXISTS project_shares (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  project_id UUID REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
-  team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
-  shared_with_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL CHECK (role IN ('viewer', 'commenter', 'editor', 'co_owner')),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  -- Either team_id or shared_with_user_id must be set, but not both
-  CONSTRAINT share_target_check CHECK (
-    (team_id IS NOT NULL AND shared_with_user_id IS NULL) OR
-    (team_id IS NULL AND shared_with_user_id IS NOT NULL)
-  ),
-  UNIQUE(project_id, team_id),
-  UNIQUE(project_id, shared_with_user_id)
-);
-
--- Enable RLS
-ALTER TABLE project_shares ENABLE ROW LEVEL SECURITY;
-
--- Project share policies
+-- PROJECT SHARES POLICIES
 CREATE POLICY "Users can view shares for their projects or shares with them" ON project_shares
   FOR SELECT USING (
     project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()) OR
@@ -183,17 +179,14 @@ CREATE POLICY "Project owners can delete shares" ON project_shares
   );
 
 -- ============================================
--- PROFILE UPDATES (user_profiles table)
+-- STEP 4: PROFILE UPDATES (user_profiles table)
 -- ============================================
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS team_mode_enabled BOOLEAN DEFAULT FALSE;
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS default_team_id UUID REFERENCES teams(id) ON DELETE SET NULL;
-
--- Email settings for sending invites (SMTP config)
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS email_settings JSONB DEFAULT '{}'::jsonb;
--- Structure: { smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, imap_user, imap_pass }
 
 -- ============================================
--- INDEXES
+-- STEP 5: INDEXES
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_teams_owner_id ON teams(owner_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_team_id ON team_members(team_id);
@@ -206,7 +199,7 @@ CREATE INDEX IF NOT EXISTS idx_project_shares_team_id ON project_shares(team_id)
 CREATE INDEX IF NOT EXISTS idx_project_shares_user_id ON project_shares(shared_with_user_id);
 
 -- ============================================
--- HELPER FUNCTION: Generate short invite token
+-- STEP 6: HELPER FUNCTION - Generate short invite token
 -- ============================================
 CREATE OR REPLACE FUNCTION generate_invite_token(length INTEGER DEFAULT 8)
 RETURNS TEXT AS $$
@@ -223,7 +216,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================
--- TRIGGER: Auto-add owner as team member
+-- STEP 7: TRIGGER - Auto-add owner as team member
 -- ============================================
 CREATE OR REPLACE FUNCTION add_owner_as_member()
 RETURNS TRIGGER AS $$
@@ -234,13 +227,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Drop trigger if exists before creating
+DROP TRIGGER IF EXISTS trigger_add_owner_as_member ON teams;
 CREATE TRIGGER trigger_add_owner_as_member
   AFTER INSERT ON teams
   FOR EACH ROW
   EXECUTE FUNCTION add_owner_as_member();
 
 -- ============================================
--- TRIGGER: Update team updated_at
+-- STEP 8: TRIGGER - Update team timestamp
 -- ============================================
 CREATE OR REPLACE FUNCTION update_team_timestamp()
 RETURNS TRIGGER AS $$
@@ -250,6 +245,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Drop trigger if exists before creating
+DROP TRIGGER IF EXISTS trigger_update_team_timestamp ON teams;
 CREATE TRIGGER trigger_update_team_timestamp
   BEFORE UPDATE ON teams
   FOR EACH ROW
