@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '../useTheme';
@@ -33,6 +33,56 @@ export default function AgileDashboard({
 }: AgileDashboardProps) {
   const theme = useTheme();
   const [insightsExpanded, setInsightsExpanded] = useState(true);
+  
+  // Drag and drop state (web only)
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [dragOverPhase, setDragOverPhase] = useState<ProjectPhase | null>(null);
+
+  // Web drag handlers
+  const handleDragStart = useCallback((e: any, taskId: string) => {
+    if (Platform.OS !== 'web') return;
+    setDraggedTaskId(taskId);
+    // Set drag data
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', taskId);
+    }
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedTaskId(null);
+    setDragOverPhase(null);
+  }, []);
+
+  const handleDragOver = useCallback((e: any, phase: ProjectPhase) => {
+    if (Platform.OS !== 'web') return;
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
+    setDragOverPhase(phase);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverPhase(null);
+  }, []);
+
+  const handleDrop = useCallback(async (e: any, targetPhase: ProjectPhase) => {
+    if (Platform.OS !== 'web') return;
+    e.preventDefault();
+    
+    const taskId = draggedTaskId || (e.dataTransfer?.getData('text/plain'));
+    if (taskId && onTaskPhaseChange) {
+      try {
+        await onTaskPhaseChange(taskId, targetPhase);
+      } catch (error) {
+        console.error('Error changing task phase:', error);
+      }
+    }
+    
+    setDraggedTaskId(null);
+    setDragOverPhase(null);
+  }, [draggedTaskId, onTaskPhaseChange]);
   
   // Calculate task counts by phase
   const getTasksByPhase = (phase: ProjectPhase) => {
@@ -178,15 +228,11 @@ export default function AgileDashboard({
             {AGILE_PHASES.map((phase) => {
               const phaseTasks = getTasksByPhase(phase);
               const config = PHASE_CONFIG[phase];
+              const isDragOver = dragOverPhase === phase;
               
-              return (
-                <View 
-                  key={phase} 
-                  style={[
-                    styles.kanbanLane, 
-                    { backgroundColor: config.bgColor + '40' }
-                  ]}
-                >
+              // Web-specific lane wrapper with drop zone
+              const laneContent = (
+                <>
                   {/* Lane Header */}
                   <View style={[styles.laneHeader, { borderBottomColor: config.color + '30' }]}>
                     <View style={[styles.laneColorBar, { backgroundColor: config.color }]} />
@@ -205,10 +251,20 @@ export default function AgileDashboard({
                     nestedScrollEnabled
                   >
                     {phaseTasks.length === 0 ? (
-                      <View style={styles.emptyLane}>
-                        <FontAwesome name="inbox" size={24} color={theme.textTertiary} />
-                        <Text style={[styles.emptyLaneText, { color: theme.textTertiary }]}>
-                          No tasks
+                      <View style={[
+                        styles.emptyLane,
+                        isDragOver && styles.emptyLaneDragOver
+                      ]}>
+                        <FontAwesome 
+                          name={isDragOver ? "arrow-down" : "inbox"} 
+                          size={24} 
+                          color={isDragOver ? config.color : theme.textTertiary} 
+                        />
+                        <Text style={[
+                          styles.emptyLaneText, 
+                          { color: isDragOver ? config.color : theme.textTertiary }
+                        ]}>
+                          {isDragOver ? 'Drop here' : 'No tasks'}
                         </Text>
                       </View>
                     ) : (
@@ -222,23 +278,30 @@ export default function AgileDashboard({
                         };
                         const priorityColor = priorityColors[priority as keyof typeof priorityColors] || priorityColors[1];
                         const isBlocked = task.status === 'blocked';
+                        const isDragging = draggedTaskId === task.id;
 
-                        return (
-                          <TouchableOpacity
-                            key={task.id}
-                            style={[
-                              styles.taskCard,
-                              { 
-                                backgroundColor: theme.surface,
-                                borderColor: isBlocked ? '#EF4444' : theme.border,
-                                borderWidth: isBlocked ? 2 : 1,
-                              }
-                            ]}
-                            onPress={() => onTaskClick?.(task)}
-                            activeOpacity={0.7}
-                          >
+                        // Task card with drag support for web
+                        const taskCardStyle = [
+                          styles.taskCard,
+                          { 
+                            backgroundColor: theme.surface,
+                            borderColor: isBlocked ? '#EF4444' : theme.border,
+                            borderWidth: isBlocked ? 2 : 1,
+                          },
+                          isDragging && styles.taskCardDragging,
+                        ];
+
+                        const taskCardContent = (
+                          <>
                             {/* Priority indicator */}
                             <View style={[styles.taskPriorityBar, { backgroundColor: priorityColor }]} />
+                            
+                            {/* Drag handle for web */}
+                            {isWeb && onTaskPhaseChange && (
+                              <View style={styles.dragHandle}>
+                                <FontAwesome name="ellipsis-v" size={12} color={theme.textTertiary} />
+                              </View>
+                            )}
                             
                             {/* Task content */}
                             <View style={styles.taskContent}>
@@ -264,11 +327,77 @@ export default function AgileDashboard({
                                 )}
                               </View>
                             </View>
+                          </>
+                        );
+
+                        // Web: Use div with drag events
+                        if (isWeb && onTaskPhaseChange) {
+                          return (
+                            <div
+                              key={task.id}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, task.id)}
+                              onDragEnd={handleDragEnd}
+                              onClick={() => onTaskClick?.(task)}
+                              style={{ cursor: 'grab' }}
+                            >
+                              <View style={taskCardStyle}>
+                                {taskCardContent}
+                              </View>
+                            </div>
+                          );
+                        }
+
+                        // Mobile: Regular TouchableOpacity
+                        return (
+                          <TouchableOpacity
+                            key={task.id}
+                            style={taskCardStyle}
+                            onPress={() => onTaskClick?.(task)}
+                            activeOpacity={0.7}
+                          >
+                            {taskCardContent}
                           </TouchableOpacity>
                         );
                       })
                     )}
                   </ScrollView>
+                </>
+              );
+
+              // Web: Wrap lane in drop zone div
+              if (isWeb && onTaskPhaseChange) {
+                return (
+                  <div
+                    key={phase}
+                    onDragOver={(e) => handleDragOver(e, phase)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, phase)}
+                    style={{ display: 'flex' }}
+                  >
+                    <View 
+                      style={[
+                        styles.kanbanLane, 
+                        { backgroundColor: config.bgColor + '40' },
+                        isDragOver && [styles.kanbanLaneDragOver, { borderColor: config.color }]
+                      ]}
+                    >
+                      {laneContent}
+                    </View>
+                  </div>
+                );
+              }
+
+              // Mobile: Regular View
+              return (
+                <View 
+                  key={phase} 
+                  style={[
+                    styles.kanbanLane, 
+                    { backgroundColor: config.bgColor + '40' }
+                  ]}
+                >
+                  {laneContent}
                 </View>
               );
             })}
@@ -478,6 +607,12 @@ const styles = StyleSheet.create({
     minHeight: 400,
     borderRadius: 10,
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  kanbanLaneDragOver: {
+    borderStyle: 'dashed',
+    transform: [{ scale: 1.02 }],
   },
   laneHeader: {
     flexDirection: 'row',
@@ -516,6 +651,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 40,
     gap: 8,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    margin: 4,
+  },
+  emptyLaneDragOver: {
+    borderColor: 'currentColor',
+    borderStyle: 'dashed',
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
   },
   emptyLaneText: {
     fontSize: 13,
@@ -531,8 +675,21 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
+  taskCardDragging: {
+    opacity: 0.5,
+    transform: [{ scale: 1.02 }],
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
   taskPriorityBar: {
     height: 3,
+  },
+  dragHandle: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 4,
+    opacity: 0.5,
   },
   taskContent: {
     padding: 12,
