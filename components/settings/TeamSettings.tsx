@@ -26,6 +26,7 @@ export default function TeamSettings({ onCreateTeam, onManageTeam }: TeamSetting
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamNote, setNewTeamNote] = useState('');
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   
   // Email settings state
   const [emailSettings, setEmailSettings] = useState<EmailSettings>({});
@@ -73,6 +74,7 @@ export default function TeamSettings({ onCreateTeam, onManageTeam }: TeamSetting
   const handleCreateTeam = async () => {
     if (!user?.id || !newTeamName.trim()) return;
     setCreating(true);
+    setCreateError(null);
     try {
       const { createTeam } = useTeamStore.getState();
       const team = await createTeam(newTeamName.trim(), newTeamNote.trim() || undefined, user.id);
@@ -82,9 +84,12 @@ export default function TeamSettings({ onCreateTeam, onManageTeam }: TeamSetting
         setNewTeamName('');
         setNewTeamNote('');
         await fetchTeams(user.id);
+      } else {
+        setCreateError('Failed to create team. Please check console for details.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating team:', error);
+      setCreateError(error?.message || 'Failed to create team. Make sure the database migration has been run.');
     } finally {
       setCreating(false);
     }
@@ -216,18 +221,24 @@ export default function TeamSettings({ onCreateTeam, onManageTeam }: TeamSetting
         visible={showCreateTeam}
         animationType="fade"
         transparent
-        onRequestClose={() => setShowCreateTeam(false)}
+        onRequestClose={() => { setShowCreateTeam(false); setCreateError(null); }}
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
             <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>Create Team</Text>
-              <TouchableOpacity onPress={() => setShowCreateTeam(false)}>
+              <TouchableOpacity onPress={() => { setShowCreateTeam(false); setCreateError(null); }}>
                 <FontAwesome name="times" size={20} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.modalBody}>
+              {createError && (
+                <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2', borderColor: '#EF4444' }]}>
+                  <FontAwesome name="exclamation-circle" size={14} color="#EF4444" />
+                  <Text style={styles.errorText}>{createError}</Text>
+                </View>
+              )}
               <Input
                 label="Team Name"
                 value={newTeamName}
@@ -248,7 +259,7 @@ export default function TeamSettings({ onCreateTeam, onManageTeam }: TeamSetting
               <Button
                 title="Cancel"
                 variant="secondary"
-                onPress={() => setShowCreateTeam(false)}
+                onPress={() => { setShowCreateTeam(false); setCreateError(null); }}
               />
               <Button
                 title="Create Team"
@@ -566,6 +577,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    ...(Platform.OS === 'web' ? { zIndex: 9999 } : {}),
+  } as any,
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 13,
+    flex: 1,
   },
   modalContent: {
     width: Platform.OS === 'web' ? 400 : '90%',

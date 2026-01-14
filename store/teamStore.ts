@@ -138,7 +138,7 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
       const { data: userData } = await supabase.auth.getUser();
       const ownerId = userId || userData?.user?.id;
 
-      if (!ownerId) throw new Error('No user ID');
+      if (!ownerId) throw new Error('No user ID available');
 
       const { data, error } = await supabase
         .from('teams')
@@ -150,7 +150,13 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Check for common errors and provide helpful messages
+        if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+          throw new Error('Database not set up. Please run the team collaboration migration in Supabase.');
+        }
+        throw new Error(error.message || 'Failed to create team');
+      }
 
       const newTeam: Team = {
         id: data.id,
@@ -163,9 +169,10 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
 
       set((state) => ({ teams: [newTeam, ...state.teams] }));
       return newTeam;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating team:', error);
-      return null;
+      // Re-throw the error so callers can handle it
+      throw error;
     }
   },
 

@@ -150,13 +150,6 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* Team & Collaboration Settings */}
-          <TeamSettings
-            onManageTeam={() => {
-              router.push('/team');
-            }}
-          />
-
           {/* Social Links */}
           {profile?.social_links && Object.keys(profile.social_links).length > 0 && (
             <View style={[styles.section, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}>
@@ -169,6 +162,15 @@ export default function ProfileScreen() {
               ))}
             </View>
           )}
+          </View>
+          
+          {/* Team & Collaboration Settings - Outside profileBox for better modal rendering */}
+          <View style={Platform.OS === 'web' ? { width: '100%', maxWidth: 900, alignSelf: 'center' } : undefined}>
+            <TeamSettings
+              onManageTeam={() => {
+                router.push('/team');
+              }}
+            />
           </View>
         </ScrollView>
       )}
