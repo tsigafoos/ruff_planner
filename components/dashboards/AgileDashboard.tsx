@@ -519,40 +519,140 @@ export default function AgileDashboard({
 
         {insightsExpanded && (
           <View style={styles.insightsContent}>
-            {/* Burndown Chart */}
+            {/* Enhanced Burndown Chart */}
             <View style={styles.insightCard}>
-              <Text style={[styles.insightCardTitle, { color: theme.text }]}>Sprint Burndown</Text>
-              <View style={styles.burndownChart}>
-                <View style={styles.burndownBars}>
-                  {Array.from({ length: sprintDays }).map((_, idx) => {
-                    const idealRemaining = Math.max(0, totalTasks - (idealPerDay * (idx + 1)));
-                    const actualRemaining = Math.max(0, totalTasks - (idealPerDay * (idx + 1) * 0.9)); // Simulated
-                    const maxHeight = 80;
-                    const idealHeight = (idealRemaining / Math.max(totalTasks, 1)) * maxHeight;
-                    const actualHeight = (actualRemaining / Math.max(totalTasks, 1)) * maxHeight;
-                    
-                    return (
-                      <View key={idx} style={styles.burndownDay}>
-                        <View style={styles.burndownBarGroup}>
-                          <View style={[styles.burndownBar, styles.burndownIdeal, { height: idealHeight }]} />
-                          <View style={[styles.burndownBar, styles.burndownActual, { height: actualHeight }]} />
-                        </View>
-                        {idx % 3 === 0 && (
-                          <Text style={[styles.burndownLabel, { color: theme.textTertiary }]}>D{idx + 1}</Text>
-                        )}
-                      </View>
-                    );
-                  })}
+              <View style={styles.burndownHeader}>
+                <Text style={[styles.insightCardTitle, { color: theme.text }]}>Sprint Burndown</Text>
+                {/* Status indicator */}
+                <View style={[
+                  styles.burndownStatus,
+                  { 
+                    backgroundColor: incompleteTasks.length <= (totalTasks * (1 - completionRate/100) * 1.1) 
+                      ? '#10B98120' 
+                      : '#F59E0B20' 
+                  }
+                ]}>
+                  <FontAwesome 
+                    name={incompleteTasks.length <= (totalTasks * (1 - completionRate/100) * 1.1) ? "check" : "exclamation"} 
+                    size={10} 
+                    color={incompleteTasks.length <= (totalTasks * (1 - completionRate/100) * 1.1) ? '#10B981' : '#F59E0B'} 
+                  />
+                  <Text style={[
+                    styles.burndownStatusText,
+                    { color: incompleteTasks.length <= (totalTasks * (1 - completionRate/100) * 1.1) ? '#10B981' : '#F59E0B' }
+                  ]}>
+                    {incompleteTasks.length <= (totalTasks * (1 - completionRate/100) * 1.1) ? 'On Track' : 'Behind'}
+                  </Text>
                 </View>
-                <View style={styles.burndownLegend}>
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: '#9CA3AF' }]} />
-                    <Text style={[styles.legendText, { color: theme.textSecondary }]}>Ideal</Text>
+              </View>
+              
+              {/* Summary stats */}
+              <View style={styles.burndownSummary}>
+                <View style={styles.burndownStat}>
+                  <Text style={[styles.burndownStatValue, { color: theme.text }]}>{totalTasks}</Text>
+                  <Text style={[styles.burndownStatLabel, { color: theme.textSecondary }]}>Total</Text>
+                </View>
+                <View style={styles.burndownStatDivider} />
+                <View style={styles.burndownStat}>
+                  <Text style={[styles.burndownStatValue, { color: '#10B981' }]}>{completedCount}</Text>
+                  <Text style={[styles.burndownStatLabel, { color: theme.textSecondary }]}>Done</Text>
+                </View>
+                <View style={styles.burndownStatDivider} />
+                <View style={styles.burndownStat}>
+                  <Text style={[styles.burndownStatValue, { color: theme.primary }]}>{incompleteTasks.length}</Text>
+                  <Text style={[styles.burndownStatLabel, { color: theme.textSecondary }]}>Remaining</Text>
+                </View>
+              </View>
+
+              {/* Chart area */}
+              <View style={styles.burndownChart}>
+                {/* Y-axis labels */}
+                <View style={styles.burndownYAxis}>
+                  <Text style={[styles.burndownAxisLabel, { color: theme.textTertiary }]}>{totalTasks}</Text>
+                  <Text style={[styles.burndownAxisLabel, { color: theme.textTertiary }]}>{Math.round(totalTasks/2)}</Text>
+                  <Text style={[styles.burndownAxisLabel, { color: theme.textTertiary }]}>0</Text>
+                </View>
+
+                {/* Chart content */}
+                <View style={styles.burndownChartContent}>
+                  {/* Grid lines */}
+                  <View style={[styles.burndownGridLine, { top: '0%', borderColor: theme.border }]} />
+                  <View style={[styles.burndownGridLine, { top: '50%', borderColor: theme.border }]} />
+                  <View style={[styles.burndownGridLine, { top: '100%', borderColor: theme.border }]} />
+
+                  {/* Bars */}
+                  <View style={styles.burndownBars}>
+                    {Array.from({ length: sprintDays }).map((_, idx) => {
+                      const dayProgress = (idx + 1) / sprintDays;
+                      const idealRemaining = Math.max(0, totalTasks * (1 - dayProgress));
+                      const actualProgress = completionRate / 100;
+                      // Simulate actual based on current progress
+                      const simulatedActual = idx < sprintDays * 0.5 
+                        ? totalTasks * (1 - (actualProgress * (idx + 1) / (sprintDays * 0.5)))
+                        : incompleteTasks.length;
+                      const actualRemaining = idx < sprintDays * actualProgress * 1.2 
+                        ? Math.max(0, simulatedActual)
+                        : incompleteTasks.length;
+                      
+                      const chartHeight = 100;
+                      const idealHeight = (idealRemaining / Math.max(totalTasks, 1)) * chartHeight;
+                      const actualHeight = (actualRemaining / Math.max(totalTasks, 1)) * chartHeight;
+                      
+                      // Determine if this is "today" (roughly based on progress)
+                      const isToday = idx === Math.floor(sprintDays * Math.min(0.9, actualProgress + 0.3));
+                      
+                      return (
+                        <View key={idx} style={styles.burndownDay}>
+                          <View style={styles.burndownBarGroup}>
+                            {/* Ideal line marker */}
+                            <View 
+                              style={[
+                                styles.burndownIdealMarker, 
+                                { bottom: `${idealHeight}%`, backgroundColor: '#9CA3AF' }
+                              ]} 
+                            />
+                            {/* Actual bar (area) */}
+                            <View 
+                              style={[
+                                styles.burndownActualBar, 
+                                { 
+                                  height: `${actualHeight}%`,
+                                  backgroundColor: actualHeight > idealHeight ? '#EF444440' : '#3B82F640',
+                                }
+                              ]} 
+                            />
+                            {/* Today marker */}
+                            {isToday && (
+                              <View style={[styles.burndownTodayLine, { backgroundColor: theme.primary }]} />
+                            )}
+                          </View>
+                        </View>
+                      );
+                    })}
                   </View>
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: theme.primary }]} />
-                    <Text style={[styles.legendText, { color: theme.textSecondary }]}>Actual</Text>
+
+                  {/* X-axis labels */}
+                  <View style={styles.burndownXAxis}>
+                    <Text style={[styles.burndownAxisLabel, { color: theme.textTertiary }]}>Day 1</Text>
+                    <Text style={[styles.burndownAxisLabel, { color: theme.textTertiary }]}>Day 7</Text>
+                    <Text style={[styles.burndownAxisLabel, { color: theme.textTertiary }]}>Day 14</Text>
                   </View>
+                </View>
+              </View>
+
+              {/* Legend */}
+              <View style={styles.burndownLegend}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendLine, { backgroundColor: '#9CA3AF' }]} />
+                  <Text style={[styles.legendText, { color: theme.textSecondary }]}>Ideal Burndown</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} />
+                  <Text style={[styles.legendText, { color: theme.textSecondary }]}>On/Ahead</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
+                  <Text style={[styles.legendText, { color: theme.textSecondary }]}>Behind</Text>
                 </View>
               </View>
             </View>
@@ -881,53 +981,133 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   insightCard: {
-    marginBottom: 8,
+    marginBottom: 16,
   },
   insightCardTitle: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  burndownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
   },
+  burndownStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  burndownStatusText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  burndownSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(128, 128, 128, 0.05)',
+    borderRadius: 8,
+  },
+  burndownStat: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  burndownStatValue: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  burndownStatLabel: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  burndownStatDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: 'rgba(128, 128, 128, 0.2)',
+  },
   burndownChart: {
-    marginTop: 8,
+    flexDirection: 'row',
+    height: 120,
+  },
+  burndownYAxis: {
+    width: 30,
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingRight: 8,
+  },
+  burndownAxisLabel: {
+    fontSize: 10,
+  },
+  burndownChartContent: {
+    flex: 1,
+    position: 'relative',
+  },
+  burndownGridLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+    borderTopWidth: 1,
+    borderStyle: 'dashed',
   },
   burndownBars: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    height: 100,
-    gap: 4,
+    height: '100%',
+    gap: 2,
   },
   burndownDay: {
     flex: 1,
-    alignItems: 'center',
+    height: '100%',
   },
   burndownBarGroup: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 2,
     flex: 1,
+    position: 'relative',
   },
-  burndownBar: {
-    width: 6,
+  burndownIdealMarker: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 3,
+    borderRadius: 1.5,
+  },
+  burndownActualBar: {
+    position: 'absolute',
+    left: 2,
+    right: 2,
+    bottom: 0,
     borderRadius: 2,
-    minHeight: 4,
   },
-  burndownIdeal: {
-    backgroundColor: '#9CA3AF',
-    opacity: 0.4,
+  burndownTodayLine: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: '50%',
+    width: 2,
+    marginLeft: -1,
   },
-  burndownActual: {
-    backgroundColor: '#3B82F6',
-  },
-  burndownLabel: {
-    fontSize: 9,
-    marginTop: 4,
+  burndownXAxis: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
   },
   burndownLegend: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 16,
-    marginTop: 12,
+    marginTop: 16,
+    flexWrap: 'wrap',
+  },
+  legendLine: {
+    width: 16,
+    height: 3,
+    borderRadius: 1.5,
   },
   legendItem: {
     flexDirection: 'row',
