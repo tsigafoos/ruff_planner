@@ -14,7 +14,7 @@ import { useTaskStore } from '@/store/taskStore';
 import { useThemeStore } from '@/store/themeStore';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
@@ -59,6 +59,11 @@ export default function ProjectDetailScreen() {
   const [newTaskFormVisible, setNewTaskFormVisible] = useState(false);
   const [projectFormVisible, setProjectFormVisible] = useState(false);
   const [resourcesVisible, setResourcesVisible] = useState(false);
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [dragOverLane, setDragOverLane] = useState<TaskStatus | null>(null);
+  const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
+  const laneRefs = useRef<{ [key: string]: View | null }>({});
   const theme = useTheme();
   const { resolvedTheme } = useThemeStore();
   // Detect dark mode by checking if background is dark
@@ -169,6 +174,107 @@ export default function ProjectDetailScreen() {
     }
   };
 
+  // Drag and drop handlers using touch/mouse events
+  const handleDragStart = (taskId: string, e: any) => {
+    const x = Platform.OS === 'web' ? e.clientX : e.nativeEvent.pageX;
+    const y = Platform.OS === 'web' ? e.clientY : e.nativeEvent.pageY;
+    dragStartPos.current = { x, y };
+    setDraggedTaskId(taskId);
+    setDragPosition({ x, y });
+  };
+
+  const handleDragMove = (e: any) => {
+    if (!draggedTaskId) return;
+    
+    const x = Platform.OS === 'web' ? e.clientX : e.nativeEvent.pageX;
+    const y = Platform.OS === 'web' ? e.clientY : e.nativeEvent.pageY;
+    setDragPosition({ x, y });
+
+    // Check which lane we're over by measuring positions
+    if (Platform.OS === 'web') {
+      const element = document.elementFromPoint(x, y);
+      if (element) {
+        // Find the lane by traversing up the DOM tree
+        let current: Element | null = element;
+        while (current) {
+          const laneKey = current.getAttribute('data-lane-key');
+          if (laneKey && STATUS_LANES.some(l => l.key === laneKey)) {
+            setDragOverLane(laneKey as TaskStatus);
+            return;
+          }
+          current = current.parentElement;
+        }
+      }
+    } else {
+      // For native, check which lane ref contains the point
+      Object.keys(laneRefs.current).forEach((laneKey) => {
+        const laneRef = laneRefs.current[laneKey];
+        if (laneRef) {
+          laneRef.measure((fx, fy, width, height, px, py) => {
+            if (x >= px && x <= px + width && y >= py && y <= py + height) {
+              setDragOverLane(laneKey as TaskStatus);
+            }
+          });
+        }
+      });
+    }
+  };
+
+  const handleDragEnd = async () => {
+    if (!draggedTaskId || !user?.id || !dragOverLane) {
+      setDraggedTaskId(null);
+      setDragOverLane(null);
+      setDragPosition(null);
+      dragStartPos.current = null;
+      return;
+    }
+
+    const currentStatus = getTaskStatus(tasks.find(t => t.id === draggedTaskId) || {});
+    if (currentStatus === dragOverLane) {
+      setDraggedTaskId(null);
+      setDragOverLane(null);
+      setDragPosition(null);
+      dragStartPos.current = null;
+      return;
+    }
+
+    try {
+      await updateTask(draggedTaskId, {
+        status: dragOverLane,
+        completed: dragOverLane === 'completed',
+      });
+      if (id) fetchTasksByProject(id, user.id);
+    } catch (error) {
+      console.error('Error updating task status:', error);
+    } finally {
+      setDraggedTaskId(null);
+      setDragOverLane(null);
+      setDragPosition(null);
+      dragStartPos.current = null;
+    }
+  };
+
+  // Set up global mouse/touch move and end handlers for web
+  useEffect(() => {
+    if (Platform.OS === 'web' && draggedTaskId) {
+      const handleMouseMove = (e: MouseEvent) => {
+        handleDragMove(e);
+      };
+
+      const handleMouseUp = () => {
+        handleDragEnd();
+      };
+
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [draggedTaskId, dragOverLane, tasks, user?.id, id]);
+
   if (!project) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -196,7 +302,7 @@ export default function ProjectDetailScreen() {
       
       <ScrollView 
         horizontal 
-        showsHorizontalScrollIndicator={false}
+        showsHorizontalScrollIndicator={true}
         style={styles.lanesContainer}
         contentContainerStyle={styles.lanesContent}
       >
@@ -204,14 +310,24 @@ export default function ProjectDetailScreen() {
           const laneTasks = tasksByStatus[lane.key] || [];
           const laneColors = isDark ? DARK_LANE_COLORS[index] : LIGHT_LANE_COLORS[index];
           
+          const isDragOver = dragOverLane === lane.key;
           return (
             <View 
-              key={lane.key} 
+              key={lane.key}
+              ref={(ref) => {
+                laneRefs.current[lane.key] = ref;
+              }}
+              {...(Platform.OS === 'web' ? {
+                // @ts-ignore - data attributes for web
+                'data-lane-key': lane.key,
+              } : {})}
               style={[
                 styles.lane, 
                 { 
                   backgroundColor: laneColors.background,
-                  borderColor: laneColors.stroke,
+                  borderColor: isDragOver ? theme.primary : laneColors.stroke,
+                  borderWidth: isDragOver ? 2 : 1,
+                  opacity: draggedTaskId && dragOverLane !== lane.key ? 0.5 : 1,
                 }
               ]}
             >
@@ -227,14 +343,44 @@ export default function ProjectDetailScreen() {
                 nestedScrollEnabled={true}
               >
                 {laneTasks.length > 0 ? (
-                  laneTasks.map((task: any) => (
-                    <View key={task.id} style={styles.laneTaskWrapper}>
-                      <TaskCard
-                        task={task}
-                        onPress={() => handleEditTask(task)}
-                      />
-                    </View>
-                  ))
+                  laneTasks.map((task: any) => {
+                    const isDragging = draggedTaskId === task.id;
+                    return (
+                      <View 
+                        key={task.id} 
+                        style={[
+                          styles.laneTaskWrapper,
+                          isDragging && styles.laneTaskWrapperDragging,
+                          Platform.OS === 'web' && (isDragging ? styles.laneTaskWrapperGrabbing : styles.laneTaskWrapperGrab),
+                        ] as any}
+                        onStartShouldSetResponder={() => !isDragging}
+                        onMoveShouldSetResponder={() => !isDragging}
+                        onResponderGrant={(e) => {
+                          if (!isDragging) {
+                            handleDragStart(task.id, e);
+                          }
+                        }}
+                        onResponderMove={handleDragMove}
+                        onResponderRelease={handleDragEnd}
+                        {...(Platform.OS === 'web' ? {
+                          onMouseDown: (e: any) => {
+                            if (!isDragging) {
+                              handleDragStart(task.id, e);
+                            }
+                          },
+                        } : {})}
+                      >
+                        <TaskCard
+                          task={task}
+                          onPress={() => {
+                            if (!draggedTaskId) {
+                              handleEditTask(task);
+                            }
+                          }}
+                        />
+                      </View>
+                    );
+                  })
                 ) : (
                   <View style={styles.laneEmpty}>
                     <Text style={[styles.laneEmptyText, { color: isDark ? theme.textTertiary : '#717171' }]}>No tasks</Text>
@@ -543,6 +689,21 @@ const styles = StyleSheet.create({
   laneTaskWrapper: {
     marginBottom: 8,
   },
+  laneTaskWrapperDragging: {
+    opacity: 0.5,
+  },
+  laneTaskWrapperGrab: Platform.select({
+    web: {
+      cursor: 'grab',
+    },
+    default: {},
+  }),
+  laneTaskWrapperGrabbing: Platform.select({
+    web: {
+      cursor: 'grabbing',
+    },
+    default: {},
+  }),
   laneEmpty: {
     padding: 20,
     alignItems: 'center',
