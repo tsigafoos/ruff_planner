@@ -13,29 +13,29 @@ This plan follows the energy-based, short sprint approach discussed. Each phase 
 
 ---
 
-## Phase 1: Data Model Update (Foundation)
+## Phase 1: Data Model Update (Foundation) ✅ COMPLETE
 
 > **Goal:** Add `project_phase` field to enable Agile Kanban lanes without breaking Waterfall
 
-### Step 1.1: Database Migration
-- [ ] Create `supabase-project-phase-migration.sql` with:
+### Step 1.1: Database Migration ✅
+- [x] Create `supabase-project-phase-migration.sql` with:
   - Add `project_phase` column to `tasks` table (nullable string/enum)
   - Values: `brainstorm`, `design`, `logic`, `polish`, `done`, or `NULL`
   - Only used when `project_type = 'agile'`
 
-### Step 1.2: Update TypeScript Types
-- [ ] Update `types/index.ts` - Add `projectPhase` to Task interface
-- [ ] Update `lib/db/schema.ts` - Add project_phase to WatermelonDB schema
-- [ ] Update `lib/db/models/Task.ts` - Add projectPhase field
+### Step 1.2: Update TypeScript Types ✅
+- [x] Update `types/index.ts` - Add `projectPhase` to Task interface
+- [x] Update `lib/db/schema.ts` - Add project_phase to WatermelonDB schema
+- [x] Update `lib/db/models/Task.ts` - Add projectPhase field
 
-### Step 1.3: Update Task Store
-- [ ] Update `store/taskStore.ts`:
+### Step 1.3: Update Task Store ✅
+- [x] Update `store/taskStore.ts`:
   - Handle `project_phase` in createTask
   - Handle `project_phase` in updateTask
   - Add `updateTaskPhase()` helper for Kanban drag
 
-### Step 1.4: Update Task Form
-- [ ] Update `components/TaskForm.tsx`:
+### Step 1.4: Update Task Form ✅
+- [x] Update `components/TaskForm.tsx`:
   - Show phase picker only for Agile projects
   - Default to `brainstorm` when creating task in Agile project
 
