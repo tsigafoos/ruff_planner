@@ -115,30 +115,36 @@ This plan follows the energy-based, short sprint approach discussed. Each phase 
 
 ---
 
-## Phase 4: Resources Enhancement
+## Phase 4: Resources Enhancement ✅ COMPLETE
 
 > **Goal:** Global user resources with tagging (not per-project)
 
-### Step 4.1: Evaluate Current Resources
-- [ ] Review `components/resources/ResourcesView.tsx`
-- [ ] Review `components/resources/ResourceCreator.tsx`
-- [ ] Identify what needs to change for global approach
+### Step 4.1: Evaluate Current Resources ✅
+- [x] Review `components/resources/ResourcesView.tsx`
+- [x] Review `components/resources/ResourceCreator.tsx`
+- [x] Identify what needs to change for global approach
 
-### Step 4.2: Update Resource Model (if needed)
-- [ ] Resources should be user-scoped (not project-scoped)
-- [ ] Add tags field (array of strings)
-- [ ] Allow linking resources to multiple projects/tasks
+### Step 4.2: Update Resource Model ✅
+- [x] Resources already user-scoped (via user_id in storage paths)
+- [x] Add tags field (array of strings)
+- [x] Add created_at timestamp
 
-### Step 4.3: Resource Tagging UI
-- [ ] Add tag input when uploading/creating resources
-- [ ] Tag-based filtering in resource list
-- [ ] Search by tag or filename
+### Step 4.3: Resource Tagging UI ✅
+- [x] Add tag input when creating resources (ResourceCreator)
+- [x] Add tag input when uploading files (Upload modal)
+- [x] Tag-based filtering with multi-select chips
+- [x] Search by tag or filename
+- [x] Edit tags on existing resources via modal
+- [x] Suggested tags from existing resources
+- [x] Results count when filtering
 
-### Step 4.4: Resource Linking
-- [ ] Allow attaching resources to tasks
-- [ ] Allow attaching resources to projects
+### Step 4.4: Resource Linking (Deferred)
+- [ ] Allow attaching resources to tasks (future enhancement)
+- [ ] Allow attaching resources to projects (future enhancement)
 - [ ] Same resource can be attached to multiple items
 - [ ] Show linked resources in task/project views
+
+> **Note:** Resource linking deferred to focus on core features first. Current tagging system provides organization without complex linking.
 
 ---
 
