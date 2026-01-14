@@ -1,17 +1,17 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useTaskStore } from '@/store/taskStore';
-import { useProjectStore } from '@/store/projectStore';
-import { useAuthStore } from '@/store/authStore';
-import { useLabelStore } from '@/store/labelStore';
+import ProjectForm from '@/components/ProjectForm';
 import TaskCard from '@/components/TaskCard';
 import TaskForm from '@/components/TaskForm';
-import ProjectForm from '@/components/ProjectForm';
 import { useTheme } from '@/components/useTheme';
+import { useAuthStore } from '@/store/authStore';
+import { useLabelStore } from '@/store/labelStore';
+import { useProjectStore } from '@/store/projectStore';
+import { useTaskStore } from '@/store/taskStore';
 import { useThemeStore } from '@/store/themeStore';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths } from 'date-fns';
+import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek, subMonths } from 'date-fns';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
 
@@ -21,7 +21,6 @@ const STATUS_LANES: { key: TaskStatus; label: string }[] = [
   { key: 'blocked', label: 'Blocked' },
   { key: 'on_hold', label: 'On Hold' },
   { key: 'completed', label: 'Completed' },
-  { key: 'cancelled', label: 'Cancelled' },
 ];
 
 // Fixed lane colors - Light mode HSL(225, 2%, 95%→70%), Dark mode HSL(225, 2%, 5%→30%)
@@ -207,8 +206,8 @@ export default function DashboardScreen() {
     const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
     return (
-      <View style={[styles.miniCalendar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <View style={[styles.miniCalendarHeader, { borderBottomColor: theme.border }]}>
+      <View style={[styles.miniCalendar, { backgroundColor: theme.surface, borderColor: theme.border }] as any}>
+        <View style={[styles.miniCalendarHeader, { borderBottomColor: theme.border }] as any}>
           <TouchableOpacity onPress={() => setCalendarDate(subMonths(calendarDate, 1))}>
             <FontAwesome name="angle-left" size={14} color={theme.textSecondary} />
           </TouchableOpacity>
@@ -447,7 +446,7 @@ export default function DashboardScreen() {
                     </View>
                   </View>
                   <ScrollView 
-                    style={styles.laneContent}
+                    style={styles.laneContent as ViewStyle}
                     showsVerticalScrollIndicator={true}
                     nestedScrollEnabled={true}
                   >
@@ -471,6 +470,25 @@ export default function DashboardScreen() {
             })}
           </ScrollView>
         )}
+        
+        {/* Cancelled Tasks Bar */}
+        <View style={styles.cancelledBarContainer}>
+          <TouchableOpacity
+            style={[styles.cancelledBar, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}
+            onPress={() => {
+              // TODO: Implement cancelled bar expansion
+            }}
+          >
+            <Text style={[styles.cancelledBarText, { color: theme.text }]}>
+              {(tasksByStatus['cancelled']?.length || 0)} Cancelled Task{(tasksByStatus['cancelled']?.length || 0) !== 1 ? 's' : ''}
+            </Text>
+            <FontAwesome 
+              name="chevron-down" 
+              size={14} 
+              color={theme.textSecondary} 
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Edit Task Form */}
@@ -508,19 +526,24 @@ const styles = StyleSheet.create({
   },
   topSection: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
-    paddingHorizontal: Platform.OS === 'web' ? 40 : 16,
+    paddingLeft: Platform.OS === 'web' ? 40 : 16,
+    paddingRight: Platform.OS === 'web' ? 40 : 16,
     paddingTop: 24,
+    maxWidth: Platform.OS === 'web' ? 1300 : '100%',
     gap: 24,
     alignItems: Platform.OS === 'web' ? 'flex-start' : undefined,
   },
   projectsSection: {
     flex: 1,
+    marginRight: Platform.OS === 'web' ? 24 : 0,
     marginBottom: Platform.OS === 'web' ? 0 : 24,
     maxHeight: Platform.OS === 'web' ? 420 : undefined,
   },
   section: {
     marginBottom: 32,
     paddingHorizontal: Platform.OS === 'web' ? 40 : 16,
+    
+    maxWidth: Platform.OS === 'web' ? 1350 : '100%',
     paddingTop: 24,
   },
   sectionHeader: {
@@ -557,6 +580,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     overflow: 'hidden',
+    alignSelf: Platform.OS === 'web' ? 'flex-end' : undefined,
   },
   miniCalendarHeader: {
     flexDirection: 'row',
@@ -712,8 +736,8 @@ const styles = StyleSheet.create({
     paddingRight: Platform.OS === 'web' ? 40 : 16,
   },
   lane: {
-    width: Platform.OS === 'web' ? 280 : 260,
-    marginRight: 16,
+    width: Platform.OS === 'web' ? 240 : 220,
+    marginRight: 8,
     borderWidth: 1,
     borderRadius: 10,
     maxHeight: Platform.OS === 'web' ? '60vh' : 500,
@@ -744,6 +768,7 @@ const styles = StyleSheet.create({
   },
   laneTaskWrapper: {
     marginBottom: 8,
+    paddingHorizontal: 0,
   },
   laneEmpty: {
     padding: 24,
@@ -771,5 +796,25 @@ const styles = StyleSheet.create({
   emptyButtonText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  cancelledBarContainer: {
+    paddingHorizontal: Platform.OS === 'web' ? 40 : 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  cancelledBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    width: '100%',
+  },
+  cancelledBarText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

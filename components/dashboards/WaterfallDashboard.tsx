@@ -10,9 +10,11 @@ interface WaterfallDashboardProps {
   onTeamClick?: () => void;
   onToolsClick?: () => void;
   onTaskClick?: (task: any) => void;
+  onResourceClick?: () => void;
+  onEditClick?: () => void;
 }
 
-export default function WaterfallDashboard({ project, tasks, onProjectUpdate, onAddTask, onTeamClick, onToolsClick, onTaskClick }: WaterfallDashboardProps) {
+export default function WaterfallDashboard({ project, tasks, onProjectUpdate, onAddTask, onTeamClick, onToolsClick, onTaskClick, onResourceClick, onEditClick }: WaterfallDashboardProps) {
   const theme = useTheme();
   
   // Parse data
@@ -285,6 +287,24 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
         <View style={styles.headerTop}>
           <Text style={[styles.headerTitle, { color: theme.text }]}>Project Details</Text>
           <View style={styles.headerActions}>
+            {onResourceClick && (
+              <TouchableOpacity
+                style={[styles.headerLink, { borderColor: theme.border }]}
+                onPress={onResourceClick}
+              >
+                <FontAwesome name="folder-open" size={14} color={theme.primary} />
+                <Text style={[styles.headerLinkText, { color: theme.primary }]}>Resource</Text>
+              </TouchableOpacity>
+            )}
+            {onEditClick && (
+              <TouchableOpacity
+                style={[styles.headerLink, { borderColor: theme.border }]}
+                onPress={onEditClick}
+              >
+                <FontAwesome name="edit" size={14} color={theme.primary} />
+                <Text style={[styles.headerLinkText, { color: theme.primary }]}>Edit</Text>
+              </TouchableOpacity>
+            )}
             {onTeamClick && (
               <TouchableOpacity
                 style={[styles.headerLink, { borderColor: theme.border }]}

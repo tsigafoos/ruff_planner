@@ -25,7 +25,6 @@ const STATUS_LANES: { key: TaskStatus; label: string }[] = [
   { key: 'blocked', label: 'Blocked' },
   { key: 'on_hold', label: 'On Hold' },
   { key: 'completed', label: 'Completed' },
-  { key: 'cancelled', label: 'Cancelled' },
 ];
 
 // Fixed lane colors - Light mode HSL(225, 2%, 95%→70%), Dark mode HSL(225, 2%, 5%→30%)
@@ -51,7 +50,7 @@ export default function ProjectDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuthStore();
-  const { tasks, loading, fetchTasksByProject, createTask, updateTask, updateTaskPhase, completeTask, deleteTask } = useTaskStore();
+  const { tasks, loading, fetchTasks, fetchTasksByProject, createTask, updateTask, updateTaskPhase, completeTask, deleteTask } = useTaskStore();
   const { projects, fetchProjects, updateProject } = useProjectStore();
   const { labels, fetchLabels } = useLabelStore();
   const [selectedTask, setSelectedTask] = useState<any>(null);
@@ -62,22 +61,35 @@ export default function ProjectDetailScreen() {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverLane, setDragOverLane] = useState<TaskStatus | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
+  const [cancelledExpanded, setCancelledExpanded] = useState(false);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const laneRefs = useRef<{ [key: string]: View | null }>({});
+  const cancelledLaneRef = useRef<View | null>(null);
   const theme = useTheme();
   const { resolvedTheme } = useThemeStore();
   // Detect dark mode by checking if background is dark
   const isDark = theme.background === '#0f0f11' || resolvedTheme === 'dark';
 
   const project = projects.find((p: any) => p.id === id);
+  const isTodoProject = project?.is_default || project?.name === 'To-Do List' || project?.name === 'To-Do';
 
   useEffect(() => {
     if (user?.id && id) {
       fetchProjects(user.id);
       fetchLabels(user.id);
-      fetchTasksByProject(id, user.id);
     }
   }, [user?.id, id]);
+
+  // Fetch tasks - all tasks for todo project, project-specific for others
+  useEffect(() => {
+    if (user?.id && project) {
+      if (isTodoProject) {
+        fetchTasks(user.id);
+      } else {
+        fetchTasksByProject(id, user.id);
+      }
+    }
+  }, [user?.id, id, project, isTodoProject]);
 
   // Derive task status
   const getTaskStatus = (task: any): TaskStatus => {
@@ -93,6 +105,16 @@ export default function ProjectDetailScreen() {
     return acc;
   }, {} as Record<TaskStatus, any[]>);
 
+  // Helper to refresh tasks based on project type
+  const refreshTasks = () => {
+    if (!user?.id) return;
+    if (isTodoProject) {
+      fetchTasks(user.id);
+    } else if (id) {
+      fetchTasksByProject(id, user.id);
+    }
+  };
+
   const handleAddTaskQuick = async (title: string) => {
     if (!user?.id || !id) return;
     try {
@@ -103,7 +125,7 @@ export default function ProjectDetailScreen() {
         priority: 1,
         labelIds: [],
       });
-      fetchTasksByProject(id, user.id);
+      refreshTasks();
     } catch (error) {
       console.error('Error creating task:', error);
     }
@@ -118,7 +140,7 @@ export default function ProjectDetailScreen() {
         projectId: id,
       });
       setNewTaskFormVisible(false);
-      fetchTasksByProject(id, user.id);
+      refreshTasks();
     } catch (error) {
       console.error('Error creating task:', error);
     }
@@ -151,7 +173,7 @@ export default function ProjectDetailScreen() {
       });
       setTaskFormVisible(false);
       setSelectedTask(null);
-      if (id) fetchTasksByProject(id, user.id);
+      refreshTasks();
     } catch (error) {
       console.error('Error updating task:', error);
     }
@@ -188,22 +210,31 @@ export default function ProjectDetailScreen() {
     
     const x = Platform.OS === 'web' ? e.clientX : e.nativeEvent.pageX;
     const y = Platform.OS === 'web' ? e.clientY : e.nativeEvent.pageY;
+    
+    // Validate coordinates are finite numbers
+    if (!isFinite(x) || !isFinite(y)) return;
+    
     setDragPosition({ x, y });
 
     // Check which lane we're over by measuring positions
     if (Platform.OS === 'web') {
-      const element = document.elementFromPoint(x, y);
-      if (element) {
-        // Find the lane by traversing up the DOM tree
-        let current: Element | null = element;
-        while (current) {
-          const laneKey = current.getAttribute('data-lane-key');
-          if (laneKey && STATUS_LANES.some(l => l.key === laneKey)) {
-            setDragOverLane(laneKey as TaskStatus);
-            return;
+      try {
+        const element = document.elementFromPoint(x, y);
+        if (element) {
+          // Find the lane by traversing up the DOM tree
+          let current: Element | null = element;
+          while (current) {
+            const laneKey = current.getAttribute('data-lane-key');
+            if (laneKey && (STATUS_LANES.some(l => l.key === laneKey) || laneKey === 'cancelled')) {
+              setDragOverLane(laneKey as TaskStatus);
+              return;
+            }
+            current = current.parentElement;
           }
-          current = current.parentElement;
         }
+      } catch (error) {
+        // Silently handle elementFromPoint errors
+        console.warn('Error in elementFromPoint:', error);
       }
     } else {
       // For native, check which lane ref contains the point
@@ -243,7 +274,7 @@ export default function ProjectDetailScreen() {
         status: dragOverLane,
         completed: dragOverLane === 'completed',
       });
-      if (id) fetchTasksByProject(id, user.id);
+      refreshTasks();
     } catch (error) {
       console.error('Error updating task status:', error);
     } finally {
@@ -287,23 +318,25 @@ export default function ProjectDetailScreen() {
   const incompleteTasks = tasks.filter((task: any) => !(task.completed_at || task.completedAt));
 
   // Task Lanes Component
-  const renderTaskLanes = () => (
-    <View style={[styles.lanesSection, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-      <View style={styles.lanesSectionHeader}>
-        <Text style={[styles.lanesSectionTitle, { color: theme.text }]}>Task Board</Text>
-        <TouchableOpacity
-          style={[styles.addTaskButton, { backgroundColor: theme.primary }]}
-          onPress={() => setNewTaskFormVisible(true)}
-        >
-          <FontAwesome name="plus" size={12} color="#ffffff" />
-          <Text style={styles.addTaskButtonText}>Add Task</Text>
-        </TouchableOpacity>
-      </View>
+  const renderTaskLanes = (fullScreen: boolean = false) => (
+    <View style={[fullScreen ? styles.lanesSectionFullScreen : styles.lanesSection, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      {!fullScreen && (
+        <View style={styles.lanesSectionHeader}>
+          <Text style={[styles.lanesSectionTitle, { color: theme.text }]}>Task Board</Text>
+          <TouchableOpacity
+            style={[styles.addTaskButton, { backgroundColor: theme.primary }]}
+            onPress={() => setNewTaskFormVisible(true)}
+          >
+            <FontAwesome name="plus" size={12} color="#ffffff" />
+            <Text style={styles.addTaskButtonText}>Add Task</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={true}
-        style={styles.lanesContainer}
+        style={fullScreen ? styles.lanesContainerFullScreen : styles.lanesContainer}
         contentContainerStyle={styles.lanesContent}
       >
         {STATUS_LANES.map((lane, index) => {
@@ -353,22 +386,25 @@ export default function ProjectDetailScreen() {
                           isDragging && styles.laneTaskWrapperDragging,
                           Platform.OS === 'web' && (isDragging ? styles.laneTaskWrapperGrabbing : styles.laneTaskWrapperGrab),
                         ] as any}
-                        onStartShouldSetResponder={() => !isDragging}
-                        onMoveShouldSetResponder={() => !isDragging}
-                        onResponderGrant={(e) => {
-                          if (!isDragging) {
-                            handleDragStart(task.id, e);
-                          }
-                        }}
-                        onResponderMove={handleDragMove}
-                        onResponderRelease={handleDragEnd}
                         {...(Platform.OS === 'web' ? {
                           onMouseDown: (e: any) => {
-                            if (!isDragging) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!isDragging && !draggedTaskId) {
                               handleDragStart(task.id, e);
                             }
                           },
-                        } : {})}
+                        } : {
+                          onStartShouldSetResponder: () => !isDragging && !draggedTaskId,
+                          onMoveShouldSetResponder: () => !isDragging && !draggedTaskId,
+                          onResponderGrant: (e: any) => {
+                            if (!isDragging && !draggedTaskId) {
+                              handleDragStart(task.id, e);
+                            }
+                          },
+                          onResponderMove: handleDragMove,
+                          onResponderRelease: handleDragEnd,
+                        })}
                       >
                         <TaskCard
                           task={task}
@@ -391,110 +427,142 @@ export default function ProjectDetailScreen() {
           );
         })}
       </ScrollView>
+      
+      {/* Cancelled Tasks Bar */}
+      <View style={styles.cancelledBarContainer}>
+        <TouchableOpacity
+          style={[styles.cancelledBar, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}
+          onPress={() => setCancelledExpanded(!cancelledExpanded)}
+        >
+          <Text style={[styles.cancelledBarText, { color: theme.text }]}>
+            {(tasksByStatus['cancelled']?.length || 0)} Cancelled Task{(tasksByStatus['cancelled']?.length || 0) !== 1 ? 's' : ''}
+          </Text>
+          <FontAwesome 
+            name={cancelledExpanded ? "chevron-up" : "chevron-down"} 
+            size={14} 
+            color={theme.textSecondary} 
+          />
+        </TouchableOpacity>
+        {cancelledExpanded && (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={true}
+            style={styles.cancelledTasksContainer}
+            contentContainerStyle={styles.cancelledTasksContent}
+          >
+            {(tasksByStatus['cancelled'] || []).map((task: any) => {
+              const isDragging = draggedTaskId === task.id;
+              return (
+                <View 
+                  key={task.id} 
+                  style={[
+                    styles.cancelledTaskWrapper,
+                    isDragging && styles.laneTaskWrapperDragging,
+                    Platform.OS === 'web' && (isDragging ? styles.laneTaskWrapperGrabbing : styles.laneTaskWrapperGrab),
+                  ] as any}
+                  {...(Platform.OS === 'web' ? {
+                    'data-lane-key': 'cancelled',
+                    onMouseDown: (e: any) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!isDragging && !draggedTaskId) {
+                        handleDragStart(task.id, e);
+                      }
+                    },
+                  } : {
+                    onStartShouldSetResponder: () => !isDragging && !draggedTaskId,
+                    onMoveShouldSetResponder: () => !isDragging && !draggedTaskId,
+                    onResponderGrant: (e: any) => {
+                      if (!isDragging && !draggedTaskId) {
+                        handleDragStart(task.id, e);
+                      }
+                    },
+                    onResponderMove: handleDragMove,
+                    onResponderRelease: handleDragEnd,
+                  })}
+                >
+                  <TaskCard
+                    task={task}
+                    onPress={() => {
+                      if (!draggedTaskId) {
+                        handleEditTask(task);
+                      }
+                    }}
+                  />
+                </View>
+              );
+            })}
+          </ScrollView>
+        )}
+      </View>
     </View>
   );
 
   const screenContent = (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: theme.surfaceSecondary, borderWidth: 1, borderColor: theme.border }]}>
-          <FontAwesome name="angle-left" size={18} color={theme.text} />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <View style={[styles.projectIcon, { backgroundColor: (project.color || theme.primary) + '12' }]}>
-            <FontAwesome
-              name={(project.icon || 'folder-o') as any}
-              size={18}
-              color={project.color || theme.primary}
-            />
-          </View>
-          <View style={styles.headerText}>
-            <Text style={[styles.title, { color: theme.text }]}>{project.name}</Text>
-            <View style={styles.headerMeta}>
-              <View style={[styles.projectTypeBadge, { backgroundColor: theme.primary + '15' }]}>
-                <Text style={[styles.projectTypeText, { color: theme.primary }]}>
-                  {project.project_type === 'agile' ? 'Agile' : 'Waterfall'}
-                </Text>
-              </View>
-              <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-                {incompleteTasks.length} active task{incompleteTasks.length !== 1 ? 's' : ''}
-              </Text>
-            </View>
-          </View>
-        </View>
-        <View style={styles.headerActions}>
-          {Platform.OS === 'web' && (
+      {/* Special Todo Project Layout */}
+      {isTodoProject ? (
+        <View style={styles.todoContainer}>
+          <View style={[styles.todoHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+            <Text style={[styles.todoTitle, { color: theme.text }]}>todo</Text>
             <TouchableOpacity
-              style={[styles.actionButton, { borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}
+              style={[styles.todoAddButton, { backgroundColor: theme.primary }]}
               onPress={() => setNewTaskFormVisible(true)}
             >
-              <FontAwesome name="plus" size={12} color={theme.text} />
-              <Text style={[styles.actionButtonText, { color: theme.text }]}>Add Task</Text>
+              <FontAwesome name="plus" size={14} color="#ffffff" />
             </TouchableOpacity>
-          )}
-          {Platform.OS === 'web' && (
-            <TouchableOpacity
-              style={[styles.actionButton, { borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}
-              onPress={() => setResourcesVisible(true)}
-            >
-              <FontAwesome name="folder-open-o" size={12} color={theme.text} />
-              <Text style={[styles.actionButtonText, { color: theme.text }]}>Resources</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={[styles.actionButton, { borderColor: theme.primary, backgroundColor: theme.primary }]}
-            onPress={() => setProjectFormVisible(true)}
-          >
-            <FontAwesome name="pencil" size={12} color="#ffffff" />
-            <Text style={[styles.actionButtonText, { color: '#ffffff' }]}>Edit Project</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Resources View or Dashboard */}
-      {resourcesVisible ? (
-        <View style={styles.resourcesContainer}>
-          <ResourcesView
-            resources={Array.isArray(project.resources) ? project.resources : []}
-            onSave={async (resources) => {
-              await handleProjectUpdate({ resources });
-            }}
-            onBack={() => setResourcesVisible(false)}
-          />
+          </View>
+          <View style={styles.todoLanesContainer}>
+            {renderTaskLanes(true)}
+          </View>
         </View>
       ) : (
-        <ScrollView style={styles.mainContent} showsVerticalScrollIndicator={true}>
-          {isAgile ? (
-            <AgileDashboard
-              project={project}
-              tasks={tasks}
-              onProjectUpdate={handleProjectUpdate}
-              onTaskClick={handleEditTask}
-              onTaskPhaseChange={async (taskId, newPhase) => {
-                await updateTaskPhase(taskId, newPhase);
-                // Refresh tasks to update UI
-                if (user?.id && id) {
-                  await fetchTasksByProject(id, user.id);
-                }
+        /* Resources View or Dashboard */
+        resourcesVisible ? (
+          <View style={styles.resourcesContainer}>
+            <ResourcesView
+              resources={Array.isArray(project.resources) ? project.resources : []}
+              onSave={async (resources) => {
+                await handleProjectUpdate({ resources });
               }}
-              onAddTask={() => setNewTaskFormVisible(true)}
+              onBack={() => setResourcesVisible(false)}
             />
-          ) : (
-            <WaterfallDashboard
-              project={project}
-              tasks={tasks}
-              onProjectUpdate={handleProjectUpdate}
-              onAddTask={() => setNewTaskFormVisible(true)}
-              onTeamClick={() => {/* TODO: Navigate to team view */}}
-              onToolsClick={() => {/* TODO: Navigate to tools view */}}
-              onTaskClick={handleEditTask}
-            />
-          )}
-          
-          {/* Task Lanes - Below Dashboard */}
-          {renderTaskLanes()}
-        </ScrollView>
+          </View>
+        ) : (
+          <ScrollView style={styles.mainContent} showsVerticalScrollIndicator={true}>
+            {isAgile ? (
+              <AgileDashboard
+                project={project}
+                tasks={tasks}
+                onProjectUpdate={handleProjectUpdate}
+                onTaskClick={handleEditTask}
+                onTaskPhaseChange={async (taskId, newPhase) => {
+                  await updateTaskPhase(taskId, newPhase);
+                  // Refresh tasks to update UI
+                  refreshTasks();
+                }}
+                onAddTask={() => setNewTaskFormVisible(true)}
+                onResourceClick={() => setResourcesVisible(true)}
+                onEditClick={() => setProjectFormVisible(true)}
+              />
+            ) : (
+              <WaterfallDashboard
+                project={project}
+                tasks={tasks}
+                onProjectUpdate={handleProjectUpdate}
+                onAddTask={() => setNewTaskFormVisible(true)}
+                onTeamClick={() => {/* TODO: Navigate to team view */}}
+                onToolsClick={() => {/* TODO: Navigate to tools view */}}
+                onTaskClick={handleEditTask}
+                onResourceClick={() => setResourcesVisible(true)}
+                onEditClick={() => setProjectFormVisible(true)}
+              />
+            )}
+            
+            {/* Task Lanes - Below Dashboard */}
+            {renderTaskLanes()}
+          </ScrollView>
+        )
       )}
 
       {Platform.OS !== 'web' && (
@@ -632,6 +700,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
+  lanesSectionFullScreen: {
+    flex: 1,
+    borderWidth: 0,
+    borderRadius: 0,
+    overflow: 'hidden',
+  },
   lanesSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -660,13 +734,16 @@ const styles = StyleSheet.create({
   lanesContainer: {
     flexGrow: 0,
   },
+  lanesContainerFullScreen: {
+    flex: 1,
+  },
   lanesContent: {
     padding: 16,
     gap: 12,
   },
   lane: {
-    width: Platform.OS === 'web' ? 260 : 240,
-    marginRight: 12,
+    width: Platform.OS === 'web' ? 240 : 220,
+    marginRight: 6,
     borderWidth: 1,
     borderRadius: 10,
     maxHeight: Platform.OS === 'web' ? 400 : 350,
@@ -719,5 +796,63 @@ const styles = StyleSheet.create({
   },
   laneEmptyText: {
     fontSize: 13,
+  },
+  // Todo Project Styles
+  todoContainer: {
+    flex: 1,
+    flexDirection: 'column',
+  },
+  todoHeader: {
+    padding: Platform.OS === 'web' ? 20 : 16,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  todoTitle: {
+    fontSize: Platform.OS === 'web' ? 32 : 28,
+    fontWeight: '600',
+    textTransform: 'lowercase',
+    letterSpacing: -0.5,
+  },
+  todoAddButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  todoLanesContainer: {
+    flex: 1,
+  },
+  cancelledBarContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  cancelledBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    width: '100%',
+  },
+  cancelledBarText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  cancelledTasksContainer: {
+    marginTop: 12,
+  },
+  cancelledTasksContent: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  cancelledTaskWrapper: {
+    width: Platform.OS === 'web' ? 240 : 220,
   },
 });
