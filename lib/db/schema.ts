@@ -32,6 +32,8 @@ export const schema = appSchema({
         { name: 'recurring_pattern', type: 'string', isOptional: true },
         { name: 'status', type: 'string', isOptional: true }, // to_do, in_progress, blocked, on_hold, completed, cancelled
         { name: 'project_phase', type: 'string', isOptional: true }, // Agile only: brainstorm, design, logic, polish, done
+        { name: 'assignee_id', type: 'string', isOptional: true, isIndexed: true }, // Single assignee (user ID)
+        { name: 'blocked_by', type: 'string', isOptional: true }, // JSON array of task IDs
         { name: 'synced_at', type: 'number', isOptional: true },
       ],
     }),

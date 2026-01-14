@@ -26,6 +26,8 @@ export default class Task extends Model {
   @field('recurring_pattern') recurringPattern?: any;
   @field('status') status?: any; // to_do, in_progress, blocked, on_hold, completed, cancelled
   @field('project_phase') projectPhase?: any; // Agile only: brainstorm, design, logic, polish, done
+  @field('assignee_id') assigneeId?: any; // Single assignee (user ID)
+  @field('blocked_by') blockedBy?: any; // JSON string of task IDs
   @field('synced_at') syncedAt?: any;
 
   @relation('projects', 'project_id') project: any;
@@ -42,5 +44,17 @@ export default class Task extends Model {
 
   set parsedLabelIds(ids: string[]) {
     this.labelIds = JSON.stringify(ids);
+  }
+
+  get parsedBlockedBy(): string[] {
+    try {
+      return JSON.parse(this.blockedBy || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  set parsedBlockedBy(ids: string[]) {
+    this.blockedBy = JSON.stringify(ids);
   }
 }

@@ -23,6 +23,8 @@ export interface Task {
   recurringPattern?: string;
   status: TaskStatus; // Primary state (to_do, in_progress, blocked, etc.)
   projectPhase?: ProjectPhase; // Agile-only: brainstorm, design, logic, polish, done
+  assigneeId?: string; // Single assignee (user ID)
+  blockedBy?: string[]; // Array of task IDs that block this task
 }
 
 export interface Project {
