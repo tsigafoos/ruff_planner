@@ -6,6 +6,7 @@ import QuickAdd from '@/components/QuickAdd';
 import ResourcesView from '@/components/resources/ResourcesView';
 import TaskCard from '@/components/TaskCard';
 import TaskForm from '@/components/TaskForm';
+import { DependencyCanvas } from '@/components/visualization';
 import { useTheme } from '@/components/useTheme';
 import { useAuthStore } from '@/store/authStore';
 import { useLabelStore } from '@/store/labelStore';
@@ -16,6 +17,8 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+type ProjectView = 'dashboard' | 'dependencies' | 'resources';
 
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
 
@@ -58,7 +61,7 @@ export default function ProjectDetailScreen() {
   const [taskFormVisible, setTaskFormVisible] = useState(false);
   const [newTaskFormVisible, setNewTaskFormVisible] = useState(false);
   const [projectFormVisible, setProjectFormVisible] = useState(false);
-  const [resourcesVisible, setResourcesVisible] = useState(false);
+  const [currentView, setCurrentView] = useState<ProjectView>('dashboard');
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverLane, setDragOverLane] = useState<TaskStatus | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
@@ -435,11 +438,30 @@ export default function ProjectDetailScreen() {
           )}
           {Platform.OS === 'web' && (
             <TouchableOpacity
-              style={[styles.actionButton, { borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}
-              onPress={() => setResourcesVisible(true)}
+              style={[
+                styles.actionButton, 
+                { borderColor: theme.border, backgroundColor: currentView === 'dependencies' ? theme.primary : theme.surfaceSecondary }
+              ]}
+              onPress={() => setCurrentView(currentView === 'dependencies' ? 'dashboard' : 'dependencies')}
             >
-              <FontAwesome name="folder-open-o" size={12} color={theme.text} />
-              <Text style={[styles.actionButtonText, { color: theme.text }]}>Resources</Text>
+              <FontAwesome name="sitemap" size={12} color={currentView === 'dependencies' ? '#fff' : theme.text} />
+              <Text style={[styles.actionButtonText, { color: currentView === 'dependencies' ? '#fff' : theme.text }]}>
+                Dependencies
+              </Text>
+            </TouchableOpacity>
+          )}
+          {Platform.OS === 'web' && (
+            <TouchableOpacity
+              style={[
+                styles.actionButton, 
+                { borderColor: theme.border, backgroundColor: currentView === 'resources' ? theme.primary : theme.surfaceSecondary }
+              ]}
+              onPress={() => setCurrentView(currentView === 'resources' ? 'dashboard' : 'resources')}
+            >
+              <FontAwesome name="folder-open-o" size={12} color={currentView === 'resources' ? '#fff' : theme.text} />
+              <Text style={[styles.actionButtonText, { color: currentView === 'resources' ? '#fff' : theme.text }]}>
+                Resources
+              </Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -452,15 +474,23 @@ export default function ProjectDetailScreen() {
         </View>
       </View>
 
-      {/* Resources View or Dashboard */}
-      {resourcesVisible ? (
+      {/* View Content */}
+      {currentView === 'resources' ? (
         <View style={styles.resourcesContainer}>
           <ResourcesView
             resources={Array.isArray(project.resources) ? project.resources : []}
             onSave={async (resources) => {
               await handleProjectUpdate({ resources });
             }}
-            onBack={() => setResourcesVisible(false)}
+            onBack={() => setCurrentView('dashboard')}
+          />
+        </View>
+      ) : currentView === 'dependencies' ? (
+        <View style={styles.dependenciesContainer}>
+          <DependencyCanvas
+            tasks={tasks}
+            projectId={id || ''}
+            onTaskClick={handleEditTask}
           />
         </View>
       ) : (
@@ -622,6 +652,10 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   resourcesContainer: {
+    flex: 1,
+    padding: Platform.OS === 'web' ? 24 : 16,
+  },
+  dependenciesContainer: {
     flex: 1,
     padding: Platform.OS === 'web' ? 24 : 16,
   },
