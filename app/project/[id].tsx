@@ -1,21 +1,21 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useTaskStore } from '@/store/taskStore';
-import { useAuthStore } from '@/store/authStore';
-import { useProjectStore } from '@/store/projectStore';
-import QuickAdd from '@/components/QuickAdd';
-import TaskForm from '@/components/TaskForm';
-import ProjectForm from '@/components/ProjectForm';
-import WaterfallDashboard from '@/components/dashboards/WaterfallDashboard';
 import AgileDashboard from '@/components/dashboards/AgileDashboard';
-import { useLabelStore } from '@/store/labelStore';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import WaterfallDashboard from '@/components/dashboards/WaterfallDashboard';
 import WebLayout from '@/components/layout/WebLayout';
-import { useTheme } from '@/components/useTheme';
-import { useThemeStore } from '@/store/themeStore';
+import ProjectForm from '@/components/ProjectForm';
+import QuickAdd from '@/components/QuickAdd';
 import ResourcesView from '@/components/resources/ResourcesView';
 import TaskCard from '@/components/TaskCard';
+import TaskForm from '@/components/TaskForm';
+import { useTheme } from '@/components/useTheme';
+import { useAuthStore } from '@/store/authStore';
+import { useLabelStore } from '@/store/labelStore';
+import { useProjectStore } from '@/store/projectStore';
+import { useTaskStore } from '@/store/taskStore';
+import { useThemeStore } from '@/store/themeStore';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
 
