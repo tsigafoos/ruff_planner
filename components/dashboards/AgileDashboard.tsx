@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity, Alert } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '../useTheme';
 import { ProjectPhase } from '../../types';
-import { AGILE_PHASES } from '../../store/taskStore';
+import { AGILE_PHASES, getNextPhase } from '../../store/taskStore';
 
 // Phase configuration with colors
 const PHASE_CONFIG: Record<ProjectPhase, { label: string; color: string; bgColor: string }> = {
@@ -13,6 +13,14 @@ const PHASE_CONFIG: Record<ProjectPhase, { label: string; color: string; bgColor
   polish: { label: 'Polish', color: '#D97706', bgColor: '#FEF3C7' },
   done: { label: 'Done', color: '#6B7280', bgColor: '#F3F4F6' },
 };
+
+// Get previous phase for "move back" functionality
+function getPreviousPhase(currentPhase: ProjectPhase | null): ProjectPhase | null {
+  if (!currentPhase) return null;
+  const currentIndex = AGILE_PHASES.indexOf(currentPhase);
+  if (currentIndex <= 0) return null;
+  return AGILE_PHASES[currentIndex - 1];
+}
 
 interface AgileDashboardProps {
   project: any;
@@ -83,6 +91,52 @@ export default function AgileDashboard({
     setDraggedTaskId(null);
     setDragOverPhase(null);
   }, [draggedTaskId, onTaskPhaseChange]);
+
+  // Mobile: Move task to next phase
+  const handleMoveToNextPhase = useCallback(async (task: any) => {
+    const currentPhase = task.project_phase || task.projectPhase || 'brainstorm';
+    const nextPhase = getNextPhase(currentPhase);
+    
+    if (nextPhase && onTaskPhaseChange) {
+      try {
+        await onTaskPhaseChange(task.id, nextPhase);
+      } catch (error) {
+        console.error('Error moving task to next phase:', error);
+      }
+    }
+  }, [onTaskPhaseChange]);
+
+  // Mobile: Move task to previous phase
+  const handleMoveToPreviousPhase = useCallback(async (task: any) => {
+    const currentPhase = task.project_phase || task.projectPhase || 'brainstorm';
+    const prevPhase = getPreviousPhase(currentPhase);
+    
+    if (prevPhase && onTaskPhaseChange) {
+      try {
+        await onTaskPhaseChange(task.id, prevPhase);
+      } catch (error) {
+        console.error('Error moving task to previous phase:', error);
+      }
+    }
+  }, [onTaskPhaseChange]);
+
+  // Mobile: Show phase picker
+  const handleShowPhaseOptions = useCallback((task: any) => {
+    const currentPhase = task.project_phase || task.projectPhase || 'brainstorm';
+    const options = AGILE_PHASES.filter(p => p !== currentPhase).map(phase => ({
+      text: `Move to ${PHASE_CONFIG[phase].label}`,
+      onPress: () => onTaskPhaseChange?.(task.id, phase),
+    }));
+    
+    Alert.alert(
+      'Move Task',
+      `Select a new phase for "${task.title}"`,
+      [
+        ...options,
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  }, [onTaskPhaseChange]);
   
   // Calculate task counts by phase
   const getTasksByPhase = (phase: ProjectPhase) => {
@@ -291,6 +345,13 @@ export default function AgileDashboard({
                           isDragging && styles.taskCardDragging,
                         ];
 
+                        // Get navigation info for mobile buttons
+                        const taskPhase = (task.project_phase || task.projectPhase || 'brainstorm') as ProjectPhase;
+                        const nextPhase = getNextPhase(taskPhase);
+                        const prevPhase = getPreviousPhase(taskPhase);
+                        const nextPhaseConfig = nextPhase ? PHASE_CONFIG[nextPhase] : null;
+                        const prevPhaseConfig = prevPhase ? PHASE_CONFIG[prevPhase] : null;
+
                         const taskCardContent = (
                           <>
                             {/* Priority indicator */}
@@ -348,16 +409,51 @@ export default function AgileDashboard({
                           );
                         }
 
-                        // Mobile: Regular TouchableOpacity
+                        // Mobile: Task card with phase navigation buttons
                         return (
-                          <TouchableOpacity
-                            key={task.id}
-                            style={taskCardStyle}
-                            onPress={() => onTaskClick?.(task)}
-                            activeOpacity={0.7}
-                          >
-                            {taskCardContent}
-                          </TouchableOpacity>
+                          <View key={task.id} style={taskCardStyle}>
+                            <TouchableOpacity
+                              onPress={() => onTaskClick?.(task)}
+                              onLongPress={() => handleShowPhaseOptions(task)}
+                              activeOpacity={0.7}
+                            >
+                              {taskCardContent}
+                            </TouchableOpacity>
+                            
+                            {/* Mobile phase navigation buttons */}
+                            {onTaskPhaseChange && phase !== 'done' && (
+                              <View style={styles.mobilePhaseNav}>
+                                {/* Move back button */}
+                                {prevPhaseConfig && (
+                                  <TouchableOpacity
+                                    style={[styles.mobileNavButton, { backgroundColor: prevPhaseConfig.bgColor }]}
+                                    onPress={() => handleMoveToPreviousPhase(task)}
+                                  >
+                                    <FontAwesome name="chevron-left" size={10} color={prevPhaseConfig.color} />
+                                    <Text style={[styles.mobileNavButtonText, { color: prevPhaseConfig.color }]}>
+                                      {prevPhaseConfig.label}
+                                    </Text>
+                                  </TouchableOpacity>
+                                )}
+                                
+                                {/* Spacer */}
+                                <View style={styles.mobileNavSpacer} />
+                                
+                                {/* Move forward button */}
+                                {nextPhaseConfig && (
+                                  <TouchableOpacity
+                                    style={[styles.mobileNavButton, styles.mobileNavButtonPrimary, { backgroundColor: nextPhaseConfig.color }]}
+                                    onPress={() => handleMoveToNextPhase(task)}
+                                  >
+                                    <Text style={styles.mobileNavButtonTextPrimary}>
+                                      {nextPhaseConfig.label}
+                                    </Text>
+                                    <FontAwesome name="chevron-right" size={10} color="#FFFFFF" />
+                                  </TouchableOpacity>
+                                )}
+                              </View>
+                            )}
+                          </View>
                         );
                       })
                     )}
@@ -726,6 +822,37 @@ const styles = StyleSheet.create({
   },
   dueDateText: {
     fontSize: 11,
+  },
+  // Mobile phase navigation
+  mobilePhaseNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+    gap: 6,
+  },
+  mobileNavButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  mobileNavButtonPrimary: {
+    // Background color set dynamically
+  },
+  mobileNavButtonText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  mobileNavButtonTextPrimary: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  mobileNavSpacer: {
+    flex: 1,
   },
 
   // ═══════════════════════════════════════════════════════════════════
