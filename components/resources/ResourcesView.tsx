@@ -17,6 +17,8 @@ interface ResourceItem {
   size?: number;          // File size in bytes
   mime_type?: string;     // File MIME type
   content?: string;       // Deprecated: kept for backward compatibility, but files should use storage
+  tags?: string[];        // Tags for filtering and organization
+  created_at?: string;    // Creation timestamp
 }
 
 interface ResourcesViewProps {
@@ -31,11 +33,72 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
   const [showCreator, setShowCreator] = useState(false);
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showTagModal, setShowTagModal] = useState(false);
   const [folderName, setFolderName] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [editingResource, setEditingResource] = useState<ResourceItem | null>(null);
+  const [newTags, setNewTags] = useState('');
+
+  // Get all unique tags from resources
+  const allTags = Array.from(new Set(
+    resources.flatMap(r => r.tags || []).filter(Boolean)
+  )).sort();
+
+  // Filter resources based on search and selected tags
+  const filteredResources = resources.filter(resource => {
+    // Search filter
+    const matchesSearch = !searchQuery || 
+      resource.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (resource.tags || []).some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    // Tag filter
+    const matchesTags = selectedTags.length === 0 ||
+      selectedTags.every(tag => (resource.tags || []).includes(tag));
+    
+    return matchesSearch && matchesTags;
+  });
+
+  // Toggle tag selection
+  const toggleTagFilter = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  // Handle editing tags for a resource
+  const handleEditTags = (resource: ResourceItem) => {
+    setEditingResource(resource);
+    setNewTags((resource.tags || []).join(', '));
+    setShowTagModal(true);
+  };
+
+  // Save updated tags
+  const handleSaveTags = async () => {
+    if (!editingResource) return;
+    
+    const tagsArray = newTags
+      .split(',')
+      .map(tag => tag.trim().toLowerCase())
+      .filter(tag => tag.length > 0);
+    
+    const updatedResources = resources.map(r => 
+      r.id === editingResource.id 
+        ? { ...r, tags: tagsArray }
+        : r
+    );
+    
+    await onSave(updatedResources);
+    setShowTagModal(false);
+    setEditingResource(null);
+    setNewTags('');
+  };
 
   const getUsername = () => {
     if (!user?.email) return 'user';
@@ -310,6 +373,78 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
         </View>
       </View>
 
+      {/* Search and Filter Bar */}
+      <View style={[styles.filterBar, { backgroundColor: theme.surfaceSecondary, borderBottomColor: theme.border }]}>
+        {/* Search Input */}
+        <View style={[styles.searchContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <FontAwesome name="search" size={14} color={theme.textTertiary} />
+          <TextInput
+            style={[styles.searchInput, { color: theme.text }]}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search resources or tags..."
+            placeholderTextColor={theme.textTertiary}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <FontAwesome name="times-circle" size={14} color={theme.textTertiary} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Tag Filters */}
+        {allTags.length > 0 && (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.tagFilterScroll}
+            contentContainerStyle={styles.tagFilterContent}
+          >
+            {allTags.map(tag => {
+              const isSelected = selectedTags.includes(tag);
+              return (
+                <TouchableOpacity
+                  key={tag}
+                  style={[
+                    styles.tagFilterChip,
+                    { 
+                      backgroundColor: isSelected ? theme.primary : theme.surface,
+                      borderColor: isSelected ? theme.primary : theme.border,
+                    }
+                  ]}
+                  onPress={() => toggleTagFilter(tag)}
+                >
+                  <FontAwesome 
+                    name="tag" 
+                    size={10} 
+                    color={isSelected ? '#FFFFFF' : theme.textSecondary} 
+                  />
+                  <Text style={[
+                    styles.tagFilterText,
+                    { color: isSelected ? '#FFFFFF' : theme.text }
+                  ]}>
+                    {tag}
+                  </Text>
+                  {isSelected && (
+                    <FontAwesome name="times" size={10} color="#FFFFFF" />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+            {selectedTags.length > 0 && (
+              <TouchableOpacity
+                style={[styles.clearFiltersButton]}
+                onPress={() => setSelectedTags([])}
+              >
+                <Text style={[styles.clearFiltersText, { color: theme.primary }]}>
+                  Clear all
+                </Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+        )}
+      </View>
+
       {/* File View */}
       {resources.length === 0 ? (
         <View style={styles.empty}>
@@ -319,22 +454,76 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
             Create resources, upload files, or organize with folders
           </Text>
         </View>
+      ) : filteredResources.length === 0 ? (
+        <View style={styles.empty}>
+          <FontAwesome name="search" size={48} color={theme.textTertiary} />
+          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No matching resources</Text>
+          <Text style={[styles.emptySubtext, { color: theme.textTertiary }]}>
+            Try adjusting your search or filters
+          </Text>
+          <TouchableOpacity 
+            style={[styles.clearSearchButton, { borderColor: theme.primary }]}
+            onPress={() => { setSearchQuery(''); setSelectedTags([]); }}
+          >
+            <Text style={[styles.clearSearchButtonText, { color: theme.primary }]}>Clear filters</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <ScrollView style={styles.fileList}>
-          {resources.map((resource) => (
-            <TouchableOpacity
+          {/* Results count */}
+          {(searchQuery || selectedTags.length > 0) && (
+            <View style={[styles.resultsCount, { backgroundColor: theme.surfaceSecondary }]}>
+              <Text style={[styles.resultsCountText, { color: theme.textSecondary }]}>
+                Showing {filteredResources.length} of {resources.length} resources
+              </Text>
+            </View>
+          )}
+          
+          {filteredResources.map((resource) => (
+            <View
               key={resource.id}
               style={[styles.fileItem, { borderBottomColor: theme.border }]}
             >
-              <View style={styles.fileItemLeft}>
-                <FontAwesome
-                  name={resource.type === 'folder' ? 'folder' : 'file-text-o'}
-                  size={16}
-                  color={theme.textSecondary}
-                />
-                <Text style={[styles.fileItemName, { color: theme.text }]}>{resource.name}</Text>
-              </View>
+              <TouchableOpacity style={styles.fileItemMain}>
+                <View style={styles.fileItemLeft}>
+                  <FontAwesome
+                    name={resource.type === 'folder' ? 'folder' : resource.type === 'resource' ? 'file-text' : 'file-o'}
+                    size={16}
+                    color={resource.type === 'folder' ? '#F59E0B' : theme.textSecondary}
+                  />
+                  <View style={styles.fileItemInfo}>
+                    <Text style={[styles.fileItemName, { color: theme.text }]}>{resource.name}</Text>
+                    {/* Tags */}
+                    {resource.tags && resource.tags.length > 0 && (
+                      <View style={styles.fileItemTags}>
+                        {resource.tags.slice(0, 3).map(tag => (
+                          <View 
+                            key={tag} 
+                            style={[styles.fileItemTag, { backgroundColor: theme.primary + '15' }]}
+                          >
+                            <Text style={[styles.fileItemTagText, { color: theme.primary }]}>
+                              {tag}
+                            </Text>
+                          </View>
+                        ))}
+                        {resource.tags.length > 3 && (
+                          <Text style={[styles.fileItemTagMore, { color: theme.textSecondary }]}>
+                            +{resource.tags.length - 3}
+                          </Text>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </TouchableOpacity>
               <View style={styles.fileItemActions}>
+                {/* Edit tags button */}
+                <TouchableOpacity
+                  style={styles.fileItemAction}
+                  onPress={() => handleEditTags(resource)}
+                >
+                  <FontAwesome name="tag" size={14} color={theme.textSecondary} />
+                </TouchableOpacity>
                 {resource.type === 'file' && resource.storage_path && (
                   <>
                     <TouchableOpacity
@@ -352,7 +541,7 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
                   </>
                 )}
               </View>
-            </TouchableOpacity>
+            </View>
           ))}
         </ScrollView>
       )}
@@ -544,6 +733,77 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
           </View>
         </View>
       </Modal>
+
+      {/* Edit Tags Modal */}
+      <Modal
+        visible={showTagModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowTagModal(false)}
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: theme.background + 'B3' }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>Edit Tags</Text>
+              <TouchableOpacity onPress={() => setShowTagModal(false)} style={styles.closeButton}>
+                <FontAwesome name="times" size={16} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalBody}>
+              <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>
+                Resource: {editingResource?.name}
+              </Text>
+              <Text style={[styles.modalHint, { color: theme.textTertiary }]}>
+                Enter tags separated by commas (e.g., guidelines, reference, ada)
+              </Text>
+              <TextInput
+                style={[styles.modalInput, { backgroundColor: theme.surfaceSecondary, color: theme.text, borderColor: theme.border }]}
+                value={newTags}
+                onChangeText={setNewTags}
+                placeholder="tag1, tag2, tag3"
+                placeholderTextColor={theme.textTertiary}
+                autoFocus
+              />
+              {/* Suggested tags */}
+              {allTags.length > 0 && (
+                <View style={styles.suggestedTags}>
+                  <Text style={[styles.suggestedTagsLabel, { color: theme.textSecondary }]}>
+                    Existing tags (tap to add):
+                  </Text>
+                  <View style={styles.suggestedTagsList}>
+                    {allTags.filter(tag => !newTags.toLowerCase().includes(tag.toLowerCase())).slice(0, 10).map(tag => (
+                      <TouchableOpacity
+                        key={tag}
+                        style={[styles.suggestedTag, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}
+                        onPress={() => {
+                          const currentTags = newTags.trim();
+                          setNewTags(currentTags ? `${currentTags}, ${tag}` : tag);
+                        }}
+                      >
+                        <FontAwesome name="plus" size={10} color={theme.textSecondary} />
+                        <Text style={[styles.suggestedTagText, { color: theme.text }]}>{tag}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+            <View style={[styles.modalFooter, { borderTopColor: theme.border }]}>
+              <Button
+                title="Cancel"
+                onPress={() => setShowTagModal(false)}
+                variant="secondary"
+                style={styles.modalButton}
+              />
+              <Button
+                title="Save Tags"
+                onPress={handleSaveTags}
+                style={styles.modalButton}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -592,6 +852,56 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
+  // Search and Filter Bar
+  filterBar: {
+    padding: 12,
+    borderBottomWidth: 1,
+    gap: 10,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    padding: 0,
+  },
+  tagFilterScroll: {
+    maxHeight: 40,
+  },
+  tagFilterContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tagFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  tagFilterText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  clearFiltersButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  clearFiltersText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  // Empty states
   empty: {
     padding: 60,
     alignItems: 'center',
@@ -607,6 +917,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
+  clearSearchButton: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  clearSearchButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  // Results count
+  resultsCount: {
+    padding: 8,
+    paddingHorizontal: 12,
+  },
+  resultsCountText: {
+    fontSize: 12,
+  },
+  // File list
   fileList: {
     flex: 1,
   },
@@ -617,15 +947,41 @@ const styles = StyleSheet.create({
     padding: 12,
     borderBottomWidth: 1,
   },
+  fileItemMain: {
+    flex: 1,
+  },
   fileItemLeft: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
     flex: 1,
+  },
+  fileItemInfo: {
+    flex: 1,
+    gap: 4,
   },
   fileItemName: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  fileItemTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: 4,
+  },
+  fileItemTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  fileItemTagText: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  fileItemTagMore: {
+    fontSize: 10,
+    marginLeft: 4,
   },
   fileItemActions: {
     flexDirection: 'row',
@@ -633,7 +989,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   fileItemAction: {
-    padding: 4,
+    padding: 6,
+  },
+  // Tag modal extras
+  modalHint: {
+    fontSize: 12,
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  suggestedTags: {
+    marginTop: 16,
+  },
+  suggestedTagsLabel: {
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  suggestedTagsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  suggestedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  suggestedTagText: {
+    fontSize: 12,
   },
   modalOverlay: {
     flex: 1,
