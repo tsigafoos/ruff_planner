@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Platform, TextInput, ScrollView, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, Platform, ScrollView, Modal } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '../useTheme';
 import { useProfileStore } from '@/store/profileStore';
@@ -119,12 +119,35 @@ export default function TeamSettings({ onCreateTeam, onManageTeam }: TeamSetting
             Create or join teams, share projects, and collaborate with others
           </Text>
         </View>
-        <Switch
-          value={teamModeEnabled}
-          onValueChange={handleToggleTeamMode}
-          trackColor={{ false: theme.border, true: theme.primary + '60' }}
-          thumbColor={teamModeEnabled ? theme.primary : theme.textTertiary}
-        />
+        <TouchableOpacity
+          style={[
+            styles.customToggle,
+            {
+              backgroundColor: teamModeEnabled ? theme.primary : theme.surfaceTertiary || '#e5e5e5',
+              borderColor: teamModeEnabled ? theme.primary : theme.border,
+            }
+          ]}
+          onPress={() => handleToggleTeamMode(!teamModeEnabled)}
+          activeOpacity={0.7}
+        >
+          <View 
+            style={[
+              styles.customToggleThumb,
+              {
+                backgroundColor: '#FFFFFF',
+                transform: [{ translateX: teamModeEnabled ? 20 : 0 }],
+              }
+            ]} 
+          />
+        </TouchableOpacity>
+      </View>
+      
+      {/* Status indicator */}
+      <View style={[styles.statusBadge, { backgroundColor: teamModeEnabled ? '#10B981' + '20' : theme.surfaceTertiary || '#f0f0f0' }]}>
+        <View style={[styles.statusDot, { backgroundColor: teamModeEnabled ? '#10B981' : theme.textTertiary }]} />
+        <Text style={[styles.statusText, { color: teamModeEnabled ? '#10B981' : theme.textSecondary }]}>
+          {teamModeEnabled ? 'Team Mode Active' : 'Team Mode Disabled'}
+        </Text>
       </View>
 
       {/* Team Mode Content */}
@@ -410,6 +433,43 @@ const styles = StyleSheet.create({
   toggleDescription: {
     fontSize: Platform.OS === 'web' ? 12 : 13,
     marginTop: 2,
+  },
+  customToggle: {
+    width: 50,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 2,
+    padding: 3,
+    justifyContent: 'center',
+  },
+  customToggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginTop: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   teamContent: {
     marginTop: 16,

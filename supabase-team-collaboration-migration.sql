@@ -183,13 +183,13 @@ CREATE POLICY "Project owners can delete shares" ON project_shares
   );
 
 -- ============================================
--- PROFILE UPDATES
+-- PROFILE UPDATES (user_profiles table)
 -- ============================================
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS team_mode_enabled BOOLEAN DEFAULT FALSE;
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS default_team_id UUID REFERENCES teams(id) ON DELETE SET NULL;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS team_mode_enabled BOOLEAN DEFAULT FALSE;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS default_team_id UUID REFERENCES teams(id) ON DELETE SET NULL;
 
 -- Email settings for sending invites (SMTP config)
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS email_settings JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS email_settings JSONB DEFAULT '{}'::jsonb;
 -- Structure: { smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, imap_user, imap_pass }
 
 -- ============================================
