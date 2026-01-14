@@ -5,6 +5,7 @@ import WebLayout from '@/components/layout/WebLayout';
 import ProjectForm from '@/components/ProjectForm';
 import QuickAdd from '@/components/QuickAdd';
 import ResourcesView from '@/components/resources/ResourcesView';
+import ShareProjectModal from '@/components/ShareProjectModal';
 import TaskCard from '@/components/TaskCard';
 import TaskForm from '@/components/TaskForm';
 import { DependencyCanvas } from '@/components/visualization';
@@ -62,6 +63,7 @@ export default function ProjectDetailScreen() {
   const [taskFormVisible, setTaskFormVisible] = useState(false);
   const [newTaskFormVisible, setNewTaskFormVisible] = useState(false);
   const [projectFormVisible, setProjectFormVisible] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
   const [currentView, setCurrentView] = useState<ProjectView>('dashboard');
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverLane, setDragOverLane] = useState<TaskStatus | null>(null);
@@ -475,6 +477,15 @@ export default function ProjectDetailScreen() {
               </Text>
             </TouchableOpacity>
           )}
+          {Platform.OS === 'web' && (
+            <TouchableOpacity
+              style={[styles.actionButton, { borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}
+              onPress={() => setShareModalVisible(true)}
+            >
+              <FontAwesome name="share-alt" size={12} color={theme.text} />
+              <Text style={[styles.actionButtonText, { color: theme.text }]}>Share</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={[styles.actionButton, { borderColor: theme.primary, backgroundColor: theme.primary }]}
             onPress={() => setProjectFormVisible(true)}
@@ -582,6 +593,13 @@ export default function ProjectDetailScreen() {
         onClose={() => setProjectFormVisible(false)}
         onSubmit={handleProjectUpdate}
         initialData={project}
+      />
+
+      <ShareProjectModal
+        visible={shareModalVisible}
+        onClose={() => setShareModalVisible(false)}
+        projectId={id || ''}
+        projectName={project?.name || ''}
       />
     </View>
   );
