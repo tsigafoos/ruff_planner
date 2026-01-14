@@ -3,6 +3,18 @@ import { Platform } from 'react-native';
 import { database } from '../lib/db';
 import { supabase } from '../lib/supabase/client';
 import { Task as TaskModel } from '../lib/db';
+import { ProjectPhase, TaskStatus } from '../types';
+
+// Valid phase values for Agile workflow
+export const AGILE_PHASES: ProjectPhase[] = ['brainstorm', 'design', 'logic', 'polish', 'done'];
+
+// Get the next phase in the Agile workflow (for mobile "next phase" button)
+export function getNextPhase(currentPhase: ProjectPhase | null): ProjectPhase | null {
+  if (!currentPhase) return 'brainstorm';
+  const currentIndex = AGILE_PHASES.indexOf(currentPhase);
+  if (currentIndex === -1 || currentIndex >= AGILE_PHASES.length - 1) return null;
+  return AGILE_PHASES[currentIndex + 1];
+}
 
 interface TaskStore {
   tasks: any[];
@@ -14,6 +26,7 @@ interface TaskStore {
   fetchTasksDueUpcoming: (userId: string) => Promise<void>;
   createTask: (taskData: any) => Promise<any>;
   updateTask: (taskId: string, updates: any) => Promise<void>;
+  updateTaskPhase: (taskId: string, newPhase: ProjectPhase | null) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   completeTask: (taskId: string) => Promise<void>;
   uncompleteTask: (taskId: string) => Promise<void>;
@@ -290,6 +303,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
             user_id: taskData.userId,
             recurring_pattern: taskData.recurringPattern || null,
             status: taskData.status || 'to_do',
+            project_phase: taskData.projectPhase || null, // Agile phase (null for Waterfall)
             completed_at: (taskData.completed || taskData.status === 'completed') ? new Date().toISOString() : null,
           })
           .select()
@@ -316,6 +330,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           task.userId = taskData.userId;
           task.recurringPattern = taskData.recurringPattern || undefined;
           task.status = taskData.status || 'to_do';
+          task.projectPhase = taskData.projectPhase || undefined; // Agile phase (undefined for Waterfall)
           if (taskData.completed || taskData.status === 'completed') {
             task.completedAt = Date.now();
           }
@@ -345,6 +360,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         if (updates.labelIds !== undefined) updateData.label_ids = updates.labelIds;
         if (updates.recurringPattern !== undefined) updateData.recurring_pattern = updates.recurringPattern;
         if (updates.status !== undefined) updateData.status = updates.status;
+        if (updates.projectPhase !== undefined) updateData.project_phase = updates.projectPhase;
         if (updates.completed !== undefined) {
           updateData.completed_at = updates.completed ? new Date().toISOString() : null;
         } else if (updates.status === 'completed') {
@@ -379,6 +395,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           if (updates.labelIds !== undefined) taskRecord.labelIds = JSON.stringify(updates.labelIds);
           if (updates.recurringPattern !== undefined) taskRecord.recurringPattern = updates.recurringPattern;
           if (updates.status !== undefined) taskRecord.status = updates.status;
+          if (updates.projectPhase !== undefined) taskRecord.projectPhase = updates.projectPhase;
           if (updates.completed !== undefined) {
             taskRecord.completedAt = updates.completed ? Date.now() : undefined;
           } else if (updates.status === 'completed') {
@@ -390,6 +407,52 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       }
     } catch (error) {
       console.error('Error updating task:', error);
+      throw error;
+    }
+  },
+
+  // Helper for Kanban drag-and-drop: Update only the project phase
+  // When moving to 'done' phase, also marks task as completed
+  updateTaskPhase: async (taskId: string, newPhase: ProjectPhase | null) => {
+    try {
+      const isDone = newPhase === 'done';
+      
+      if (Platform.OS === 'web') {
+        const updateData: any = {
+          project_phase: newPhase,
+        };
+        
+        // If moving to 'done' lane, also complete the task
+        if (isDone) {
+          updateData.status = 'completed';
+          updateData.completed_at = new Date().toISOString();
+        }
+
+        const { error } = await supabase
+          .from('tasks')
+          .update(updateData)
+          .eq('id', taskId);
+        
+        if (error) throw error;
+        
+        const currentTasks = get().tasks;
+        const updatedTasks = currentTasks.map((task: any) =>
+          task.id === taskId ? { ...task, ...updateData } : task
+        );
+        set({ tasks: updatedTasks });
+      } else {
+        const tasksCollection = database.get('tasks');
+        const task = await tasksCollection.find(taskId);
+        await task.update((taskRecord: any) => {
+          taskRecord.projectPhase = newPhase;
+          if (isDone) {
+            taskRecord.status = 'completed';
+            taskRecord.completedAt = Date.now();
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error updating task phase:', error);
       throw error;
     }
   },
