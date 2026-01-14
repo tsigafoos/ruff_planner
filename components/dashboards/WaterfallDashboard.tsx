@@ -128,8 +128,38 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
       return <Text style={[styles.emptyText, { color: theme.textTertiary }]}>Invalid date range</Text>;
     }
 
+    // Calculate "Today" marker position
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayPosition = ((today.getTime() - projectStart.getTime()) / (projectEnd.getTime() - projectStart.getTime())) * 100;
+    const showTodayMarker = todayPosition >= 0 && todayPosition <= 100;
+
+    // Calculate middle date for axis
+    const middleDate = new Date(projectStart.getTime() + (projectEnd.getTime() - projectStart.getTime()) / 2);
+
     return (
       <View style={styles.ganttContainer}>
+        {/* Priority Legend */}
+        <View style={styles.ganttLegend}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: priorityColors[1] }]} />
+            <Text style={[styles.legendText, { color: theme.textSecondary }]}>Low</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: priorityColors[2] }]} />
+            <Text style={[styles.legendText, { color: theme.textSecondary }]}>Medium</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: priorityColors[3] }]} />
+            <Text style={[styles.legendText, { color: theme.textSecondary }]}>High</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: priorityColors[4] }]} />
+            <Text style={[styles.legendText, { color: theme.textSecondary }]}>Urgent</Text>
+          </View>
+        </View>
+
+        {/* Tasks */}
         {tasks.map((task: any, idx: number) => {
           const startDateRaw = task.start_date || task.startDate;
           const startDate = startDateRaw ? new Date(startDateRaw) : (task.created_at ? new Date(task.created_at) : projectStart);
@@ -146,6 +176,7 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
           
           const priority = task.priority || 4;
           const taskColor = priorityColors[priority as keyof typeof priorityColors] || priorityColors[4];
+          const isCompleted = !!(task.completed_at || task.completedAt || task.status === 'completed');
 
           return (
             <TouchableOpacity 
@@ -154,28 +185,91 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
               onPress={() => onTaskClick?.(task)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.ganttTaskName, { color: theme.text }]} numberOfLines={1}>
-                {task.title}
-              </Text>
-              <View style={[styles.ganttBarContainer, { backgroundColor: theme.border + '40' }]}>
+              <View style={styles.ganttTaskInfo}>
+                {isCompleted && (
+                  <FontAwesome name="check-circle" size={14} color="#10B981" style={styles.ganttCheckIcon} />
+                )}
+                <Text 
+                  style={[
+                    styles.ganttTaskName, 
+                    { color: theme.text },
+                    isCompleted && styles.ganttTaskNameCompleted
+                  ]} 
+                  numberOfLines={1}
+                >
+                  {task.title}
+                </Text>
+              </View>
+              <View style={[styles.ganttBarContainer, { backgroundColor: theme.border + '30' }]}>
+                {/* Today marker (rendered behind bars) */}
+                {showTodayMarker && (
+                  <View 
+                    style={[
+                      styles.ganttTodayMarker, 
+                      { left: `${todayPosition}%`, backgroundColor: theme.primary }
+                    ]} 
+                  />
+                )}
+                {/* Task bar */}
                 <View
                   style={[
                     styles.ganttBar,
                     {
                       left: `${leftPercent}%`,
                       width: `${widthPercent}%`,
-                      backgroundColor: taskColor,
+                      backgroundColor: isCompleted ? taskColor + '60' : taskColor,
+                      borderColor: taskColor,
+                      borderWidth: isCompleted ? 2 : 0,
                     },
                   ]}
-                />
+                >
+                  {/* Completion stripe pattern for completed tasks */}
+                  {isCompleted && (
+                    <View style={styles.ganttBarCompleted}>
+                      <FontAwesome name="check" size={10} color={taskColor} />
+                    </View>
+                  )}
+                </View>
               </View>
             </TouchableOpacity>
           );
         })}
-        <View style={styles.ganttLabels}>
+
+        {/* Milestone markers */}
+        {milestones.length > 0 && (
+          <View style={styles.ganttMilestones}>
+            <Text style={[styles.ganttMilestonesLabel, { color: theme.textSecondary }]}>Milestones:</Text>
+            <View style={styles.ganttMilestonesList}>
+              {milestones.slice(0, 3).map((milestone: string, idx: number) => (
+                <View key={idx} style={styles.ganttMilestoneItem}>
+                  <FontAwesome name="flag" size={12} color={theme.warning} />
+                  <Text style={[styles.ganttMilestoneText, { color: theme.text }]} numberOfLines={1}>
+                    {milestone}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Date axis */}
+        <View style={[styles.ganttDateAxis, { borderTopColor: theme.border }]}>
           <Text style={[styles.ganttLabel, { color: theme.textSecondary }]}>
             {projectStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </Text>
+          <View style={styles.ganttDateAxisCenter}>
+            {showTodayMarker && (
+              <View style={styles.ganttTodayLabel}>
+                <View style={[styles.ganttTodayDot, { backgroundColor: theme.primary }]} />
+                <Text style={[styles.ganttTodayText, { color: theme.primary }]}>Today</Text>
+              </View>
+            )}
+            {!showTodayMarker && (
+              <Text style={[styles.ganttLabel, { color: theme.textSecondary }]}>
+                {middleDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </Text>
+            )}
+          </View>
           <Text style={[styles.ganttLabel, { color: theme.textSecondary }]}>
             {projectEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </Text>
@@ -568,17 +662,51 @@ const styles = StyleSheet.create({
   ganttContainer: {
     marginTop: 8,
   },
+  ganttLegend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 2,
+  },
+  legendText: {
+    fontSize: 11,
+  },
   ganttRow: {
     marginBottom: 12,
+  },
+  ganttTaskInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  ganttCheckIcon: {
+    marginRight: 6,
   },
   ganttTaskName: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 6,
+    flex: 1,
+  },
+  ganttTaskNameCompleted: {
+    textDecorationLine: 'line-through',
+    opacity: 0.7,
   },
   ganttBarContainer: {
     height: 24,
-    borderRadius: 4,
+    borderRadius: 6,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -586,13 +714,78 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     height: '100%',
-    borderRadius: 4,
-    minWidth: 2,
+    borderRadius: 6,
+    minWidth: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  ganttLabels: {
+  ganttBarCompleted: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ganttTodayMarker: {
+    position: 'absolute',
+    top: 0,
+    width: 2,
+    height: '100%',
+    zIndex: 1,
+  },
+  ganttMilestones: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  ganttMilestonesLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  ganttMilestonesList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  ganttMilestoneItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  ganttMilestoneText: {
+    fontSize: 13,
+    maxWidth: 150,
+  },
+  ganttDateAxis: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+  },
+  ganttDateAxisCenter: {
+    alignItems: 'center',
+  },
+  ganttTodayLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ganttTodayDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  ganttTodayText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   ganttLabel: {
     fontSize: 12,
