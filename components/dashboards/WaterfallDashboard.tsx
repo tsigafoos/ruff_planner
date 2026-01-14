@@ -416,14 +416,73 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
       {/* Key Milestones Status */}
       {milestones.length > 0 && (
         <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Key Milestones</Text>
-          {milestones.map((milestone: string, idx: number) => (
-            <View key={idx} style={[styles.milestoneItem, { borderBottomColor: theme.borderLight }]}>
-              <View style={[styles.milestoneStatus, styles.milestoneOnTrack]} />
-              <Text style={[styles.milestoneText, { color: theme.text }]}>{milestone}</Text>
-              <Text style={[styles.milestoneStatusText, { color: theme.textSecondary }]}>On Track</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Key Milestones</Text>
+            <View style={[styles.sectionBadge, { backgroundColor: theme.primary + '20' }]}>
+              <Text style={[styles.sectionBadgeText, { color: theme.primary }]}>
+                {milestones.length} total
+              </Text>
             </View>
-          ))}
+          </View>
+          {/* Milestone progress bar */}
+          <View style={styles.milestoneProgress}>
+            <View style={[styles.milestoneProgressBar, { backgroundColor: theme.border }]}>
+              {milestones.map((_, idx) => (
+                <View 
+                  key={idx}
+                  style={[
+                    styles.milestoneProgressSegment,
+                    { 
+                      backgroundColor: idx < Math.ceil(milestones.length * completionPercent / 100) 
+                        ? '#10B981' 
+                        : 'transparent',
+                      borderRightColor: theme.surface,
+                    }
+                  ]}
+                />
+              ))}
+            </View>
+            <Text style={[styles.milestoneProgressText, { color: theme.textSecondary }]}>
+              ~{Math.ceil(milestones.length * completionPercent / 100)} estimated complete
+            </Text>
+          </View>
+          {milestones.map((milestone: string, idx: number) => {
+            // Estimate milestone status based on project progress
+            const milestoneProgress = (idx + 1) / milestones.length;
+            const projectProgress = completionPercent / 100;
+            const status = projectProgress >= milestoneProgress ? 'complete' 
+              : projectProgress >= milestoneProgress - 0.15 ? 'on-track' 
+              : 'upcoming';
+            const statusConfig = {
+              'complete': { color: '#10B981', icon: 'check-circle' as const, label: 'Complete' },
+              'on-track': { color: '#3B82F6', icon: 'clock-o' as const, label: 'In Progress' },
+              'upcoming': { color: theme.textTertiary, icon: 'circle-o' as const, label: 'Upcoming' },
+            };
+            const config = statusConfig[status];
+            
+            return (
+              <View key={idx} style={[styles.milestoneItem, { borderBottomColor: theme.border + '40' }]}>
+                <View style={styles.milestoneNumber}>
+                  <Text style={[styles.milestoneNumberText, { color: theme.textSecondary }]}>
+                    {idx + 1}
+                  </Text>
+                </View>
+                <FontAwesome name={config.icon} size={18} color={config.color} />
+                <Text style={[
+                  styles.milestoneText, 
+                  { color: theme.text },
+                  status === 'complete' && styles.milestoneTextComplete
+                ]}>
+                  {milestone}
+                </Text>
+                <View style={[styles.milestoneStatusBadge, { backgroundColor: config.color + '15' }]}>
+                  <Text style={[styles.milestoneStatusText, { color: config.color }]}>
+                    {config.label}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
         </View>
       )}
 
@@ -459,13 +518,42 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
       {/* Deliverables */}
       {deliverables.length > 0 && (
         <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Deliverables</Text>
-          {deliverables.map((deliverable: string, idx: number) => (
-            <View key={idx} style={styles.listItem}>
-              <View style={[styles.bullet, { backgroundColor: theme.textSecondary }]} />
-              <Text style={[styles.listText, { color: theme.text }]}>{deliverable}</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Deliverables</Text>
+            <View style={[styles.sectionBadge, { backgroundColor: theme.accent + '20' }]}>
+              <FontAwesome name="cube" size={10} color={theme.accent} />
+              <Text style={[styles.sectionBadgeText, { color: theme.accent }]}>
+                {deliverables.length} items
+              </Text>
             </View>
-          ))}
+          </View>
+          {deliverables.map((deliverable: string, idx: number) => {
+            // Estimate deliverable completion based on project progress
+            const deliverableProgress = (idx + 1) / deliverables.length;
+            const isLikelyComplete = (completionPercent / 100) >= deliverableProgress;
+            
+            return (
+              <View key={idx} style={[styles.deliverableItem, { borderBottomColor: theme.border + '40' }]}>
+                <View style={styles.deliverableNumber}>
+                  <Text style={[styles.deliverableNumberText, { color: theme.textSecondary }]}>
+                    {idx + 1}
+                  </Text>
+                </View>
+                <FontAwesome 
+                  name={isLikelyComplete ? "check-square-o" : "square-o"} 
+                  size={18} 
+                  color={isLikelyComplete ? '#10B981' : theme.textTertiary} 
+                />
+                <Text style={[
+                  styles.deliverableText, 
+                  { color: theme.text },
+                  isLikelyComplete && styles.deliverableTextComplete
+                ]}>
+                  {deliverable}
+                </Text>
+              </View>
+            );
+          })}
         </View>
       )}
 
@@ -532,13 +620,77 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
       {/* Risk Register Summary */}
       {topRisks.length > 0 && (
         <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Top 5 Risks</Text>
-          {topRisks.map((risk: string, idx: number) => (
-            <View key={idx} style={[styles.riskItem, { borderBottomColor: theme.borderLight }]}>
-              <View style={[styles.riskSeverity, styles.riskHigh]} />
-              <Text style={[styles.riskText, { color: theme.text }]}>{risk}</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Risk Register</Text>
+            <View style={[
+              styles.sectionBadge, 
+              { backgroundColor: risks.length > 3 ? '#EF444420' : risks.length > 0 ? '#F59E0B20' : '#10B98120' }
+            ]}>
+              <FontAwesome 
+                name="exclamation-triangle" 
+                size={10} 
+                color={risks.length > 3 ? '#EF4444' : risks.length > 0 ? '#F59E0B' : '#10B981'} 
+              />
+              <Text style={[
+                styles.sectionBadgeText, 
+                { color: risks.length > 3 ? '#EF4444' : risks.length > 0 ? '#F59E0B' : '#10B981' }
+              ]}>
+                {risks.length} {risks.length === 1 ? 'risk' : 'risks'}
+              </Text>
             </View>
-          ))}
+          </View>
+          {/* Risk severity legend */}
+          <View style={styles.riskLegend}>
+            <View style={styles.riskLegendItem}>
+              <View style={[styles.riskLegendDot, { backgroundColor: '#EF4444' }]} />
+              <Text style={[styles.riskLegendText, { color: theme.textSecondary }]}>High</Text>
+            </View>
+            <View style={styles.riskLegendItem}>
+              <View style={[styles.riskLegendDot, { backgroundColor: '#F59E0B' }]} />
+              <Text style={[styles.riskLegendText, { color: theme.textSecondary }]}>Medium</Text>
+            </View>
+            <View style={styles.riskLegendItem}>
+              <View style={[styles.riskLegendDot, { backgroundColor: '#10B981' }]} />
+              <Text style={[styles.riskLegendText, { color: theme.textSecondary }]}>Low</Text>
+            </View>
+          </View>
+          {topRisks.map((risk: string, idx: number) => {
+            // Assign severity based on position (first = highest priority) and keywords
+            const riskLower = risk.toLowerCase();
+            const hasHighKeywords = riskLower.includes('critical') || riskLower.includes('major') || riskLower.includes('severe');
+            const hasLowKeywords = riskLower.includes('minor') || riskLower.includes('low') || riskLower.includes('unlikely');
+            
+            let severity: 'high' | 'medium' | 'low';
+            if (hasHighKeywords || idx === 0) {
+              severity = 'high';
+            } else if (hasLowKeywords || idx >= 3) {
+              severity = 'low';
+            } else {
+              severity = 'medium';
+            }
+            
+            const severityConfig = {
+              high: { color: '#EF4444', icon: 'exclamation-circle' as const, label: 'HIGH' },
+              medium: { color: '#F59E0B', icon: 'exclamation' as const, label: 'MED' },
+              low: { color: '#10B981', icon: 'info-circle' as const, label: 'LOW' },
+            };
+            const config = severityConfig[severity];
+            
+            return (
+              <View key={idx} style={[styles.riskItem, { borderBottomColor: theme.border + '40' }]}>
+                <View style={[styles.riskSeverityBadge, { backgroundColor: config.color + '15' }]}>
+                  <FontAwesome name={config.icon} size={12} color={config.color} />
+                  <Text style={[styles.riskSeverityText, { color: config.color }]}>{config.label}</Text>
+                </View>
+                <Text style={[styles.riskText, { color: theme.text }]}>{risk}</Text>
+              </View>
+            );
+          })}
+          {risks.length > 5 && (
+            <Text style={[styles.riskMoreText, { color: theme.textSecondary }]}>
+              +{risks.length - 5} more risks not shown
+            </Text>
+          )}
         </View>
       )}
 
@@ -649,10 +801,27 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 16,
+  },
+  sectionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  sectionBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   emptyText: {
     fontSize: 14,
@@ -790,27 +959,59 @@ const styles = StyleSheet.create({
   ganttLabel: {
     fontSize: 12,
   },
+  milestoneProgress: {
+    marginBottom: 16,
+  },
+  milestoneProgressBar: {
+    flexDirection: 'row',
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  milestoneProgressSegment: {
+    flex: 1,
+    borderRightWidth: 2,
+  },
+  milestoneProgressText: {
+    fontSize: 11,
+    fontStyle: 'italic',
+  },
   milestoneItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    gap: 12,
+    gap: 10,
   },
-  milestoneStatus: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+  milestoneNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  milestoneOnTrack: {
-    backgroundColor: '#10B981',
+  milestoneNumberText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   milestoneText: {
     flex: 1,
     fontSize: 15,
   },
+  milestoneTextComplete: {
+    textDecorationLine: 'line-through',
+    opacity: 0.7,
+  },
+  milestoneStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
   milestoneStatusText: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '600',
   },
   resourceGroup: {
     marginBottom: 16,
@@ -854,24 +1055,85 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
   },
-  riskItem: {
+  riskLegend: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  riskLegendItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+  },
+  riskLegendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  riskLegendText: {
+    fontSize: 11,
+  },
+  riskItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     paddingVertical: 12,
     borderBottomWidth: 1,
     gap: 12,
   },
-  riskSeverity: {
-    width: 12,
-    height: 12,
+  riskSeverityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 6,
+    minWidth: 60,
   },
-  riskHigh: {
-    backgroundColor: '#EF4444',
+  riskSeverityText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
   riskText: {
     flex: 1,
     fontSize: 15,
+    lineHeight: 22,
+  },
+  riskMoreText: {
+    fontSize: 13,
+    fontStyle: 'italic',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  // Deliverable styles
+  deliverableItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    gap: 10,
+  },
+  deliverableNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deliverableNumberText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  deliverableText: {
+    flex: 1,
+    fontSize: 15,
+  },
+  deliverableTextComplete: {
+    textDecorationLine: 'line-through',
+    opacity: 0.7,
   },
   collapsibleHeader: {
     flexDirection: 'row',
