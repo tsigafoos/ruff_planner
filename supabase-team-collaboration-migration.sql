@@ -3,6 +3,27 @@
 -- Run this in Supabase SQL Editor
 
 -- ============================================
+-- STEP 0: DROP EXISTING POLICIES (if re-running)
+-- ============================================
+DROP POLICY IF EXISTS "Users can view teams they belong to" ON teams;
+DROP POLICY IF EXISTS "Users can create teams" ON teams;
+DROP POLICY IF EXISTS "Team owners can update their teams" ON teams;
+DROP POLICY IF EXISTS "Team owners can delete their teams" ON teams;
+DROP POLICY IF EXISTS "Team members can view other members" ON team_members;
+DROP POLICY IF EXISTS "Team owners/admins can add members" ON team_members;
+DROP POLICY IF EXISTS "Team owners/admins can update member roles" ON team_members;
+DROP POLICY IF EXISTS "Team owners/admins can remove members" ON team_members;
+DROP POLICY IF EXISTS "Team owners/admins can view invites" ON team_invites;
+DROP POLICY IF EXISTS "Team owners/admins can create invites" ON team_invites;
+DROP POLICY IF EXISTS "Team owners/admins can update invites" ON team_invites;
+DROP POLICY IF EXISTS "Team owners/admins can delete invites" ON team_invites;
+DROP POLICY IF EXISTS "Anyone can view invite by token" ON team_invites;
+DROP POLICY IF EXISTS "Users can view shares for their projects or shares with them" ON project_shares;
+DROP POLICY IF EXISTS "Project owners can create shares" ON project_shares;
+DROP POLICY IF EXISTS "Project owners can update shares" ON project_shares;
+DROP POLICY IF EXISTS "Project owners can delete shares" ON project_shares;
+
+-- ============================================
 -- STEP 1: CREATE ALL TABLES FIRST (no policies yet)
 -- ============================================
 
@@ -57,7 +78,56 @@ CREATE TABLE IF NOT EXISTS project_shares (
 );
 
 -- ============================================
--- STEP 2: ENABLE RLS ON ALL TABLES
+-- STEP 2: CREATE HELPER FUNCTIONS (SECURITY DEFINER to bypass RLS)
+-- These functions run with elevated privileges to check membership
+-- without triggering infinite recursion in policies
+-- ============================================
+
+-- Check if user is a member of a team (any role)
+CREATE OR REPLACE FUNCTION is_team_member(check_team_id UUID, check_user_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM team_members 
+    WHERE team_id = check_team_id AND user_id = check_user_id
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Check if user is an admin or owner of a team
+CREATE OR REPLACE FUNCTION is_team_admin(check_team_id UUID, check_user_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM team_members 
+    WHERE team_id = check_team_id 
+      AND user_id = check_user_id 
+      AND role IN ('owner', 'admin')
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Check if user owns the team
+CREATE OR REPLACE FUNCTION is_team_owner(check_team_id UUID, check_user_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM teams 
+    WHERE id = check_team_id AND owner_id = check_user_id
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Get all team IDs a user belongs to
+CREATE OR REPLACE FUNCTION get_user_team_ids(check_user_id UUID)
+RETURNS SETOF UUID AS $$
+BEGIN
+  RETURN QUERY SELECT team_id FROM team_members WHERE user_id = check_user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================
+-- STEP 3: ENABLE RLS ON ALL TABLES
 -- ============================================
 ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
@@ -65,14 +135,14 @@ ALTER TABLE team_invites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE project_shares ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
--- STEP 3: CREATE POLICIES (now that all tables exist)
+-- STEP 4: CREATE POLICIES (using helper functions to avoid recursion)
 -- ============================================
 
 -- TEAMS POLICIES
 CREATE POLICY "Users can view teams they belong to" ON teams
   FOR SELECT USING (
     owner_id = auth.uid() OR
-    id IN (SELECT team_id FROM team_members WHERE user_id = auth.uid())
+    is_team_member(id, auth.uid())
   );
 
 CREATE POLICY "Users can create teams" ON teams
@@ -84,71 +154,52 @@ CREATE POLICY "Team owners can update their teams" ON teams
 CREATE POLICY "Team owners can delete their teams" ON teams
   FOR DELETE USING (owner_id = auth.uid());
 
--- TEAM MEMBERS POLICIES
+-- TEAM MEMBERS POLICIES (using helper functions)
 CREATE POLICY "Team members can view other members" ON team_members
   FOR SELECT USING (
-    team_id IN (SELECT team_id FROM team_members WHERE user_id = auth.uid())
+    -- User can see members of teams they belong to
+    user_id = auth.uid() OR
+    is_team_member(team_id, auth.uid())
   );
 
 CREATE POLICY "Team owners/admins can add members" ON team_members
   FOR INSERT WITH CHECK (
-    team_id IN (
-      SELECT team_id FROM team_members 
-      WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
-    ) OR
-    team_id IN (SELECT id FROM teams WHERE owner_id = auth.uid())
+    is_team_admin(team_id, auth.uid()) OR
+    is_team_owner(team_id, auth.uid())
   );
 
 CREATE POLICY "Team owners/admins can update member roles" ON team_members
   FOR UPDATE USING (
-    team_id IN (
-      SELECT team_id FROM team_members 
-      WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
-    )
+    is_team_admin(team_id, auth.uid())
   );
 
 CREATE POLICY "Team owners/admins can remove members" ON team_members
   FOR DELETE USING (
-    team_id IN (
-      SELECT team_id FROM team_members 
-      WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
-    ) OR
+    is_team_admin(team_id, auth.uid()) OR
     user_id = auth.uid() -- Users can leave teams
   );
 
 -- TEAM INVITES POLICIES
 CREATE POLICY "Team owners/admins can view invites" ON team_invites
   FOR SELECT USING (
-    team_id IN (
-      SELECT team_id FROM team_members 
-      WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
-    ) OR
-    team_id IN (SELECT id FROM teams WHERE owner_id = auth.uid())
+    is_team_admin(team_id, auth.uid()) OR
+    is_team_owner(team_id, auth.uid())
   );
 
 CREATE POLICY "Team owners/admins can create invites" ON team_invites
   FOR INSERT WITH CHECK (
-    team_id IN (
-      SELECT team_id FROM team_members 
-      WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
-    ) OR
-    team_id IN (SELECT id FROM teams WHERE owner_id = auth.uid())
+    is_team_admin(team_id, auth.uid()) OR
+    is_team_owner(team_id, auth.uid())
   );
 
 CREATE POLICY "Team owners/admins can update invites" ON team_invites
   FOR UPDATE USING (
-    team_id IN (
-      SELECT team_id FROM team_members 
-      WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
-    )
+    is_team_admin(team_id, auth.uid())
   );
 
 CREATE POLICY "Team owners/admins can delete invites" ON team_invites
   FOR DELETE USING (
-    team_id IN (
-      SELECT team_id FROM team_members 
-      WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
-    )
+    is_team_admin(team_id, auth.uid())
   );
 
 -- Public policy for accepting invites (anyone with valid token)
@@ -160,7 +211,7 @@ CREATE POLICY "Users can view shares for their projects or shares with them" ON 
   FOR SELECT USING (
     project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()) OR
     shared_with_user_id = auth.uid() OR
-    team_id IN (SELECT team_id FROM team_members WHERE user_id = auth.uid())
+    is_team_member(team_id, auth.uid())
   );
 
 CREATE POLICY "Project owners can create shares" ON project_shares
@@ -179,14 +230,14 @@ CREATE POLICY "Project owners can delete shares" ON project_shares
   );
 
 -- ============================================
--- STEP 4: PROFILE UPDATES (user_profiles table)
+-- STEP 5: PROFILE UPDATES (user_profiles table)
 -- ============================================
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS team_mode_enabled BOOLEAN DEFAULT FALSE;
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS default_team_id UUID REFERENCES teams(id) ON DELETE SET NULL;
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS email_settings JSONB DEFAULT '{}'::jsonb;
 
 -- ============================================
--- STEP 5: INDEXES
+-- STEP 6: INDEXES
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_teams_owner_id ON teams(owner_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_team_id ON team_members(team_id);
@@ -199,7 +250,7 @@ CREATE INDEX IF NOT EXISTS idx_project_shares_team_id ON project_shares(team_id)
 CREATE INDEX IF NOT EXISTS idx_project_shares_user_id ON project_shares(shared_with_user_id);
 
 -- ============================================
--- STEP 6: HELPER FUNCTION - Generate short invite token
+-- STEP 7: HELPER FUNCTION - Generate short invite token
 -- ============================================
 CREATE OR REPLACE FUNCTION generate_invite_token(length INTEGER DEFAULT 8)
 RETURNS TEXT AS $$
@@ -216,7 +267,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================
--- STEP 7: TRIGGER - Auto-add owner as team member
+-- STEP 8: TRIGGER - Auto-add owner as team member
 -- ============================================
 CREATE OR REPLACE FUNCTION add_owner_as_member()
 RETURNS TRIGGER AS $$
@@ -225,7 +276,7 @@ BEGIN
   VALUES (NEW.id, NEW.owner_id, 'owner');
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Drop trigger if exists before creating
 DROP TRIGGER IF EXISTS trigger_add_owner_as_member ON teams;
@@ -235,7 +286,7 @@ CREATE TRIGGER trigger_add_owner_as_member
   EXECUTE FUNCTION add_owner_as_member();
 
 -- ============================================
--- STEP 8: TRIGGER - Update team timestamp
+-- STEP 9: TRIGGER - Update team timestamp
 -- ============================================
 CREATE OR REPLACE FUNCTION update_team_timestamp()
 RETURNS TRIGGER AS $$
