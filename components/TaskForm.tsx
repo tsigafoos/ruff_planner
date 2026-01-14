@@ -5,10 +5,18 @@ import DatePicker from './ui/DatePicker';
 import Input from './ui/Input';
 import PriorityPicker from './ui/PriorityPicker';
 import { useTheme } from './useTheme';
-import { ProjectPhase } from '../types';
+import { ProjectPhase, MaintenanceCategory } from '../types';
 import { AGILE_PHASES } from '../store/taskStore';
 
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
+
+// Category options for Maintenance projects
+const CATEGORY_OPTIONS: { value: MaintenanceCategory; label: string; icon: string; color: string }[] = [
+  { value: 'bug', label: 'Bug', icon: '🐛', color: '#EF4444' },
+  { value: 'enhancement', label: 'Enhancement', icon: '✨', color: '#8B5CF6' },
+  { value: 'support', label: 'Support', icon: '🎧', color: '#0EA5E9' },
+  { value: 'other', label: 'Other', icon: '📋', color: '#6B7280' },
+];
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
   { value: 'to_do', label: 'To Do' },
@@ -54,6 +62,7 @@ export default function TaskForm({
   const [status, setStatus] = useState<TaskStatus>('to_do');
   const [projectId, setProjectId] = useState<string | undefined>();
   const [projectPhase, setProjectPhase] = useState<ProjectPhase | null>(null);
+  const [category, setCategory] = useState<MaintenanceCategory | null>(null);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [completed, setCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -71,6 +80,12 @@ export default function TaskForm({
     return projectType === 'agile';
   }, [selectedProject]);
 
+  const isMaintenanceProject = useMemo(() => {
+    if (!selectedProject) return false;
+    const projectType = selectedProject.projectType || selectedProject.project_type;
+    return projectType === 'maintenance';
+  }, [selectedProject]);
+
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title || '');
@@ -80,6 +95,7 @@ export default function TaskForm({
       setPriority(initialData.priority || 1);
       setProjectId(initialData.projectId || initialData.project_id);
       setProjectPhase(initialData.projectPhase || initialData.project_phase || null);
+      setCategory(initialData.category || null);
       setSelectedLabels(initialData.labelIds || initialData.label_ids || []);
       const isCompleted = !!(initialData.completed_at || initialData.completedAt || initialData.completed);
       setCompleted(isCompleted);
@@ -99,6 +115,7 @@ export default function TaskForm({
       setPriority(1);
       setProjectId(undefined);
       setProjectPhase(null);
+      setCategory(null);
       setSelectedLabels([]);
       setCompleted(false);
       setStatus('to_do');
@@ -114,6 +131,15 @@ export default function TaskForm({
     }
   }, [isAgileProject, initialData]);
 
+  // Auto-set category to 'other' when switching to a Maintenance project (for new tasks)
+  useEffect(() => {
+    if (isMaintenanceProject && !category && !initialData) {
+      setCategory('other');
+    } else if (!isMaintenanceProject) {
+      setCategory(null);
+    }
+  }, [isMaintenanceProject, initialData]);
+
   const handleSubmit = async () => {
     if (!title.trim()) return;
     setLoading(true);
@@ -127,6 +153,7 @@ export default function TaskForm({
         status,
         projectId,
         projectPhase: isAgileProject ? projectPhase : null, // Only include phase for Agile projects
+        category: isMaintenanceProject ? category : null, // Only include category for Maintenance projects
         labelIds: selectedLabels,
         completed: status === 'completed' || completed,
       });
@@ -267,6 +294,46 @@ export default function TaskForm({
                             styles.phaseOptionText,
                             {
                               color: isSelected ? theme.text : theme.textSecondary,
+                              fontWeight: isSelected ? '600' : '400',
+                            },
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
+            {/* Category picker - only shown for Maintenance projects */}
+            {isMaintenanceProject && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
+                  Issue Category
+                </Text>
+                <View style={styles.categoryOptions}>
+                  {CATEGORY_OPTIONS.map((option) => {
+                    const isSelected = category === option.value;
+                    return (
+                      <TouchableOpacity
+                        key={option.value}
+                        style={[
+                          styles.categoryOption,
+                          {
+                            backgroundColor: isSelected ? option.color + '20' : theme.surfaceSecondary,
+                            borderColor: isSelected ? option.color : theme.border,
+                          },
+                        ]}
+                        onPress={() => setCategory(option.value)}
+                      >
+                        <Text style={styles.categoryOptionIcon}>{option.icon}</Text>
+                        <Text
+                          style={[
+                            styles.categoryOptionText,
+                            {
+                              color: isSelected ? option.color : theme.text,
                               fontWeight: isSelected ? '600' : '400',
                             },
                           ]}
@@ -517,6 +584,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   phaseOptionText: {
+    fontSize: Platform.OS === 'web' ? 13 : 14,
+    fontWeight: '500',
+  },
+  categoryOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  categoryOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Platform.OS === 'web' ? 14 : 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 2,
+    minWidth: Platform.OS === 'web' ? 120 : 100,
+  },
+  categoryOptionIcon: {
+    fontSize: 14,
+  },
+  categoryOptionText: {
     fontSize: Platform.OS === 'web' ? 13 : 14,
     fontWeight: '500',
   },
