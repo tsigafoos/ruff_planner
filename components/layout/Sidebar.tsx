@@ -2,6 +2,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import { useRouter, usePathname } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useThemeStore, themes } from '@/store/themeStore';
+import { useProfileStore } from '@/store/profileStore';
+import { useTeamStore } from '@/store/teamStore';
 
 // Layout constants
 export const SIDEBAR_COLLAPSED_WIDTH = 60;
@@ -12,6 +14,7 @@ interface NavItem {
   route: string;
   icon: string;
   section?: string; // Group header
+  teamOnly?: boolean; // Only show when team mode is enabled
 }
 
 const navItems: NavItem[] = [
@@ -23,6 +26,7 @@ const navItems: NavItem[] = [
   { name: 'Calendar', route: '/(tabs)/calendar', icon: 'calendar-o' },
   { name: 'Resources', route: '/(tabs)/projects', icon: 'file-o', section: 'Manage' }, // Placeholder route
   { name: 'Labels', route: '/(tabs)/labels', icon: 'tags' },
+  { name: 'Team', route: '/team', icon: 'users', section: 'Collaborate', teamOnly: true },
 ];
 
 interface SidebarProps {
@@ -42,11 +46,19 @@ export default function Sidebar({
   const pathname = usePathname();
   const { toggleTheme, resolvedTheme } = useThemeStore();
   const theme = themes[resolvedTheme];
+  const { profile } = useProfileStore();
+  const { currentTeam } = useTeamStore();
+
+  // Check if team mode is enabled
+  const teamModeEnabled = profile?.team_mode_enabled;
 
   // Only render on web
   if (Platform.OS !== 'web') {
     return null;
   }
+
+  // Filter nav items based on team mode
+  const filteredNavItems = navItems.filter(item => !item.teamOnly || teamModeEnabled);
 
   const isActive = (route: string) => {
     return pathname === route || pathname?.startsWith(route.replace('/(tabs)', ''));
@@ -55,7 +67,7 @@ export default function Sidebar({
   const renderNavItem = (item: NavItem, index: number) => {
     const active = isActive(item.route);
     const showSection = item.section && !collapsed;
-    const prevItem = navItems[index - 1];
+    const prevItem = filteredNavItems[index - 1];
     const isFirstInSection = item.section && (!prevItem || prevItem.section !== item.section);
 
     return (
@@ -147,8 +159,24 @@ export default function Sidebar({
 
       {/* Navigation Items */}
       <View style={styles.navSection}>
-        {navItems.map((item, index) => renderNavItem(item, index))}
+        {filteredNavItems.map((item, index) => renderNavItem(item, index))}
       </View>
+
+      {/* Team indicator when team mode enabled */}
+      {teamModeEnabled && currentTeam && !collapsed && (
+        <TouchableOpacity
+          style={[styles.teamIndicator, { backgroundColor: theme.surfaceTertiary, borderColor: theme.border }]}
+          onPress={() => router.push('/team')}
+        >
+          <FontAwesome name="building" size={14} color={theme.primary} />
+          <View style={styles.teamIndicatorText}>
+            <Text style={[styles.teamLabel, { color: theme.textTertiary }]}>Team</Text>
+            <Text style={[styles.teamName, { color: theme.text }]} numberOfLines={1}>
+              {currentTeam.name}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      )}
 
       {/* Sidebar Footer */}
       <View style={[styles.sidebarFooter, { borderTopColor: theme.border }]}>
@@ -258,5 +286,28 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 13,
     fontWeight: '500',
+  },
+  teamIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 8,
+    marginBottom: 8,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  teamIndicatorText: {
+    flex: 1,
+  },
+  teamLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  teamName: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
