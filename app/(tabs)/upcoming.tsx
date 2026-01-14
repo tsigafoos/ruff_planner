@@ -1,15 +1,17 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { useTaskStore } from '@/store/taskStore';
 import { useAuthStore } from '@/store/authStore';
 import TaskCard from '@/components/TaskCard';
 import QuickAdd from '@/components/QuickAdd';
 import { useTheme } from '@/components/useTheme';
+import { PageHeader, commonActions } from '@/components/layout';
 
 export default function UpcomingScreen() {
   const { user } = useAuthStore();
   const { tasks, loading, fetchTasksDueUpcoming } = useTaskStore();
   const theme = useTheme();
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -23,10 +25,21 @@ export default function UpcomingScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <Text style={[styles.title, { color: theme.text }]}>Upcoming</Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{tasks.length} tasks</Text>
-      </View>
+      {Platform.OS === 'web' ? (
+        <PageHeader
+          section="Tasks"
+          pageName="Upcoming"
+          subtitle={`${tasks.length} tasks`}
+          actions={[
+            commonActions.addTask(() => setQuickAddVisible(true)),
+          ]}
+        />
+      ) : (
+        <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+          <Text style={[styles.title, { color: theme.text }]}>Upcoming</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{tasks.length} tasks</Text>
+        </View>
+      )}
 
       {loading ? (
         <View style={styles.center}>
@@ -47,7 +60,7 @@ export default function UpcomingScreen() {
         />
       )}
 
-      <QuickAdd onAdd={handleAddTask} />
+      <QuickAdd onAdd={handleAddTask} visible={quickAddVisible} onToggle={() => setQuickAddVisible(!quickAddVisible)} />
     </View>
   );
 }

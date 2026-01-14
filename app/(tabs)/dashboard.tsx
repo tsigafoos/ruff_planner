@@ -11,6 +11,7 @@ import ProjectForm from '@/components/ProjectForm';
 import { useTheme } from '@/components/useTheme';
 import { useThemeStore } from '@/store/themeStore';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { PageHeader, commonActions } from '@/components/layout';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths } from 'date-fns';
 
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
@@ -272,7 +273,19 @@ export default function DashboardScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {Platform.OS === 'web' && (
+        <PageHeader
+          section="Overview"
+          pageName="Dashboard"
+          subtitle={`${tasks.length} tasks, ${projects.length} projects`}
+          actions={[
+            commonActions.addTask(() => setNewTaskFormVisible(true)),
+            commonActions.addProject(() => setProjectFormVisible(true)),
+          ]}
+        />
+      )}
+      <ScrollView style={styles.scrollContent}>
       {/* Projects and Mini Calendar Row */}
       <View style={styles.topSection}>
         {/* Projects List Section */}
@@ -498,12 +511,16 @@ export default function DashboardScreen() {
         onClose={() => setProjectFormVisible(false)}
         onSubmit={handleCreateProject}
       />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  scrollContent: {
     flex: 1,
   },
   topSection: {
