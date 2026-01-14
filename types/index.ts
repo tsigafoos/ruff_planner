@@ -69,3 +69,84 @@ export interface Comment {
   createdAt: Date;
   userId: string;
 }
+
+// ============================================
+// Team & Collaboration Types
+// ============================================
+
+// Team member roles
+export type TeamRole = 'owner' | 'admin' | 'member' | 'guest';
+
+// Project sharing roles
+export type ProjectShareRole = 'viewer' | 'commenter' | 'editor' | 'co_owner';
+
+// Invite status
+export type InviteStatus = 'pending' | 'accepted' | 'expired' | 'revoked';
+
+export interface Team {
+  id: string;
+  name: string;
+  note?: string;
+  ownerId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TeamMember {
+  id: string;
+  teamId: string;
+  userId: string;
+  role: TeamRole;
+  joinedAt: Date;
+  // Populated fields from joins
+  user?: {
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    avatar?: string;
+  };
+}
+
+export interface TeamInvite {
+  id: string;
+  teamId: string;
+  email: string;
+  role: TeamRole;
+  token: string;
+  invitedBy: string;
+  status: InviteStatus;
+  createdAt: Date;
+  expiresAt: Date;
+  // Populated fields
+  team?: Team;
+}
+
+export interface ProjectShare {
+  id: string;
+  projectId: string;
+  teamId?: string;
+  sharedWithUserId?: string;
+  role: ProjectShareRole;
+  createdAt: Date;
+  // Populated fields
+  team?: Team;
+  user?: {
+    email: string;
+    firstName?: string;
+    lastName?: string;
+  };
+}
+
+// Email settings for SMTP/IMAP
+export interface EmailSettings {
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPass?: string;
+  smtpSecure?: boolean;
+  imapHost?: string;
+  imapPort?: number;
+  imapUser?: string;
+  imapPass?: string;
+  imapSecure?: boolean;
+}
