@@ -51,7 +51,7 @@ export default function ProjectDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuthStore();
-  const { tasks, loading, fetchTasksByProject, createTask, updateTask, completeTask, deleteTask } = useTaskStore();
+  const { tasks, loading, fetchTasksByProject, createTask, updateTask, updateTaskPhase, completeTask, deleteTask } = useTaskStore();
   const { projects, fetchProjects, updateProject } = useProjectStore();
   const { labels, fetchLabels } = useLabelStore();
   const [selectedTask, setSelectedTask] = useState<any>(null);
@@ -470,6 +470,15 @@ export default function ProjectDetailScreen() {
               project={project}
               tasks={tasks}
               onProjectUpdate={handleProjectUpdate}
+              onTaskClick={handleEditTask}
+              onTaskPhaseChange={async (taskId, newPhase) => {
+                await updateTaskPhase(taskId, newPhase);
+                // Refresh tasks to update UI
+                if (user?.id && id) {
+                  await fetchTasksByProject(id, user.id);
+                }
+              }}
+              onAddTask={() => setNewTaskFormVisible(true)}
             />
           ) : (
             <WaterfallDashboard
