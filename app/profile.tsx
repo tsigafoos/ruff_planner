@@ -8,6 +8,7 @@ import WebLayout from '@/components/layout/WebLayout';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { format } from 'date-fns';
 import ProfileForm from '@/components/ProfileForm';
+import TeamSettings from '@/components/settings/TeamSettings';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -148,6 +149,14 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </View>
+
+          {/* Team & Collaboration Settings */}
+          <TeamSettings
+            onManageTeam={() => {
+              // TODO: Navigate to team management screen
+              console.log('Navigate to team management');
+            }}
+          />
 
           {/* Social Links */}
           {profile?.social_links && Object.keys(profile.social_links).length > 0 && (
