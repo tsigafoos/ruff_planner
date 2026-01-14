@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Button from './ui/Button';
 import DatePicker from './ui/DatePicker';
 import Input from './ui/Input';
 import PriorityPicker from './ui/PriorityPicker';
 import { useTheme } from './useTheme';
+import { ProjectPhase } from '../types';
+import { AGILE_PHASES } from '../store/taskStore';
 
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
 
@@ -15,6 +17,15 @@ const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
   { value: 'on_hold', label: 'On Hold' },
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' },
+];
+
+// Phase options for Agile projects with subtle mood-based colors
+const PHASE_OPTIONS: { value: ProjectPhase; label: string; color: string }[] = [
+  { value: 'brainstorm', label: 'Brainstorm', color: '#E9D5FF' }, // pale lavender
+  { value: 'design', label: 'Design', color: '#DBEAFE' }, // soft blue
+  { value: 'logic', label: 'Logic', color: '#D1FAE5' }, // soft green
+  { value: 'polish', label: 'Polish', color: '#FEF3C7' }, // soft amber
+  { value: 'done', label: 'Done', color: '#E5E7EB' }, // gray
 ];
 
 interface TaskFormProps {
@@ -42,9 +53,23 @@ export default function TaskForm({
   const [priority, setPriority] = useState(1);
   const [status, setStatus] = useState<TaskStatus>('to_do');
   const [projectId, setProjectId] = useState<string | undefined>();
+  const [projectPhase, setProjectPhase] = useState<ProjectPhase | null>(null);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [completed, setCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Determine if the selected project is Agile
+  const selectedProject = useMemo(() => {
+    if (!projectId) return null;
+    return projects.find((p: any) => p.id === projectId) || null;
+  }, [projectId, projects]);
+
+  const isAgileProject = useMemo(() => {
+    if (!selectedProject) return false;
+    // Check both camelCase and snake_case for project_type
+    const projectType = selectedProject.projectType || selectedProject.project_type;
+    return projectType === 'agile';
+  }, [selectedProject]);
 
   useEffect(() => {
     if (initialData) {
@@ -53,8 +78,9 @@ export default function TaskForm({
       setStartDate(initialData.startDate ? new Date(initialData.startDate) : (initialData.start_date ? new Date(initialData.start_date) : new Date()));
       setDueDate(initialData.dueDate ? new Date(initialData.dueDate) : (initialData.due_date ? new Date(initialData.due_date) : undefined));
       setPriority(initialData.priority || 1);
-      setProjectId(initialData.projectId);
-      setSelectedLabels(initialData.labelIds || []);
+      setProjectId(initialData.projectId || initialData.project_id);
+      setProjectPhase(initialData.projectPhase || initialData.project_phase || null);
+      setSelectedLabels(initialData.labelIds || initialData.label_ids || []);
       const isCompleted = !!(initialData.completed_at || initialData.completedAt || initialData.completed);
       setCompleted(isCompleted);
       // Set status from initialData, defaulting based on completed status
@@ -72,11 +98,21 @@ export default function TaskForm({
       setDueDate(undefined);
       setPriority(1);
       setProjectId(undefined);
+      setProjectPhase(null);
       setSelectedLabels([]);
       setCompleted(false);
       setStatus('to_do');
     }
   }, [initialData, visible]);
+
+  // Auto-set phase to 'brainstorm' when switching to an Agile project (for new tasks)
+  useEffect(() => {
+    if (isAgileProject && !projectPhase && !initialData) {
+      setProjectPhase('brainstorm');
+    } else if (!isAgileProject) {
+      setProjectPhase(null);
+    }
+  }, [isAgileProject, initialData]);
 
   const handleSubmit = async () => {
     if (!title.trim()) return;
@@ -90,6 +126,7 @@ export default function TaskForm({
         priority,
         status,
         projectId,
+        projectPhase: isAgileProject ? projectPhase : null, // Only include phase for Agile projects
         labelIds: selectedLabels,
         completed: status === 'completed' || completed,
       });
@@ -167,6 +204,10 @@ export default function TaskForm({
                         // Auto-set completed when status is 'completed'
                         if (option.value === 'completed') {
                           setCompleted(true);
+                          // Also set phase to 'done' for Agile projects
+                          if (isAgileProject) {
+                            setProjectPhase('done');
+                          }
                         } else if (status === 'completed' && option.value !== 'completed') {
                           setCompleted(false);
                         }
@@ -188,6 +229,56 @@ export default function TaskForm({
                 })}
               </View>
             </View>
+
+            {/* Phase picker - only shown for Agile projects */}
+            {isAgileProject && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
+                  Workflow Phase (Agile)
+                </Text>
+                <View style={styles.phaseOptions}>
+                  {PHASE_OPTIONS.map((option) => {
+                    const isSelected = projectPhase === option.value;
+                    return (
+                      <TouchableOpacity
+                        key={option.value}
+                        style={[
+                          styles.phaseOption,
+                          {
+                            backgroundColor: isSelected ? option.color : theme.surfaceSecondary,
+                            borderColor: isSelected ? theme.primary : theme.border,
+                          },
+                        ]}
+                        onPress={() => {
+                          setProjectPhase(option.value);
+                          // Auto-complete when selecting 'done' phase
+                          if (option.value === 'done') {
+                            setStatus('completed');
+                            setCompleted(true);
+                          } else if (projectPhase === 'done' && option.value !== 'done') {
+                            // Moving out of 'done' - revert to in_progress
+                            setStatus('in_progress');
+                            setCompleted(false);
+                          }
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.phaseOptionText,
+                            {
+                              color: isSelected ? theme.text : theme.textSecondary,
+                              fontWeight: isSelected ? '600' : '400',
+                            },
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
 
             <DatePicker
               label="Start Date"
@@ -409,6 +500,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusOptionText: {
+    fontSize: Platform.OS === 'web' ? 13 : 14,
+    fontWeight: '500',
+  },
+  phaseOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  phaseOption: {
+    paddingHorizontal: Platform.OS === 'web' ? 16 : 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 2,
+    minWidth: Platform.OS === 'web' ? 100 : 90,
+    alignItems: 'center',
+  },
+  phaseOptionText: {
     fontSize: Platform.OS === 'web' ? 13 : 14,
     fontWeight: '500',
   },
