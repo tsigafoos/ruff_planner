@@ -41,28 +41,30 @@ This plan follows the energy-based, short sprint approach discussed. Each phase 
 
 ---
 
-## Phase 2: Waterfall Dashboard Polish
+## Phase 2: Waterfall Dashboard Polish ✅ COMPLETE
 
 > **Goal:** Polish the existing Waterfall dashboard (already further along)
 
-### Step 2.1: Summary Cards Enhancement
-- [ ] Review `components/dashboards/WaterfallDashboard.tsx`
-- [ ] Ensure summary cards show:
+### Step 2.1: Summary Cards Enhancement ✅
+- [x] Review `components/dashboards/WaterfallDashboard.tsx`
+- [x] Ensure summary cards show:
   - Total tasks / completed / remaining
   - Project health indicator (green/yellow/red)
   - Days remaining until deadline
   - Top risks count
 
-### Step 2.2: Gantt Chart Polish
-- [ ] Verify Gantt displays tasks with proper date ranges
-- [ ] Add subtle priority color coding
-- [ ] Ensure milestone markers are visible
-- [ ] Improve date labels readability
+### Step 2.2: Gantt Chart Polish ✅
+- [x] Verify Gantt displays tasks with proper date ranges
+- [x] Add subtle priority color coding
+- [x] Ensure milestone markers are visible
+- [x] Improve date labels readability
+- [x] Add "Today" marker line
+- [x] Add completion indicators
 
-### Step 2.3: Risk & Milestone Sections
-- [ ] Clean up risks display (top 5 with severity)
-- [ ] Add milestone progress indicators
-- [ ] Ensure deliverables section is clear
+### Step 2.3: Risk & Milestone Sections ✅
+- [x] Clean up risks display (top 5 with severity levels)
+- [x] Add milestone progress indicators
+- [x] Ensure deliverables section is clear with numbered items
 
 ---
 
