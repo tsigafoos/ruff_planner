@@ -43,6 +43,7 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [editingResource, setEditingResource] = useState<ResourceItem | null>(null);
   const [newTags, setNewTags] = useState('');
+  const [uploadTags, setUploadTags] = useState('');
 
   // Get all unique tags from resources
   const allTags = Array.from(new Set(
@@ -165,6 +166,7 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
   const handleUploadFile = () => {
     setSelectedFolder('');
     setUploadFiles([]);
+    setUploadTags('');
     setShowUploadModal(true);
   };
 
@@ -222,6 +224,12 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
           .from('user-files')
           .getPublicUrl(storagePath);
         
+        // Parse upload tags
+        const tagsArray = uploadTags
+          .split(',')
+          .map(tag => tag.trim().toLowerCase())
+          .filter(tag => tag.length > 0);
+        
         // Create resource metadata (without file content)
         newFiles.push({
           id: `${Date.now()}-${i}`,
@@ -232,6 +240,8 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
           storage_url: urlData.publicUrl,
           size: file.size,
           mime_type: file.type,
+          tags: tagsArray.length > 0 ? tagsArray : undefined,
+          created_at: new Date().toISOString(),
         });
         
         setUploadProgress(((i + 1) / totalFiles) * 100);
@@ -242,6 +252,7 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
       setShowUploadModal(false);
       setUploadFiles([]);
       setSelectedFolder('');
+      setUploadTags('');
       setUploadProgress(0);
     } catch (error) {
       console.error('Error uploading files:', error);
@@ -615,6 +626,7 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
                   setShowUploadModal(false);
                   setUploadFiles([]);
                   setSelectedFolder('');
+                  setUploadTags('');
                 }} style={styles.closeButton}>
                   <FontAwesome name="times" size={16} color={theme.textSecondary} />
                 </TouchableOpacity>
@@ -661,6 +673,37 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
                     </TouchableOpacity>
                   ))}
                 </View>
+              </View>
+
+              {/* Tags input for uploads */}
+              <View style={styles.uploadTagsContainer}>
+                <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>Tags (optional)</Text>
+                <TextInput
+                  style={[styles.modalInput, { backgroundColor: theme.surfaceSecondary, color: theme.text, borderColor: theme.border }]}
+                  value={uploadTags}
+                  onChangeText={setUploadTags}
+                  placeholder="e.g., reference, guidelines, important"
+                  placeholderTextColor={theme.textTertiary}
+                  editable={!uploading}
+                />
+                {allTags.length > 0 && (
+                  <View style={styles.uploadTagSuggestions}>
+                    {allTags.filter(t => !uploadTags.toLowerCase().includes(t.toLowerCase())).slice(0, 5).map(tag => (
+                      <TouchableOpacity
+                        key={tag}
+                        style={[styles.suggestedTag, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}
+                        onPress={() => {
+                          const currentTags = uploadTags.trim();
+                          setUploadTags(currentTags ? `${currentTags}, ${tag}` : tag);
+                        }}
+                        disabled={uploading}
+                      >
+                        <FontAwesome name="plus" size={10} color={theme.textSecondary} />
+                        <Text style={[styles.suggestedTagText, { color: theme.text }]}>{tag}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
 
               {uploadFiles.length === 0 ? (
@@ -719,6 +762,7 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
                     setShowUploadModal(false);
                     setUploadFiles([]);
                     setSelectedFolder('');
+                    setUploadTags('');
                   }
                 }}
                 variant="secondary"
@@ -1023,6 +1067,17 @@ const styles = StyleSheet.create({
   },
   suggestedTagText: {
     fontSize: 12,
+  },
+  // Upload modal tags
+  uploadTagsContainer: {
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  uploadTagSuggestions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
   },
   modalOverlay: {
     flex: 1,
