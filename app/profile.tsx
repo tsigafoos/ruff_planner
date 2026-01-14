@@ -153,8 +153,7 @@ export default function ProfileScreen() {
           {/* Team & Collaboration Settings */}
           <TeamSettings
             onManageTeam={() => {
-              // TODO: Navigate to team management screen
-              console.log('Navigate to team management');
+              router.push('/team');
             }}
           />
 
