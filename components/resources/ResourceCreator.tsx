@@ -7,8 +7,9 @@ import MermaidRenderer from '../documentation/MermaidRenderer';
 import ReactMarkdown from 'react-markdown';
 
 interface ResourceCreatorProps {
-  onSave: (title: string, type: string, content: string) => void;
+  onSave: (title: string, type: string, content: string, tags?: string[]) => void;
   onClose: () => void;
+  existingTags?: string[]; // Tags already in use for suggestions
 }
 
 type ResourceType = 'markdown' | 'mermaid' | 'txt';
@@ -16,11 +17,13 @@ type ResourceType = 'markdown' | 'mermaid' | 'txt';
 export default function ResourceCreator({
   onSave,
   onClose,
+  existingTags = [],
 }: ResourceCreatorProps) {
   const theme = useTheme();
   const [title, setTitle] = useState('');
   const [type, setType] = useState<ResourceType>('markdown');
   const [content, setContent] = useState('');
+  const [tags, setTags] = useState('');
   const [previewContent, setPreviewContent] = useState('');
   const [showPreview, setShowPreview] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -29,6 +32,21 @@ export default function ResourceCreator({
   const [mermaidFlowchartType, setMermaidFlowchartType] = useState('TB');
   const [showFlowchartDropdown, setShowFlowchartDropdown] = useState(false);
   const dropdownRef = useRef<View>(null);
+
+  // Parse tags string into array
+  const parseTags = (tagsStr: string): string[] => {
+    return tagsStr
+      .split(',')
+      .map(tag => tag.trim().toLowerCase())
+      .filter(tag => tag.length > 0);
+  };
+
+  // Add suggested tag
+  const addSuggestedTag = (tag: string) => {
+    const currentTags = tags.trim();
+    if (currentTags.toLowerCase().includes(tag.toLowerCase())) return;
+    setTags(currentTags ? `${currentTags}, ${tag}` : tag);
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -296,7 +314,8 @@ graph ${flowType}
     if (!title.trim() || !content.trim()) return;
     setLoading(true);
     try {
-      await onSave(title.trim(), type, content.trim());
+      const tagsArray = parseTags(tags);
+      await onSave(title.trim(), type, content.trim(), tagsArray.length > 0 ? tagsArray : undefined);
       onClose();
     } catch (error) {
       console.error('Error saving resource:', error);
@@ -341,6 +360,34 @@ graph ${flowType}
             placeholder="Resource Title"
             placeholderTextColor={theme.textTertiary}
           />
+        </View>
+        <View style={styles.headerTags}>
+          <FontAwesome name="tags" size={14} color={theme.textSecondary} />
+          <TextInput
+            style={[styles.tagsInput, { color: theme.text, borderColor: theme.border }]}
+            value={tags}
+            onChangeText={setTags}
+            placeholder="Tags (comma-separated)"
+            placeholderTextColor={theme.textTertiary}
+          />
+          {existingTags.length > 0 && (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              style={styles.tagSuggestions}
+              contentContainerStyle={styles.tagSuggestionsContent}
+            >
+              {existingTags.filter(t => !tags.toLowerCase().includes(t.toLowerCase())).slice(0, 5).map(tag => (
+                <TouchableOpacity
+                  key={tag}
+                  style={[styles.tagSuggestion, { backgroundColor: theme.surfaceSecondary }]}
+                  onPress={() => addSuggestedTag(tag)}
+                >
+                  <Text style={[styles.tagSuggestionText, { color: theme.text }]}>+ {tag}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
         </View>
         <View style={styles.headerRight}>
           <Button
@@ -626,6 +673,38 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 0,
     padding: 0,
+  },
+  headerTags: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    marginHorizontal: 16,
+  },
+  tagsInput: {
+    flex: 1,
+    fontSize: 13,
+    padding: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    maxWidth: 200,
+  },
+  tagSuggestions: {
+    maxWidth: 250,
+  },
+  tagSuggestionsContent: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  tagSuggestion: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  tagSuggestionText: {
+    fontSize: 11,
+    fontWeight: '500',
   },
   headerRight: {
     flexDirection: 'row',

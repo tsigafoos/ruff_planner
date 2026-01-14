@@ -316,12 +316,14 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
     );
   };
 
-  const handleSaveResource = async (title: string, type: string, content: string) => {
+  const handleSaveResource = async (title: string, type: string, content: string, tags?: string[]) => {
     const newResource: ResourceItem = {
       id: Date.now().toString(),
       name: title,
       type: 'resource',
       content,
+      tags,
+      created_at: new Date().toISOString(),
     };
     await onSave([...resources, newResource]);
     setShowCreator(false);
@@ -332,6 +334,7 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
       <ResourceCreator
         onSave={handleSaveResource}
         onClose={() => setShowCreator(false)}
+        existingTags={allTags}
       />
     );
   }
