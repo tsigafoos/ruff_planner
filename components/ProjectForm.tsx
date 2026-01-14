@@ -260,6 +260,15 @@ export default function ProjectForm({
 
               <View style={styles.typeSection}>
                 <Text style={[styles.label, { color: theme.textSecondary }]}>Project Type</Text>
+                {/* Show transition note when editing existing project and changing type */}
+                {initialData && projectType !== (initialData.project_type || initialData.projectType || 'waterfall') && (
+                  <View style={[styles.transitionNote, { backgroundColor: theme.accent + '15', borderColor: theme.accent }]}>
+                    <FontAwesome name="info-circle" size={12} color={theme.accent} />
+                    <Text style={[styles.transitionNoteText, { color: theme.accent }]}>
+                      Switching modes will keep existing task data but show different UI views
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.typeOptions}>
                   <TouchableOpacity
                     style={[
@@ -489,6 +498,19 @@ const styles = StyleSheet.create({
   },
   typeSection: {
     marginBottom: 20,
+  },
+  transitionNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  transitionNoteText: {
+    flex: 1,
+    fontSize: 12,
   },
   typeOptions: {
     flexDirection: 'row',
