@@ -51,6 +51,30 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
     yellow: '#F59E0B',
     red: '#EF4444',
   };
+  const healthLabels = {
+    green: 'On Track',
+    yellow: 'At Risk',
+    red: 'Behind',
+  };
+
+  // Calculate summary statistics
+  const completedTasks = tasks.filter((t: any) => t.completed_at || t.completedAt || t.status === 'completed').length;
+  const totalTasks = tasks.length;
+  const remainingTasks = totalTasks - completedTasks;
+  const completionPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  // Calculate days remaining
+  const calculateDaysRemaining = () => {
+    if (!project.end_date) return null;
+    const endDate = new Date(project.end_date);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+    const diffTime = endDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+  const daysRemaining = calculateDaysRemaining();
 
   // Priority colors (matching PriorityPicker: 1=Low, 2=Medium, 3=High, 4=Urgent)
   const priorityColors = {
@@ -194,6 +218,97 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
                 <Text style={[styles.headerLinkText, { color: theme.primary }]}>+Task</Text>
               </TouchableOpacity>
             )}
+          </View>
+        </View>
+      </View>
+
+      {/* Summary Cards - Quick Overview */}
+      <View style={styles.summaryCardsContainer}>
+        {/* Project Health Card */}
+        <View style={[styles.summaryCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={styles.summaryCardHeader}>
+            <FontAwesome name="heartbeat" size={16} color={healthColors[health]} />
+            <Text style={[styles.summaryCardLabel, { color: theme.textSecondary }]}>Health</Text>
+          </View>
+          <View style={styles.summaryCardContent}>
+            <View style={[styles.healthIndicator, { backgroundColor: healthColors[health] }]} />
+            <Text style={[styles.summaryCardValue, { color: healthColors[health] }]}>
+              {healthLabels[health]}
+            </Text>
+          </View>
+        </View>
+
+        {/* Task Progress Card */}
+        <View style={[styles.summaryCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={styles.summaryCardHeader}>
+            <FontAwesome name="tasks" size={16} color={theme.primary} />
+            <Text style={[styles.summaryCardLabel, { color: theme.textSecondary }]}>Progress</Text>
+          </View>
+          <View style={styles.summaryCardContent}>
+            <Text style={[styles.summaryCardValueLarge, { color: theme.text }]}>
+              {completionPercent}%
+            </Text>
+            <Text style={[styles.summaryCardSubtext, { color: theme.textSecondary }]}>
+              {completedTasks}/{totalTasks} tasks
+            </Text>
+          </View>
+          {/* Progress bar */}
+          <View style={[styles.progressBarContainer, { backgroundColor: theme.border }]}>
+            <View 
+              style={[
+                styles.progressBar, 
+                { 
+                  width: `${completionPercent}%`,
+                  backgroundColor: completionPercent === 100 ? '#10B981' : theme.primary 
+                }
+              ]} 
+            />
+          </View>
+        </View>
+
+        {/* Days Remaining Card */}
+        <View style={[styles.summaryCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={styles.summaryCardHeader}>
+            <FontAwesome name="calendar" size={16} color={theme.accent} />
+            <Text style={[styles.summaryCardLabel, { color: theme.textSecondary }]}>Timeline</Text>
+          </View>
+          <View style={styles.summaryCardContent}>
+            {daysRemaining !== null ? (
+              <>
+                <Text style={[
+                  styles.summaryCardValueLarge, 
+                  { color: daysRemaining < 0 ? '#EF4444' : daysRemaining <= 7 ? '#F59E0B' : theme.text }
+                ]}>
+                  {daysRemaining < 0 ? Math.abs(daysRemaining) : daysRemaining}
+                </Text>
+                <Text style={[styles.summaryCardSubtext, { color: theme.textSecondary }]}>
+                  {daysRemaining < 0 ? 'days overdue' : daysRemaining === 0 ? 'due today' : daysRemaining === 1 ? 'day left' : 'days left'}
+                </Text>
+              </>
+            ) : (
+              <Text style={[styles.summaryCardSubtext, { color: theme.textSecondary }]}>
+                No end date set
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* Risks Card */}
+        <View style={[styles.summaryCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={styles.summaryCardHeader}>
+            <FontAwesome name="exclamation-triangle" size={16} color={risks.length > 0 ? '#F59E0B' : theme.textTertiary} />
+            <Text style={[styles.summaryCardLabel, { color: theme.textSecondary }]}>Risks</Text>
+          </View>
+          <View style={styles.summaryCardContent}>
+            <Text style={[
+              styles.summaryCardValueLarge, 
+              { color: risks.length > 3 ? '#EF4444' : risks.length > 0 ? '#F59E0B' : '#10B981' }
+            ]}>
+              {risks.length}
+            </Text>
+            <Text style={[styles.summaryCardSubtext, { color: theme.textSecondary }]}>
+              {risks.length === 0 ? 'No risks' : risks.length === 1 ? 'risk identified' : 'risks identified'}
+            </Text>
           </View>
         </View>
       </View>
@@ -345,6 +460,67 @@ const styles = StyleSheet.create({
     padding: Platform.OS === 'web' ? 20 : 16,
     borderBottomWidth: 1,
     marginBottom: 16,
+  },
+  // Summary Cards Styles
+  summaryCardsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: Platform.OS === 'web' ? 8 : 8,
+    marginBottom: 16,
+    gap: 12,
+  },
+  summaryCard: {
+    flex: 1,
+    minWidth: Platform.OS === 'web' ? 180 : 150,
+    maxWidth: Platform.OS === 'web' ? 250 : '48%',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  summaryCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  summaryCardLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  summaryCardContent: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  summaryCardValue: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  summaryCardValueLarge: {
+    fontSize: 28,
+    fontWeight: '700',
+    lineHeight: 32,
+  },
+  summaryCardSubtext: {
+    fontSize: 13,
+  },
+  healthIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  progressBarContainer: {
+    height: 4,
+    borderRadius: 2,
+    marginTop: 12,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 2,
   },
   headerTop: {
     flexDirection: 'row',
