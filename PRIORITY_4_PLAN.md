@@ -1,8 +1,15 @@
 # Priority 4: Team & Collaboration Mode
 
-> **Status:** 🟡 AWAITING APPROVAL  
+> **Status:** 🟢 IN PROGRESS  
 > **Date:** January 14, 2026  
 > **Estimated Time:** 4-5 hours (can be split across sessions)
+
+### Decisions Made:
+- ✅ **Invite Links**: Short 8-char codes
+- ✅ **Email**: Add email settings (SMTP/IMAP) in account settings
+- ✅ **Multiple Teams**: Yes, users can be in multiple teams
+- ✅ **Team Deletion**: Projects stay with owner, shares removed
+- ✅ **Guest Upgrade**: Yes, prompt guests to create full account
 
 ---
 
