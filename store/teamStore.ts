@@ -381,7 +381,13 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Check for common errors
+        if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+          throw new Error('Database not set up. Please run the team collaboration migration.');
+        }
+        throw new Error(error.message || 'Failed to create invite');
+      }
 
       const newInvite: TeamInvite = {
         id: data.id,
@@ -397,9 +403,9 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
 
       set((state) => ({ invites: [newInvite, ...state.invites] }));
       return newInvite;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating invite:', error);
-      return null;
+      throw error;
     }
   },
 

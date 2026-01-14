@@ -145,19 +145,14 @@ export default function TopNavbar() {
 
   const teamItems: DropdownItem[] = [
     { 
-      label: 'My Teams', 
+      label: 'Manage Teams', 
       icon: 'users', 
-      onPress: () => console.log('My Teams - coming soon') 
+      onPress: () => router.push('/team') 
     },
     { 
-      label: 'Create Team', 
-      icon: 'plus', 
-      onPress: () => console.log('Create Team - coming soon') 
-    },
-    { 
-      label: 'Invitations', 
-      icon: 'envelope-o', 
-      onPress: () => console.log('Invitations - coming soon') 
+      label: 'Invite Member', 
+      icon: 'user-plus', 
+      onPress: () => router.push('/team/invite') 
     },
   ];
 
@@ -178,12 +173,7 @@ export default function TopNavbar() {
     { 
       label: 'Account Settings', 
       icon: 'cog', 
-      onPress: () => console.log('Account Settings - coming soon') 
-    },
-    { 
-      label: 'Preferences', 
-      icon: 'sliders', 
-      onPress: () => console.log('Preferences - coming soon') 
+      onPress: () => router.push('/profile') 
     },
     { 
       label: 'Sign Out', 

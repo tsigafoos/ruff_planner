@@ -28,11 +28,13 @@ export default function InviteScreen() {
   const [sending, setSending] = useState(false);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleCreateInvite = async () => {
     if (!currentTeam || !user?.id || !email.trim()) return;
     
     setSending(true);
+    setError(null);
     try {
       const invite = await createInvite(currentTeam.id, email.trim(), role, user.id);
       if (invite) {
@@ -42,9 +44,12 @@ export default function InviteScreen() {
           : 'https://app.barkitdone.com'; // Replace with actual app URL
         const link = `${baseUrl}/invite/${invite.token}`;
         setInviteLink(link);
+      } else {
+        setError('Failed to create invite. Please try again.');
       }
-    } catch (error) {
-      console.error('Error creating invite:', error);
+    } catch (err: any) {
+      console.error('Error creating invite:', err);
+      setError(err?.message || 'Failed to create invite. Please try again.');
     } finally {
       setSending(false);
     }
@@ -62,6 +67,7 @@ export default function InviteScreen() {
     setRole('member');
     setInviteLink(null);
     setCopied(false);
+    setError(null);
   };
 
   if (!currentTeam) {
@@ -89,6 +95,13 @@ export default function InviteScreen() {
             <Text style={[styles.formDescription, { color: theme.textSecondary }]}>
               Enter the email address of the person you want to invite to your team
             </Text>
+
+            {error && (
+              <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2', borderColor: '#EF4444' }]}>
+                <FontAwesome name="exclamation-circle" size={14} color="#EF4444" />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
 
             <Input
               label="Email Address"
@@ -357,6 +370,20 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   actionButton: {
+    flex: 1,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 13,
     flex: 1,
   },
 });
