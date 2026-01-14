@@ -3,13 +3,6 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Card from './ui/Card';
 import { useTheme } from '@/components/useTheme';
 
-const priorityColors: { [key: number]: string } = {
-  1: '#10B981',
-  2: '#3B82F6',
-  3: '#F59E0B',
-  4: '#EF4444',
-};
-
 interface TaskCardProps {
   task: any;
   onPress?: () => void;
@@ -24,10 +17,34 @@ export default function TaskCard({ task, onPress, onComplete, onDelete }: TaskCa
   const isCompleted = !!(task.completed_at || task.completedAt);
   const dueDateValue = task.due_date || task.dueDate;
   const dueDate = dueDateValue ? new Date(dueDateValue) : null;
-  const priorityColor = priorityColors[task.priority] || theme.textTertiary;
+  const status = task.status || 'to_do';
+  
+  // Use theme priority colors
+  const priorityColorMap: { [key: number]: string } = {
+    1: theme.priority?.p1 || '#10B981',
+    2: theme.priority?.p2 || '#3B82F6',
+    3: theme.priority?.p3 || '#F59E0B',
+    4: theme.priority?.p4 || '#EF4444',
+  };
+  const priorityColor = priorityColorMap[task.priority] || theme.textTertiary;
+  
+  // Check if task is overdue
+  const isOverdue = dueDate && dueDate < new Date() && !isCompleted;
+  
+  // Status indicator color
+  const getStatusColor = () => {
+    if (isCompleted) return theme.success;
+    if (status === 'blocked') return theme.error;
+    if (status === 'on_hold') return theme.warning;
+    if (status === 'in_progress') return theme.primary;
+    return theme.textTertiary;
+  };
 
   return (
-    <Card style={styles.card}>
+    <Card style={[styles.card, isCompleted && styles.cardCompleted]}>
+      {/* Status indicator line */}
+      <View style={[styles.statusLine, { backgroundColor: getStatusColor() }]} />
+      
       <View style={styles.content}>
         <TouchableOpacity 
           onPress={onPress} 
@@ -42,9 +59,10 @@ export default function TaskCard({ task, onPress, onComplete, onDelete }: TaskCa
               style={[
                 styles.checkbox,
                 { borderColor: theme.border },
-                isCompleted && { backgroundColor: theme.primary, borderColor: theme.primary },
+                isCompleted && { backgroundColor: theme.success, borderColor: theme.success },
               ]}
               activeOpacity={0.8}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               {isCompleted && <FontAwesome name="check" size={12} color="#FFFFFF" />}
             </TouchableOpacity>
@@ -53,37 +71,57 @@ export default function TaskCard({ task, onPress, onComplete, onDelete }: TaskCa
                 style={[
                   styles.title,
                   { color: theme.text },
+                  isCompleted && styles.titleCompleted,
                   isCompleted && { color: theme.textTertiary },
                 ]}
+                numberOfLines={2}
               >
                 {task.title}
               </Text>
-              {task.description && (
+              {task.description && !isCompleted && (
                 <Text
                   style={[
                     styles.description,
                     { color: theme.textSecondary },
-                    isCompleted && { color: theme.textTertiary },
                   ]}
+                  numberOfLines={2}
                 >
                   {task.description}
                 </Text>
               )}
               <View style={styles.meta}>
                 {dueDate && (
-                  <View style={styles.metaItem}>
-                    <FontAwesome name="calendar" size={12} color={theme.textTertiary} />
-                    <Text style={[styles.metaText, { color: theme.textTertiary }]}>
+                  <View style={[
+                    styles.metaItem,
+                    isOverdue && styles.metaItemOverdue,
+                    isOverdue && { backgroundColor: theme.error + '15' },
+                  ]}>
+                    <FontAwesome 
+                      name="calendar" 
+                      size={11} 
+                      color={isOverdue ? theme.error : theme.textTertiary} 
+                    />
+                    <Text style={[
+                      styles.metaText, 
+                      { color: isOverdue ? theme.error : theme.textTertiary },
+                      isOverdue && { fontWeight: '600' },
+                    ]}>
                       {dueDate.toLocaleDateString()}
                     </Text>
                   </View>
                 )}
-                <View style={[styles.priorityBadge, { backgroundColor: priorityColor + '20' }]}>
+                <View style={[styles.priorityBadge, { backgroundColor: priorityColor + '15' }]}>
                   <View style={[styles.priorityDot, { backgroundColor: priorityColor }]} />
                   <Text style={[styles.priorityText, { color: priorityColor }]}>
                     P{task.priority}
                   </Text>
                 </View>
+                {status === 'blocked' && (
+                  <View style={[styles.statusBadge, { backgroundColor: theme.error + '15' }]}>
+                    <FontAwesome name="ban" size={10} color={theme.error} />
+                    <Text style={[styles.statusText, { color: theme.error }]}>Blocked</Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
@@ -93,8 +131,9 @@ export default function TaskCard({ task, onPress, onComplete, onDelete }: TaskCa
             onPress={onDelete} 
             style={styles.deleteButton}
             activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <FontAwesome name="trash" size={16} color={theme.error} />
+            <FontAwesome name="trash-o" size={16} color={theme.error} />
           </TouchableOpacity>
         )}
       </View>
@@ -104,25 +143,41 @@ export default function TaskCard({ task, onPress, onComplete, onDelete }: TaskCa
 
 const styles = StyleSheet.create({
   card: {
-    marginBottom: 8,
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  cardCompleted: {
+    opacity: 0.7,
+  },
+  statusLine: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
+    paddingLeft: 8,
   },
   taskContent: {
     flex: 1,
     flexDirection: 'row',
+    minHeight: Platform.OS === 'web' ? 48 : 56, // Better touch target
   },
   leftSection: {
     flexDirection: 'row',
     flex: 1,
+    alignItems: 'flex-start',
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: Platform.OS === 'web' ? 22 : 26,
+    height: Platform.OS === 'web' ? 22 : 26,
+    borderRadius: 13,
     borderWidth: 2,
     marginRight: 12,
     marginTop: 2,
@@ -131,48 +186,77 @@ const styles = StyleSheet.create({
   },
   taskInfo: {
     flex: 1,
+    paddingRight: 8,
   },
   title: {
     fontSize: Platform.OS === 'web' ? 14 : 16,
     fontWeight: '600',
     marginBottom: 4,
+    lineHeight: Platform.OS === 'web' ? 20 : 22,
+  },
+  titleCompleted: {
+    textDecorationLine: 'line-through',
   },
   description: {
-    fontSize: Platform.OS === 'web' ? 12 : 14,
+    fontSize: Platform.OS === 'web' ? 13 : 14,
     marginBottom: 8,
+    lineHeight: Platform.OS === 'web' ? 18 : 20,
   },
   meta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+  },
+  metaItemOverdue: {
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
   },
   metaText: {
-    fontSize: 12,
+    fontSize: 11,
   },
   priorityBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: 10,
     gap: 4,
   },
   priorityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   priorityText: {
-    fontSize: Platform.OS === 'web' ? 11 : 12,
+    fontSize: 11,
     fontWeight: '600',
   },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 4,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
   deleteButton: {
-    padding: 8,
-    marginLeft: 8,
+    padding: 10,
+    marginLeft: 4,
   },
 });

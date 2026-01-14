@@ -6,31 +6,88 @@ import { useTheme } from '@/components/useTheme';
 interface ProjectCardProps {
   project: any;
   taskCount?: number;
+  completedCount?: number;
   onPress?: () => void;
 }
 
-export default function ProjectCard({ project, taskCount, onPress }: ProjectCardProps) {
+export default function ProjectCard({ project, taskCount, completedCount, onPress }: ProjectCardProps) {
   const theme = useTheme();
+  
+  // Calculate progress
+  const progress = taskCount && taskCount > 0 
+    ? Math.round(((completedCount || 0) / taskCount) * 100) 
+    : 0;
+  
+  // Methodology badge
+  const isAgile = project.methodology === 'agile';
+  const methodologyIcon = isAgile ? 'columns' : 'tasks';
+  const methodologyLabel = isAgile ? 'Agile' : 'Waterfall';
   
   return (
     <Card style={styles.card}>
-      <TouchableOpacity onPress={onPress} style={styles.content}>
-        <View
-          style={[
-            styles.iconContainer,
-            { backgroundColor: project.color + '20' },
-          ]}
-        >
-          <FontAwesome
-            name={(project.icon || 'folder') as any}
-            size={24}
-            color={project.color}
-          />
-        </View>
-        <View style={styles.info}>
-          <Text style={[styles.name, { color: theme.text }]}>{project.name}</Text>
-          {taskCount !== undefined && (
-            <Text style={[styles.count, { color: theme.textSecondary }]}>{taskCount} tasks</Text>
+      <TouchableOpacity 
+        onPress={onPress} 
+        style={styles.content}
+        activeOpacity={0.7}
+      >
+        {/* Color accent line */}
+        <View style={[styles.accentLine, { backgroundColor: project.color || theme.primary }]} />
+        
+        <View style={styles.mainContent}>
+          <View style={styles.topRow}>
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: (project.color || theme.primary) + '15' },
+              ]}
+            >
+              <FontAwesome
+                name={(project.icon || 'folder') as any}
+                size={20}
+                color={project.color || theme.primary}
+              />
+            </View>
+            <View style={styles.info}>
+              <Text style={[styles.name, { color: theme.text }]} numberOfLines={1}>
+                {project.name}
+              </Text>
+              <View style={styles.badges}>
+                <View style={[styles.methodologyBadge, { backgroundColor: theme.surfaceSecondary }]}>
+                  <FontAwesome name={methodologyIcon as any} size={10} color={theme.textTertiary} />
+                  <Text style={[styles.methodologyText, { color: theme.textTertiary }]}>
+                    {methodologyLabel}
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <FontAwesome name="chevron-right" size={12} color={theme.textTertiary} />
+          </View>
+          
+          {/* Progress bar (if tasks exist) */}
+          {taskCount !== undefined && taskCount > 0 && (
+            <View style={styles.progressSection}>
+              <View style={[styles.progressBar, { backgroundColor: theme.surfaceTertiary }]}>
+                <View 
+                  style={[
+                    styles.progressFill, 
+                    { 
+                      width: `${progress}%`,
+                      backgroundColor: progress === 100 ? theme.success : project.color || theme.primary,
+                    }
+                  ]} 
+                />
+              </View>
+              <Text style={[styles.progressText, { color: theme.textTertiary }]}>
+                {completedCount || 0}/{taskCount} tasks ({progress}%)
+              </Text>
+            </View>
+          )}
+          
+          {/* Empty state */}
+          {(taskCount === undefined || taskCount === 0) && (
+            <Text style={[styles.emptyText, { color: theme.textTertiary }]}>
+              No tasks yet
+            </Text>
           )}
         </View>
       </TouchableOpacity>
@@ -41,15 +98,31 @@ export default function ProjectCard({ project, taskCount, onPress }: ProjectCard
 const styles = StyleSheet.create({
   card: {
     marginBottom: 12,
+    overflow: 'hidden',
   },
   content: {
+    flexDirection: 'row',
+    minHeight: Platform.OS === 'web' ? 72 : 80,
+  },
+  accentLine: {
+    width: 4,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+  },
+  mainContent: {
+    flex: 1,
+    paddingLeft: 12,
+    paddingRight: 4,
+    justifyContent: 'center',
+  },
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -62,7 +135,43 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
-  count: {
-    fontSize: Platform.OS === 'web' ? 12 : 14,
+  badges: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  methodologyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  methodologyText: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  progressSection: {
+    marginTop: 10,
+    paddingLeft: 52,
+  },
+  progressBar: {
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  progressText: {
+    fontSize: 11,
+  },
+  emptyText: {
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 52,
+    fontStyle: 'italic',
   },
 });
