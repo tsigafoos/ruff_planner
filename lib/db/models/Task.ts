@@ -14,6 +14,7 @@ export default class Task extends Model {
 
   @field('title') title: any;
   @field('description') description?: any;
+  @field('start_date') startDate?: any;
   @field('due_date') dueDate?: any;
   @field('priority') priority: any;
   @field('project_id') projectId?: any;
@@ -23,6 +24,8 @@ export default class Task extends Model {
   @readonly @date('updated_at') updatedAt: any;
   @field('user_id') userId: any;
   @field('recurring_pattern') recurringPattern?: any;
+  @field('status') status?: any; // to_do, in_progress, blocked, on_hold, completed, cancelled
+  @field('project_phase') projectPhase?: any; // Agile only: brainstorm, design, logic, polish, done
   @field('synced_at') syncedAt?: any;
 
   @relation('projects', 'project_id') project: any;

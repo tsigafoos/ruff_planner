@@ -20,6 +20,7 @@ export const schema = appSchema({
       columns: [
         { name: 'title', type: 'string' },
         { name: 'description', type: 'string', isOptional: true },
+        { name: 'start_date', type: 'number', isOptional: true },
         { name: 'due_date', type: 'number', isOptional: true },
         { name: 'priority', type: 'number' },
         { name: 'project_id', type: 'string', isOptional: true, isIndexed: true },
@@ -29,6 +30,8 @@ export const schema = appSchema({
         { name: 'updated_at', type: 'number' },
         { name: 'user_id', type: 'string', isIndexed: true },
         { name: 'recurring_pattern', type: 'string', isOptional: true },
+        { name: 'status', type: 'string', isOptional: true }, // to_do, in_progress, blocked, on_hold, completed, cancelled
+        { name: 'project_phase', type: 'string', isOptional: true }, // Agile only: brainstorm, design, logic, polish, done
         { name: 'synced_at', type: 'number', isOptional: true },
       ],
     }),
