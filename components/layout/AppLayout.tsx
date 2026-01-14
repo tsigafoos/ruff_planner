@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: 'column',
-    height: '100vh',
+    ...(Platform.OS === 'web' ? { height: '100vh' as any } : {}),
     overflow: 'hidden',
   },
   body: {
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
-    overflow: 'auto',
+    ...(Platform.OS === 'web' ? { overflow: 'auto' as any } : {}),
   },
   contentInner: {
     flex: 1,

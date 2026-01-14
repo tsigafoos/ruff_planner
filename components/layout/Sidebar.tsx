@@ -78,7 +78,7 @@ export default function Sidebar({
             },
           ]}
           onPress={() => router.push(item.route as any)}
-          title={collapsed ? item.name : undefined}
+          accessibilityLabel={collapsed ? item.name : undefined}
         >
           <View style={[styles.iconContainer, collapsed && styles.iconContainerCollapsed]}>
             <FontAwesome
@@ -122,7 +122,7 @@ export default function Sidebar({
           <TouchableOpacity
             style={[styles.pinButton, pinned && { backgroundColor: theme.surfaceTertiary }]}
             onPress={onTogglePin}
-            title={pinned ? 'Unpin sidebar' : 'Pin sidebar open'}
+            accessibilityLabel={pinned ? 'Unpin sidebar' : 'Pin sidebar open'}
           >
             <FontAwesome
               name={pinned ? 'thumb-tack' : 'thumb-tack'}
@@ -135,7 +135,7 @@ export default function Sidebar({
         <TouchableOpacity
           style={styles.collapseButton}
           onPress={onToggleCollapse}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          accessibilityLabel={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           <FontAwesome
             name={collapsed ? 'angle-right' : 'angle-left'}
@@ -159,7 +159,7 @@ export default function Sidebar({
             { justifyContent: collapsed ? 'center' : 'flex-start' },
           ]}
           onPress={toggleTheme}
-          title={resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          accessibilityLabel={resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           <View style={[styles.iconContainer, collapsed && styles.iconContainerCollapsed]}>
             <FontAwesome
@@ -184,7 +184,6 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     justifyContent: 'space-between',
     borderRightWidth: 1,
-    transition: 'width 0.2s ease',
   },
   sidebarHeader: {
     flexDirection: 'row',

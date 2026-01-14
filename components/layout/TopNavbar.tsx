@@ -350,6 +350,6 @@ const styles = StyleSheet.create({
   },
   dropdownItemText: {
     fontSize: 14,
-    fontWeight: '450',
+    fontWeight: '500',
   },
 });
