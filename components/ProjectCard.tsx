@@ -18,10 +18,17 @@ export default function ProjectCard({ project, taskCount, completedCount, onPres
     ? Math.round(((completedCount || 0) / taskCount) * 100) 
     : 0;
   
-  // Methodology badge
-  const isAgile = project.methodology === 'agile';
-  const methodologyIcon = isAgile ? 'columns' : 'tasks';
-  const methodologyLabel = isAgile ? 'Agile' : 'Waterfall';
+  // Project type badge (supports both old 'methodology' and new 'project_type')
+  const projectType = project.project_type || project.projectType || project.methodology || 'waterfall';
+  const isAgile = projectType === 'agile';
+  const isMaintenance = projectType === 'maintenance';
+  
+  // Badge configuration based on project type
+  const badgeConfig = isMaintenance 
+    ? { icon: 'wrench' as const, label: 'Maintenance', color: '#F59E0B' }
+    : isAgile 
+      ? { icon: 'columns' as const, label: 'Agile', color: undefined }
+      : { icon: 'tasks' as const, label: 'Waterfall', color: undefined };
   
   return (
     <Card style={styles.card}>
@@ -52,10 +59,22 @@ export default function ProjectCard({ project, taskCount, completedCount, onPres
                 {project.name}
               </Text>
               <View style={styles.badges}>
-                <View style={[styles.methodologyBadge, { backgroundColor: theme.surfaceSecondary }]}>
-                  <FontAwesome name={methodologyIcon as any} size={10} color={theme.textTertiary} />
-                  <Text style={[styles.methodologyText, { color: theme.textTertiary }]}>
-                    {methodologyLabel}
+                <View style={[
+                  styles.methodologyBadge, 
+                  { 
+                    backgroundColor: isMaintenance ? '#FEF3C7' : theme.surfaceSecondary 
+                  }
+                ]}>
+                  <FontAwesome 
+                    name={badgeConfig.icon} 
+                    size={10} 
+                    color={badgeConfig.color || theme.textTertiary} 
+                  />
+                  <Text style={[
+                    styles.methodologyText, 
+                    { color: badgeConfig.color || theme.textTertiary }
+                  ]}>
+                    {badgeConfig.label}
                   </Text>
                 </View>
               </View>
