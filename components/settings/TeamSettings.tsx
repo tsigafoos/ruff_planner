@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Platform, ScrollView, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView, Modal } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '../useTheme';
 import { useProfileStore } from '@/store/profileStore';
@@ -332,14 +332,29 @@ export default function TeamSettings({ onCreateTeam, onManageTeam }: TeamSetting
                 secureTextEntry
               />
 
-              <View style={styles.toggleRow}>
+              <View style={[styles.emailToggleRow, { backgroundColor: theme.surfaceSecondary || '#f5f5f5', borderColor: theme.border }]}>
                 <Text style={[styles.toggleLabel, { color: theme.text }]}>Use SSL/TLS</Text>
-                <Switch
-                  value={emailSettings.smtpSecure || false}
-                  onValueChange={(v) => setEmailSettings({ ...emailSettings, smtpSecure: v })}
-                  trackColor={{ false: theme.border, true: theme.primary + '60' }}
-                  thumbColor={emailSettings.smtpSecure ? theme.primary : theme.textTertiary}
-                />
+                <TouchableOpacity
+                  style={[
+                    styles.customToggle,
+                    {
+                      backgroundColor: emailSettings.smtpSecure ? theme.primary : theme.surfaceTertiary || '#e5e5e5',
+                      borderColor: emailSettings.smtpSecure ? theme.primary : theme.border,
+                    }
+                  ]}
+                  onPress={() => setEmailSettings({ ...emailSettings, smtpSecure: !emailSettings.smtpSecure })}
+                  activeOpacity={0.7}
+                >
+                  <View 
+                    style={[
+                      styles.customToggleThumb,
+                      {
+                        backgroundColor: '#FFFFFF',
+                        transform: [{ translateX: emailSettings.smtpSecure ? 20 : 0 }],
+                      }
+                    ]} 
+                  />
+                </TouchableOpacity>
               </View>
 
               {/* IMAP Settings */}
@@ -385,14 +400,29 @@ export default function TeamSettings({ onCreateTeam, onManageTeam }: TeamSetting
                 secureTextEntry
               />
 
-              <View style={styles.toggleRow}>
+              <View style={[styles.emailToggleRow, { backgroundColor: theme.surfaceSecondary || '#f5f5f5', borderColor: theme.border }]}>
                 <Text style={[styles.toggleLabel, { color: theme.text }]}>Use SSL/TLS</Text>
-                <Switch
-                  value={emailSettings.imapSecure || false}
-                  onValueChange={(v) => setEmailSettings({ ...emailSettings, imapSecure: v })}
-                  trackColor={{ false: theme.border, true: theme.primary + '60' }}
-                  thumbColor={emailSettings.imapSecure ? theme.primary : theme.textTertiary}
-                />
+                <TouchableOpacity
+                  style={[
+                    styles.customToggle,
+                    {
+                      backgroundColor: emailSettings.imapSecure ? theme.primary : theme.surfaceTertiary || '#e5e5e5',
+                      borderColor: emailSettings.imapSecure ? theme.primary : theme.border,
+                    }
+                  ]}
+                  onPress={() => setEmailSettings({ ...emailSettings, imapSecure: !emailSettings.imapSecure })}
+                  activeOpacity={0.7}
+                >
+                  <View 
+                    style={[
+                      styles.customToggleThumb,
+                      {
+                        backgroundColor: '#FFFFFF',
+                        transform: [{ translateX: emailSettings.imapSecure ? 20 : 0 }],
+                      }
+                    ]} 
+                  />
+                </TouchableOpacity>
               </View>
             </ScrollView>
 
@@ -432,6 +462,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 8,
+  },
+  emailToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 12,
+    marginBottom: 4,
   },
   toggleInfo: {
     flex: 1,
