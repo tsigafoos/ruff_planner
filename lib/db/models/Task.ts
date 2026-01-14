@@ -28,6 +28,7 @@ export default class Task extends Model {
   @field('project_phase') projectPhase?: any; // Agile only: brainstorm, design, logic, polish, done
   @field('assignee_id') assigneeId?: any; // Single assignee (user ID)
   @field('blocked_by') blockedBy?: any; // JSON string of task IDs
+  @field('category') category?: any; // Maintenance only: bug, enhancement, support, other
   @field('synced_at') syncedAt?: any;
 
   @relation('projects', 'project_id') project: any;
