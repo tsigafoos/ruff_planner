@@ -331,7 +331,13 @@ export default function AgileDashboard({
                           4: '#EF4444',
                         };
                         const priorityColor = priorityColors[priority as keyof typeof priorityColors] || priorityColors[1];
-                        const isBlocked = task.status === 'blocked';
+                        // Check if blocked by status or has blocking dependencies
+                        const blockedByRaw = task.blocked_by || task.blockedBy;
+                        const blockedByList: string[] = Array.isArray(blockedByRaw) 
+                          ? blockedByRaw 
+                          : (typeof blockedByRaw === 'string' ? JSON.parse(blockedByRaw || '[]') : []);
+                        const hasBlockers = blockedByList.length > 0;
+                        const isBlocked = task.status === 'blocked' || hasBlockers;
                         const isDragging = draggedTaskId === task.id;
 
                         // Task card with drag support for web
@@ -373,9 +379,11 @@ export default function AgileDashboard({
                               {/* Task meta */}
                               <View style={styles.taskMeta}>
                                 {isBlocked && (
-                                  <View style={styles.blockedBadge}>
-                                    <FontAwesome name="ban" size={10} color="#EF4444" />
-                                    <Text style={styles.blockedBadgeText}>Blocked</Text>
+                                  <View style={[styles.blockedBadge, hasBlockers && styles.blockedBadgeAmber]}>
+                                    <FontAwesome name={hasBlockers ? "lock" : "ban"} size={10} color={hasBlockers ? "#F59E0B" : "#EF4444"} />
+                                    <Text style={[styles.blockedBadgeText, hasBlockers && { color: '#F59E0B' }]}>
+                                      {hasBlockers ? `Blocked by ${blockedByList.length}` : 'Blocked'}
+                                    </Text>
                                   </View>
                                 )}
                                 {task.due_date && (
@@ -909,6 +917,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
+  },
+  blockedBadgeAmber: {
+    backgroundColor: '#FEF3C7',
   },
   blockedBadgeText: {
     fontSize: 10,
