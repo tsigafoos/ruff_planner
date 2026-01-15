@@ -5,6 +5,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { useAuthStore } from '@/store/authStore';
 import { useTheme } from '@/components/useTheme';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { PageHeader } from '@/components/layout';
 import { 
   startOfWeek, 
   endOfWeek, 
@@ -301,8 +302,17 @@ export default function CalendarScreen() {
     }
   };
 
+  // Get view mode display name
+  const viewModeLabel = viewMode === 'month' ? 'Month View' : viewMode === 'week' ? 'Week View' : 'Day View';
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {Platform.OS === 'web' && (
+        <PageHeader
+          section="Calendar"
+          pageName={viewModeLabel}
+        />
+      )}
       {/* Centered Calendar Container */}
       <View style={styles.calendarWrapper}>
         <View style={[styles.calendarContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>

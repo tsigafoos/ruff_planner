@@ -8,6 +8,7 @@ import WebLayout from '@/components/layout/WebLayout';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { format } from 'date-fns';
 import ProfileForm from '@/components/ProfileForm';
+import TeamSettings from '@/components/settings/TeamSettings';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -161,6 +162,15 @@ export default function ProfileScreen() {
               ))}
             </View>
           )}
+          </View>
+          
+          {/* Team & Collaboration Settings - Outside profileBox for better modal rendering */}
+          <View style={Platform.OS === 'web' ? { width: '100%', maxWidth: 900, alignSelf: 'center' } : undefined}>
+            <TeamSettings
+              onManageTeam={() => {
+                router.push('/team');
+              }}
+            />
           </View>
         </ScrollView>
       )}

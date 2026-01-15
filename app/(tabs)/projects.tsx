@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import ProjectCard from '@/components/ProjectCard';
 import ProjectForm from '@/components/ProjectForm';
 import { useTheme } from '@/components/useTheme';
+import { PageHeader, commonActions } from '@/components/layout';
 
 export default function ProjectsScreen() {
   const router = useRouter();
@@ -63,20 +64,34 @@ export default function ProjectsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <View>
-          <Text style={[styles.title, { color: theme.text }]}>Projects</Text>
+      {Platform.OS === 'web' ? (
+        <PageHeader
+          section="Projects"
+          pageName="All Projects"
+          subtitle={`${projects.length} projects`}
+          actions={[
+            commonActions.addProject(() => {
+              setSelectedProject(null);
+              setProjectFormVisible(true);
+            }),
+          ]}
+        />
+      ) : (
+        <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+          <View>
+            <Text style={[styles.title, { color: theme.text }]}>Projects</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: theme.primary }]}
+            onPress={() => {
+              setSelectedProject(null);
+              setProjectFormVisible(true);
+            }}
+          >
+            <Text style={styles.addButtonText}>+ New Project</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: theme.primary }]}
-          onPress={() => {
-            setSelectedProject(null);
-            setProjectFormVisible(true);
-          }}
-        >
-          <Text style={styles.addButtonText}>+ New Project</Text>
-        </TouchableOpacity>
-      </View>
+      )}
 
       {loading ? (
         <View style={styles.center}>

@@ -1,3 +1,4 @@
+import { PageHeader, commonActions } from '@/components/layout';
 import ProjectForm from '@/components/ProjectForm';
 import TaskCard from '@/components/TaskCard';
 import TaskForm from '@/components/TaskForm';
@@ -9,9 +10,6 @@ import { useTaskStore } from '@/store/taskStore';
 import { useThemeStore } from '@/store/themeStore';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek, subMonths } from 'date-fns';
-import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
 
@@ -386,7 +384,19 @@ export default function DashboardScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {Platform.OS === 'web' && (
+        <PageHeader
+          section="Overview"
+          pageName="Dashboard"
+          subtitle={`${tasks.length} tasks, ${projects.length} projects`}
+          actions={[
+            commonActions.addTask(() => setNewTaskFormVisible(true)),
+            commonActions.addProject(() => setProjectFormVisible(true)),
+          ]}
+        />
+      )}
+      <ScrollView style={styles.scrollContent}>
       {/* Projects and Mini Calendar Row */}
       <View style={styles.topSection}>
         {/* Projects List Section */}
@@ -674,12 +684,16 @@ export default function DashboardScreen() {
         onClose={() => setProjectFormVisible(false)}
         onSubmit={handleCreateProject}
       />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  scrollContent: {
     flex: 1,
   },
   topSection: {

@@ -1,202 +1,35 @@
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { useRouter, usePathname } from 'expo-router';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useThemeStore, themes } from '@/store/themeStore';
-import { ReactNode, useEffect, useState } from 'react';
-import TopBar from './TopBar';
+import { Platform } from 'react-native';
+import { ReactNode } from 'react';
+import AppLayout from './AppLayout';
 
 interface WebLayoutProps {
   children: ReactNode;
 }
 
-const navItems = [
-  { name: 'Dashboard', route: '/(tabs)/dashboard', icon: 'home' },
-  { name: 'Calendar', route: '/(tabs)/calendar', icon: 'calendar' },
-  { name: 'Projects', route: '/(tabs)/projects', icon: 'folder' },
-];
-
+/**
+ * WebLayout - Wrapper component for web platform
+ * 
+ * Uses AppLayout which provides:
+ * - TopNavbar (logo + dropdowns)
+ * - Collapsible Sidebar (navigation)
+ * - Main content area with consistent margins
+ * - Footer (sync status)
+ * 
+ * On non-web platforms, renders children directly.
+ */
 export default function WebLayout({ children }: WebLayoutProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { toggleTheme, resolvedTheme } = useThemeStore();
-  const theme = themes[resolvedTheme];
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  // Only render on web
+  // On non-web platforms, just render children without layout
   if (Platform.OS !== 'web') {
     return <>{children}</>;
   }
 
-  useEffect(() => {
-    // Initialize theme class on mount
-    if (typeof document !== 'undefined') {
-      document.documentElement.classList.remove('light', 'dark', 'light-theme', 'dark-theme');
-      document.documentElement.classList.add(resolvedTheme);
-    }
-  }, [resolvedTheme]);
-
-  return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Top Bar */}
-      <TopBar />
-
-      <View style={styles.mainContainer}>
-        {/* Sidebar */}
-        <View style={[
-          styles.sidebar,
-          { backgroundColor: theme.sidebar, borderRightColor: theme.border },
-          sidebarCollapsed && { width: 64 },
-        ]}>
-          <View style={styles.sidebarHeader}>
-            <View style={styles.sidebarHeaderSpacer} />
-            <TouchableOpacity
-              style={styles.collapseButton}
-              onPress={() => setSidebarCollapsed(!sidebarCollapsed)}
-            >
-              <FontAwesome
-                name={sidebarCollapsed ? 'angle-right' : 'angle-left'}
-                size={16}
-                color={theme.sidebarText}
-              />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.navSection}>
-            {navItems.map((item) => {
-              const isActive = pathname === item.route || pathname?.startsWith(item.route);
-              return (
-                <TouchableOpacity
-                  key={item.route}
-                  style={[
-                    styles.navItem,
-                    { 
-                      backgroundColor: isActive ? theme.surfaceTertiary || theme.sidebarHover : 'transparent',
-                      justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                      paddingHorizontal: sidebarCollapsed ? 12 : 20,
-                    },
-                  ]}
-                  onPress={() => router.push(item.route as any)}
-                >
-                  <FontAwesome
-                    name={item.icon as any}
-                    size={18}
-                    color={isActive ? theme.sidebarActive : theme.sidebarText}
-                  />
-                  {!sidebarCollapsed && (
-                    <Text
-                      style={[
-                        styles.navText,
-                        {
-                          color: isActive ? theme.sidebarTextActive : theme.sidebarText,
-                          fontWeight: isActive ? '600' : '500',
-                        },
-                      ]}
-                    >
-                      {item.name}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <View style={[styles.sidebarFooter, { borderTopColor: theme.border }]}>
-            <TouchableOpacity
-              style={[
-                styles.themeToggle,
-                { justifyContent: sidebarCollapsed ? 'center' : 'flex-start' },
-              ]}
-              onPress={toggleTheme}
-            >
-              <FontAwesome
-                name={resolvedTheme === 'dark' ? 'sun-o' : 'moon-o'}
-                size={16}
-                color={theme.sidebarText}
-              />
-              {!sidebarCollapsed && (
-                <Text style={[styles.themeToggleText, { color: theme.sidebarText }]}>
-                  {resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Main Content */}
-        <View style={[styles.content, { backgroundColor: theme.background }]}>
-          {children}
-        </View>
-      </View>
-    </View>
-  );
+  return <AppLayout>{children}</AppLayout>;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: 'column',
-    height: '100vh',
-  },
-  mainContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    overflow: 'hidden',
-  },
-  sidebar: {
-    width: 180,
-    borderRightWidth: 1,
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-  },
-  sidebarHeader: {
-    padding: 20,
-    paddingBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  sidebarHeaderSpacer: {
-    flex: 1,
-  },
-  collapseButton: {
-    padding: 6,
-    borderRadius: 6,
-  },
-  navSection: {
-    flex: 1,
-    paddingTop: 8,
-  },
-  navItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    gap: 12,
-    marginHorizontal: 8,
-    marginBottom: 4,
-    borderRadius: 8,
-  },
-  navText: {
-    fontSize: 14,
-  },
-  sidebarFooter: {
-    padding: 16,
-    borderTopWidth: 1,
-  },
-  themeToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  themeToggleText: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  content: {
-    flex: 1,
-    overflow: 'auto',
-  },
-});
+// Re-export layout components for convenience
+export { default as AppLayout } from './AppLayout';
+export { default as TopNavbar } from './TopNavbar';
+export { default as Sidebar, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_EXPANDED_WIDTH } from './Sidebar';
+export { default as Footer, FOOTER_HEIGHT } from './Footer';
+export { default as PageHeader, commonActions } from './PageHeader';
+export type { ActionButton } from './PageHeader';

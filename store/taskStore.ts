@@ -30,6 +30,25 @@ interface TaskStore {
   deleteTask: (taskId: string) => Promise<void>;
   completeTask: (taskId: string) => Promise<void>;
   uncompleteTask: (taskId: string) => Promise<void>;
+  // Dependency management
+  addBlocker: (taskId: string, blockerTaskId: string) => Promise<{ success: boolean; circular?: boolean }>;
+  removeBlocker: (taskId: string, blockerTaskId: string) => Promise<void>;
+  getBlockedBy: (taskId: string) => string[];
+  getBlockingTasks: (taskId: string) => any[];
+  hasCircularDependency: (taskId: string, potentialBlockerId: string) => boolean;
+}
+
+// Helper to parse blocked_by field
+function parseBlockedBy(task: any): string[] {
+  if (!task) return [];
+  const blockedBy = task.blocked_by || task.blockedBy;
+  if (!blockedBy) return [];
+  if (Array.isArray(blockedBy)) return blockedBy;
+  try {
+    return JSON.parse(blockedBy);
+  } catch {
+    return [];
+  }
 }
 
 // Helper function to get or create default project ID
@@ -304,6 +323,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
             recurring_pattern: taskData.recurringPattern || null,
             status: taskData.status || 'to_do',
             project_phase: taskData.projectPhase || null, // Agile phase (null for Waterfall)
+            assignee_id: taskData.assigneeId || null,
+            blocked_by: taskData.blockedBy || [],
+            category: taskData.category || null, // Maintenance category (null for non-maintenance)
             completed_at: (taskData.completed || taskData.status === 'completed') ? new Date().toISOString() : null,
           })
           .select()
@@ -331,6 +353,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           task.recurringPattern = taskData.recurringPattern || undefined;
           task.status = taskData.status || 'to_do';
           task.projectPhase = taskData.projectPhase || undefined; // Agile phase (undefined for Waterfall)
+          task.assigneeId = taskData.assigneeId || undefined;
+          task.blockedBy = JSON.stringify(taskData.blockedBy || []);
+          task.category = taskData.category || undefined; // Maintenance category (undefined for non-maintenance)
           if (taskData.completed || taskData.status === 'completed') {
             task.completedAt = Date.now();
           }
@@ -361,6 +386,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         if (updates.recurringPattern !== undefined) updateData.recurring_pattern = updates.recurringPattern;
         if (updates.status !== undefined) updateData.status = updates.status;
         if (updates.projectPhase !== undefined) updateData.project_phase = updates.projectPhase;
+        if (updates.assigneeId !== undefined) updateData.assignee_id = updates.assigneeId;
+        if (updates.blockedBy !== undefined) updateData.blocked_by = updates.blockedBy;
+        if (updates.category !== undefined) updateData.category = updates.category;
         if (updates.completed !== undefined) {
           updateData.completed_at = updates.completed ? new Date().toISOString() : null;
         } else if (updates.status === 'completed') {
@@ -396,6 +424,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           if (updates.recurringPattern !== undefined) taskRecord.recurringPattern = updates.recurringPattern;
           if (updates.status !== undefined) taskRecord.status = updates.status;
           if (updates.projectPhase !== undefined) taskRecord.projectPhase = updates.projectPhase;
+          if (updates.assigneeId !== undefined) taskRecord.assigneeId = updates.assigneeId;
+          if (updates.blockedBy !== undefined) taskRecord.blockedBy = JSON.stringify(updates.blockedBy);
+          if (updates.category !== undefined) taskRecord.category = updates.category;
           if (updates.completed !== undefined) {
             taskRecord.completedAt = updates.completed ? Date.now() : undefined;
           } else if (updates.status === 'completed') {
@@ -544,6 +575,121 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       }
     } catch (error) {
       console.error('Error uncompleting task:', error);
+      throw error;
+    }
+  },
+
+  // Get task IDs that block a specific task
+  getBlockedBy: (taskId: string) => {
+    const task = get().tasks.find((t: any) => t.id === taskId);
+    return parseBlockedBy(task);
+  },
+
+  // Get all tasks that are blocked by a specific task (i.e., tasks where this task is in their blocked_by)
+  getBlockingTasks: (taskId: string) => {
+    return get().tasks.filter((task: any) => {
+      const blockedBy = parseBlockedBy(task);
+      return blockedBy.includes(taskId);
+    });
+  },
+
+  // Check for circular dependency: would adding blockerTaskId as blocker create a cycle?
+  hasCircularDependency: (taskId: string, potentialBlockerId: string) => {
+    if (taskId === potentialBlockerId) return true;
+    
+    const tasks = get().tasks;
+    const visited = new Set<string>();
+    const stack: string[] = [potentialBlockerId];
+    
+    while (stack.length > 0) {
+      const currentId = stack.pop()!;
+      if (currentId === taskId) return true;
+      if (visited.has(currentId)) continue;
+      visited.add(currentId);
+      
+      const currentTask = tasks.find((t: any) => t.id === currentId);
+      const blockers = parseBlockedBy(currentTask);
+      stack.push(...blockers);
+    }
+    
+    return false;
+  },
+
+  // Add a blocker to a task
+  addBlocker: async (taskId: string, blockerTaskId: string) => {
+    try {
+      // Check for circular dependency
+      if (get().hasCircularDependency(taskId, blockerTaskId)) {
+        return { success: false, circular: true };
+      }
+
+      const task = get().tasks.find((t: any) => t.id === taskId);
+      const currentBlockers = parseBlockedBy(task);
+      
+      // Don't add duplicate
+      if (currentBlockers.includes(blockerTaskId)) {
+        return { success: true };
+      }
+      
+      const newBlockers = [...currentBlockers, blockerTaskId];
+
+      if (Platform.OS === 'web') {
+        const { error } = await supabase
+          .from('tasks')
+          .update({ blocked_by: newBlockers })
+          .eq('id', taskId);
+        
+        if (error) throw error;
+        
+        const currentTasks = get().tasks;
+        const updatedTasks = currentTasks.map((t: any) =>
+          t.id === taskId ? { ...t, blocked_by: newBlockers } : t
+        );
+        set({ tasks: updatedTasks });
+      } else {
+        const tasksCollection = database.get('tasks');
+        const taskRecord = await tasksCollection.find(taskId);
+        await taskRecord.update((record: any) => {
+          record.blockedBy = JSON.stringify(newBlockers);
+        });
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error adding blocker:', error);
+      throw error;
+    }
+  },
+
+  // Remove a blocker from a task
+  removeBlocker: async (taskId: string, blockerTaskId: string) => {
+    try {
+      const task = get().tasks.find((t: any) => t.id === taskId);
+      const currentBlockers = parseBlockedBy(task);
+      const newBlockers = currentBlockers.filter((id: string) => id !== blockerTaskId);
+
+      if (Platform.OS === 'web') {
+        const { error } = await supabase
+          .from('tasks')
+          .update({ blocked_by: newBlockers })
+          .eq('id', taskId);
+        
+        if (error) throw error;
+        
+        const currentTasks = get().tasks;
+        const updatedTasks = currentTasks.map((t: any) =>
+          t.id === taskId ? { ...t, blocked_by: newBlockers } : t
+        );
+        set({ tasks: updatedTasks });
+      } else {
+        const tasksCollection = database.get('tasks');
+        const taskRecord = await tasksCollection.find(taskId);
+        await taskRecord.update((record: any) => {
+          record.blockedBy = JSON.stringify(newBlockers);
+        });
+      }
+    } catch (error) {
+      console.error('Error removing blocker:', error);
       throw error;
     }
   },

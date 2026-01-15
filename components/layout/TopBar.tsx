@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   },
   navText: {
     fontSize: 14,
-    fontWeight: '450',
+    fontWeight: '500',
   },
   chevron: {
     marginLeft: 4,
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   },
   dropdownItemText: {
     fontSize: 14,
-    fontWeight: '450',
+    fontWeight: '500',
   },
   rightSection: {
     flexDirection: 'row',

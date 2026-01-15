@@ -3,6 +3,7 @@ import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, 
 import { useLabelStore } from '@/store/labelStore';
 import { useAuthStore } from '@/store/authStore';
 import { useTheme } from '@/components/useTheme';
+import { PageHeader } from '@/components/layout';
 
 export default function LabelsScreen() {
   const { user } = useAuthStore();
@@ -17,10 +18,26 @@ export default function LabelsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <Text style={[styles.title, { color: theme.text }]}>Labels</Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{labels.length} labels</Text>
-      </View>
+      {Platform.OS === 'web' ? (
+        <PageHeader
+          section="Settings"
+          pageName="Labels"
+          subtitle={`${labels.length} labels`}
+          actions={[
+            {
+              label: 'Add Label',
+              icon: 'plus',
+              onPress: () => console.log('Add Label - coming soon'),
+              variant: 'primary',
+            },
+          ]}
+        />
+      ) : (
+        <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+          <Text style={[styles.title, { color: theme.text }]}>Labels</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{labels.length} labels</Text>
+        </View>
+      )}
 
       {loading ? (
         <View style={styles.center}>

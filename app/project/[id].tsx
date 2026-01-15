@@ -1,12 +1,15 @@
 import AgileDashboard from '@/components/dashboards/AgileDashboard';
+import MaintenanceDashboard from '@/components/dashboards/MaintenanceDashboard';
 import WaterfallDashboard from '@/components/dashboards/WaterfallDashboard';
 import WebLayout from '@/components/layout/WebLayout';
 import ProjectForm from '@/components/ProjectForm';
 import QuickAdd from '@/components/QuickAdd';
 import ResourcesView from '@/components/resources/ResourcesView';
+import ShareProjectModal from '@/components/ShareProjectModal';
 import TaskCard from '@/components/TaskCard';
 import TaskForm from '@/components/TaskForm';
 import { useTheme } from '@/components/useTheme';
+import { DependencyCanvas } from '@/components/visualization';
 import { useAuthStore } from '@/store/authStore';
 import { useLabelStore } from '@/store/labelStore';
 import { useProjectStore } from '@/store/projectStore';
@@ -16,6 +19,8 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+type ProjectView = 'dashboard' | 'dependencies' | 'resources';
 
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
 
@@ -57,7 +62,8 @@ export default function ProjectDetailScreen() {
   const [taskFormVisible, setTaskFormVisible] = useState(false);
   const [newTaskFormVisible, setNewTaskFormVisible] = useState(false);
   const [projectFormVisible, setProjectFormVisible] = useState(false);
-  const [resourcesVisible, setResourcesVisible] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [currentView, setCurrentView] = useState<ProjectView>('dashboard');
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverLane, setDragOverLane] = useState<TaskStatus | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
@@ -314,7 +320,9 @@ export default function ProjectDetailScreen() {
     );
   }
 
-  const isAgile = project.project_type === 'agile';
+  const projectType = project.project_type || project.projectType || 'waterfall';
+  const isAgile = projectType === 'agile';
+  const isMaintenance = projectType === 'maintenance';
   const incompleteTasks = tasks.filter((task: any) => !(task.completed_at || task.completedAt));
 
   // Task Lanes Component
@@ -500,67 +508,165 @@ export default function ProjectDetailScreen() {
 
   const screenContent = (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Special Todo Project Layout */}
-      {isTodoProject ? (
-        <View style={styles.todoContainer}>
-          <View style={[styles.todoHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-            <Text style={[styles.todoTitle, { color: theme.text }]}>todo</Text>
-            <TouchableOpacity
-              style={[styles.todoAddButton, { backgroundColor: theme.primary }]}
-              onPress={() => setNewTaskFormVisible(true)}
-            >
-              <FontAwesome name="plus" size={14} color="#ffffff" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.todoLanesContainer}>
-            {renderTaskLanes(true)}
-          </View>
-        </View>
-      ) : (
-        /* Resources View or Dashboard */
-        resourcesVisible ? (
-          <View style={styles.resourcesContainer}>
-            <ResourcesView
-              resources={Array.isArray(project.resources) ? project.resources : []}
-              onSave={async (resources) => {
-                await handleProjectUpdate({ resources });
-              }}
-              onBack={() => setResourcesVisible(false)}
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+        <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: theme.surfaceSecondary, borderWidth: 1, borderColor: theme.border }]}>
+          <FontAwesome name="angle-left" size={18} color={theme.text} />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <View style={[styles.projectIcon, { backgroundColor: (project.color || theme.primary) + '12' }]}>
+            <FontAwesome
+              name={(project.icon || 'folder-o') as any}
+              size={18}
+              color={project.color || theme.primary}
             />
           </View>
-        ) : (
-          <ScrollView style={styles.mainContent} showsVerticalScrollIndicator={true}>
-            {isAgile ? (
-              <AgileDashboard
-                project={project}
-                tasks={tasks}
-                onProjectUpdate={handleProjectUpdate}
-                onTaskClick={handleEditTask}
-                onTaskPhaseChange={async (taskId, newPhase) => {
-                  await updateTaskPhase(taskId, newPhase);
-                  // Refresh tasks to update UI
-                  refreshTasks();
-                }}
-                onAddTask={() => setNewTaskFormVisible(true)}
-              />
-            ) : (
-              <WaterfallDashboard
-                project={project}
-                tasks={tasks}
-                onProjectUpdate={handleProjectUpdate}
-                onAddTask={() => setNewTaskFormVisible(true)}
-                onTeamClick={() => {/* TODO: Navigate to team view */}}
-                onToolsClick={() => {/* TODO: Navigate to tools view */}}
-                onTaskClick={handleEditTask}
-                onResourceClick={() => setResourcesVisible(true)}
-                onEditClick={() => setProjectFormVisible(true)}
-              />
-            )}
-            
-            {/* Task Lanes - Below Dashboard */}
-            {renderTaskLanes()}
-          </ScrollView>
-        )
+          <View style={styles.headerText}>
+            <Text style={[styles.title, { color: theme.text }]}>{project.name}</Text>
+            <View style={styles.headerMeta}>
+              <View style={[
+                styles.projectTypeBadge, 
+                { 
+                  backgroundColor: isMaintenance ? '#FEF3C7' : theme.primary + '15' 
+                }
+              ]}>
+                <Text style={[
+                  styles.projectTypeText, 
+                  { color: isMaintenance ? '#F59E0B' : theme.primary }
+                ]}>
+                  {isMaintenance ? 'Maintenance' : isAgile ? 'Agile' : 'Waterfall'}
+                </Text>
+              </View>
+              <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+                {incompleteTasks.length} {isMaintenance ? 'open issue' : 'active task'}{incompleteTasks.length !== 1 ? 's' : ''}
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { borderColor: theme.primary, backgroundColor: theme.primary }]}
+            onPress={() => setNewTaskFormVisible(true)}
+          >
+            <FontAwesome name="plus" size={12} color="#ffffff" />
+            <Text style={[styles.actionButtonText, { color: '#ffffff' }]}>Add Task</Text>
+          </TouchableOpacity>
+          {Platform.OS === 'web' && (
+            <TouchableOpacity
+              style={[
+                styles.actionButton, 
+                { borderColor: theme.border, backgroundColor: currentView === 'dependencies' ? theme.primary : theme.surfaceSecondary }
+              ]}
+              onPress={() => setCurrentView(currentView === 'dependencies' ? 'dashboard' : 'dependencies')}
+            >
+              <FontAwesome name="sitemap" size={12} color={currentView === 'dependencies' ? '#fff' : theme.text} />
+              <Text style={[styles.actionButtonText, { color: currentView === 'dependencies' ? '#fff' : theme.text }]}>
+                Dependencies
+              </Text>
+            </TouchableOpacity>
+          )}
+          {Platform.OS === 'web' && (
+            <TouchableOpacity
+              style={[
+                styles.actionButton, 
+                { borderColor: theme.border, backgroundColor: currentView === 'resources' ? theme.primary : theme.surfaceSecondary }
+              ]}
+              onPress={() => setCurrentView(currentView === 'resources' ? 'dashboard' : 'resources')}
+            >
+              <FontAwesome name="folder-open-o" size={12} color={currentView === 'resources' ? '#fff' : theme.text} />
+              <Text style={[styles.actionButtonText, { color: currentView === 'resources' ? '#fff' : theme.text }]}>
+                Resources
+              </Text>
+            </TouchableOpacity>
+          )}
+          {Platform.OS === 'web' && (
+            <TouchableOpacity
+              style={[styles.actionButton, { borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}
+              onPress={() => setShareModalVisible(true)}
+            >
+              <FontAwesome name="share-alt" size={12} color={theme.text} />
+              <Text style={[styles.actionButtonText, { color: theme.text }]}>Share</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.actionButton, { borderColor: theme.primary, backgroundColor: theme.primary }]}
+            onPress={() => setProjectFormVisible(true)}
+          >
+            <FontAwesome name="pencil" size={12} color="#ffffff" />
+            <Text style={[styles.actionButtonText, { color: '#ffffff' }]}>Edit Project</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* View Content */}
+      {currentView === 'resources' ? (
+        <View style={styles.resourcesContainer}>
+          <ResourcesView
+            resources={Array.isArray(project.resources) ? project.resources : []}
+            onSave={async (resources) => {
+              await handleProjectUpdate({ resources });
+            }}
+            onBack={() => setCurrentView('dashboard')}
+          />
+        </View>
+      ) : currentView === 'dependencies' ? (
+        <View style={styles.dependenciesContainer}>
+          <DependencyCanvas
+            tasks={tasks}
+            projectId={id || ''}
+            onTaskClick={handleEditTask}
+          />
+        </View>
+      ) : (
+        <ScrollView style={styles.mainContent} showsVerticalScrollIndicator={true}>
+          {isMaintenance ? (
+            <MaintenanceDashboard
+              project={project}
+              tasks={tasks}
+              onProjectUpdate={handleProjectUpdate}
+              onTaskClick={handleEditTask}
+              onTaskStatusChange={async (taskId, newStatus) => {
+                await updateTask(taskId, { 
+                  status: newStatus,
+                  completed: newStatus === 'completed',
+                });
+                // Refresh tasks to update UI
+                if (user?.id && id) {
+                  await fetchTasksByProject(id, user.id);
+                }
+              }}
+              onAddTask={() => setNewTaskFormVisible(true)}
+            />
+          ) : isAgile ? (
+            <AgileDashboard
+              project={project}
+              tasks={tasks}
+              onProjectUpdate={handleProjectUpdate}
+              onTaskClick={handleEditTask}
+              onTaskPhaseChange={async (taskId, newPhase) => {
+                await updateTaskPhase(taskId, newPhase);
+                // Refresh tasks to update UI
+                if (user?.id && id) {
+                  await fetchTasksByProject(id, user.id);
+                }
+              }}
+              onAddTask={() => setNewTaskFormVisible(true)}
+            />
+          ) : (
+            <WaterfallDashboard
+              project={project}
+              tasks={tasks}
+              onProjectUpdate={handleProjectUpdate}
+              onAddTask={() => setNewTaskFormVisible(true)}
+              onTeamClick={() => {/* TODO: Navigate to team view */}}
+              onToolsClick={() => {/* TODO: Navigate to tools view */}}
+              onTaskClick={handleEditTask}
+            />
+          )}
+          
+          {/* Task Lanes - Below Dashboard (skip for Maintenance which has its own issue list) */}
+          {!isMaintenance && renderTaskLanes()}
+        </ScrollView>
       )}
 
       {Platform.OS !== 'web' && (
@@ -589,6 +695,13 @@ export default function ProjectDetailScreen() {
         onClose={() => setProjectFormVisible(false)}
         onSubmit={handleProjectUpdate}
         initialData={project}
+      />
+
+      <ShareProjectModal
+        visible={shareModalVisible}
+        onClose={() => setShareModalVisible(false)}
+        projectId={id || ''}
+        projectName={project?.name || ''}
       />
     </View>
   );
@@ -688,6 +801,10 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   resourcesContainer: {
+    flex: 1,
+    padding: Platform.OS === 'web' ? 24 : 16,
+  },
+  dependenciesContainer: {
     flex: 1,
     padding: Platform.OS === 'web' ? 24 : 16,
   },

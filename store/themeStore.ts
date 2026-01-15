@@ -6,8 +6,14 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 interface ThemeStore {
   themeMode: ThemeMode;
   resolvedTheme: 'light' | 'dark';
+  sidebarCollapsed: boolean;
+  sidebarPinned: boolean;
   setThemeMode: (mode: ThemeMode) => void;
   toggleTheme: () => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  toggleSidebarCollapsed: () => void;
+  setSidebarPinned: (pinned: boolean) => void;
+  toggleSidebarPinned: () => void;
 }
 
 const getSystemTheme = (): 'light' | 'dark' => {
@@ -17,13 +23,45 @@ const getSystemTheme = (): 'light' | 'dark' => {
   return 'light';
 };
 
+// Load sidebar state from localStorage if available
+const loadSidebarState = () => {
+  if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+    try {
+      const collapsed = localStorage.getItem('sidebarCollapsed');
+      const pinned = localStorage.getItem('sidebarPinned');
+      return {
+        collapsed: collapsed === 'true',
+        pinned: pinned === 'true',
+      };
+    } catch {
+      return { collapsed: false, pinned: false };
+    }
+  }
+  return { collapsed: false, pinned: false };
+};
+
+// Save sidebar state to localStorage
+const saveSidebarState = (collapsed: boolean, pinned: boolean) => {
+  if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem('sidebarCollapsed', String(collapsed));
+      localStorage.setItem('sidebarPinned', String(pinned));
+    } catch {
+      // Ignore localStorage errors
+    }
+  }
+};
+
 export const useThemeStore = create<ThemeStore>((set, get) => {
   // Initialize with system preference
   const systemTheme = getSystemTheme();
+  const sidebarState = loadSidebarState();
   
   return {
     themeMode: 'system',
     resolvedTheme: systemTheme,
+    sidebarCollapsed: sidebarState.collapsed,
+    sidebarPinned: sidebarState.pinned,
     setThemeMode: (mode: ThemeMode) => {
       const resolved = mode === 'system' ? getSystemTheme() : mode;
       set({ themeMode: mode, resolvedTheme: resolved });
@@ -43,6 +81,24 @@ export const useThemeStore = create<ThemeStore>((set, get) => {
         document.documentElement.classList.remove('light', 'dark', 'light-theme', 'dark-theme');
         document.documentElement.classList.add(newTheme);
       }
+    },
+    setSidebarCollapsed: (collapsed: boolean) => {
+      set({ sidebarCollapsed: collapsed });
+      saveSidebarState(collapsed, get().sidebarPinned);
+    },
+    toggleSidebarCollapsed: () => {
+      const newCollapsed = !get().sidebarCollapsed;
+      set({ sidebarCollapsed: newCollapsed });
+      saveSidebarState(newCollapsed, get().sidebarPinned);
+    },
+    setSidebarPinned: (pinned: boolean) => {
+      set({ sidebarPinned: pinned });
+      saveSidebarState(get().sidebarCollapsed, pinned);
+    },
+    toggleSidebarPinned: () => {
+      const newPinned = !get().sidebarPinned;
+      set({ sidebarPinned: newPinned });
+      saveSidebarState(get().sidebarCollapsed, newPinned);
     },
   };
 });

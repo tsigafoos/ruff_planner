@@ -19,6 +19,13 @@ export default function TaskCard({ task, onPress, onComplete, onDelete }: TaskCa
   const dueDate = dueDateValue ? new Date(dueDateValue) : null;
   const status = task.status || 'to_do';
   
+  // Parse blocked_by field
+  const blockedByRaw = task.blocked_by || task.blockedBy;
+  const blockedBy: string[] = Array.isArray(blockedByRaw) 
+    ? blockedByRaw 
+    : (typeof blockedByRaw === 'string' ? JSON.parse(blockedByRaw || '[]') : []);
+  const hasBlockers = blockedBy.length > 0;
+  
   // Use theme priority colors
   const priorityColorMap: { [key: number]: string } = {
     1: theme.priority?.p1 || '#10B981',
@@ -120,6 +127,14 @@ export default function TaskCard({ task, onPress, onComplete, onDelete }: TaskCa
                   <View style={[styles.statusBadge, { backgroundColor: theme.error + '15' }]}>
                     <FontAwesome name="ban" size={10} color={theme.error} />
                     <Text style={[styles.statusText, { color: theme.error }]}>Blocked</Text>
+                  </View>
+                )}
+                {hasBlockers && !isCompleted && (
+                  <View style={[styles.blockedByBadge, { backgroundColor: theme.warning + '15' }]}>
+                    <FontAwesome name="lock" size={10} color={theme.warning} />
+                    <Text style={[styles.blockedByText, { color: theme.warning }]}>
+                      Blocked by {blockedBy.length}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -254,6 +269,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     textTransform: 'uppercase',
+  },
+  blockedByBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 4,
+  },
+  blockedByText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
   deleteButton: {
     padding: 10,

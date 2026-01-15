@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import TaskCard from '@/components/TaskCard';
 import QuickAdd from '@/components/QuickAdd';
 import { useTheme } from '@/components/useTheme';
+import { PageHeader } from '@/components/layout';
 
 export default function TodayScreen() {
   const { user } = useAuthStore();
@@ -41,10 +42,18 @@ export default function TodayScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <Text style={[styles.title, { color: theme.text }]}>Today</Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{tasks.length} tasks due today</Text>
-      </View>
+      {Platform.OS === 'web' ? (
+        <PageHeader
+          section="Tasks"
+          pageName="Today"
+          subtitle={`${tasks.length} tasks due today`}
+        />
+      ) : (
+        <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+          <Text style={[styles.title, { color: theme.text }]}>Today</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{tasks.length} tasks due today</Text>
+        </View>
+      )}
 
       {loading ? (
         <View style={styles.center}>

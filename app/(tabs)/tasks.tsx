@@ -7,6 +7,7 @@ import TaskForm from '@/components/TaskForm';
 import { useProjectStore } from '@/store/projectStore';
 import { useLabelStore } from '@/store/labelStore';
 import { useTheme } from '@/components/useTheme';
+import { PageHeader, commonActions } from '@/components/layout';
 
 export default function TasksScreen() {
   const { user } = useAuthStore();
@@ -120,30 +121,47 @@ export default function TasksScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <View>
-          <Text style={[styles.title, { color: theme.text }]}>Tasks</Text>
-          <View style={styles.headerMeta}>
-            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-              {showCompleted ? `${completedTasks.length} completed` : `${incompleteTasks.length} active`}
-            </Text>
-            <TouchableOpacity
-              style={[styles.filterButton, { borderColor: theme.border }]}
-              onPress={() => setShowCompleted(!showCompleted)}
-            >
-              <Text style={[styles.filterButtonText, { color: theme.primary }]}>
-                {showCompleted ? 'Show Active' : 'Show Completed'}
+      {Platform.OS === 'web' ? (
+        <PageHeader
+          section="Tasks"
+          pageName="All Tasks"
+          subtitle={showCompleted ? `${completedTasks.length} completed` : `${incompleteTasks.length} active`}
+          actions={[
+            {
+              label: showCompleted ? 'Show Active' : 'Show Completed',
+              icon: 'filter',
+              onPress: () => setShowCompleted(!showCompleted),
+              variant: 'secondary',
+            },
+            commonActions.addTask(() => setNewTaskFormVisible(true)),
+          ]}
+        />
+      ) : (
+        <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+          <View>
+            <Text style={[styles.title, { color: theme.text }]}>Tasks</Text>
+            <View style={styles.headerMeta}>
+              <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+                {showCompleted ? `${completedTasks.length} completed` : `${incompleteTasks.length} active`}
               </Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.filterButton, { borderColor: theme.border }]}
+                onPress={() => setShowCompleted(!showCompleted)}
+              >
+                <Text style={[styles.filterButtonText, { color: theme.primary }]}>
+                  {showCompleted ? 'Show Active' : 'Show Completed'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: theme.primary }]}
+            onPress={() => setNewTaskFormVisible(true)}
+          >
+            <Text style={styles.addButtonText}>+ New Task</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: theme.primary }]}
-          onPress={() => setNewTaskFormVisible(true)}
-        >
-          <Text style={styles.addButtonText}>+ New Task</Text>
-        </TouchableOpacity>
-      </View>
+      )}
 
       {loading ? (
         <View style={styles.center}>
