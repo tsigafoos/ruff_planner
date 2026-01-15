@@ -13,6 +13,7 @@ import { useTaskStore } from '@/store/taskStore';
 import { useThemeStore } from '@/store/themeStore';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { format } from 'date-fns';
+import { TemplateTask } from '@/lib/projectTemplates';
 
 type DashboardViewMode = 'static' | 'dynamic';
 
@@ -131,6 +132,45 @@ export default function DashboardScreen() {
       fetchProjects(user.id);
     } catch (error) {
       console.error('Error creating project:', error);
+    }
+  };
+
+  // Handler for creating project from template with tasks
+  const handleCreateProjectWithTasks = async (
+    projectData: any, 
+    templateTasks: Array<TemplateTask & { dueDate: Date; startDate?: Date }>
+  ) => {
+    if (!user?.id) return;
+    try {
+      // Create the project first
+      const newProject = await createProject({
+        ...projectData,
+        userId: user.id,
+      });
+      
+      // If project was created successfully, create all the tasks
+      if (newProject?.id) {
+        for (const templateTask of templateTasks) {
+          await createTask({
+            title: templateTask.title,
+            description: templateTask.description || '',
+            priority: templateTask.priority,
+            status: templateTask.status || 'to_do',
+            dueDate: templateTask.dueDate,
+            startDate: templateTask.startDate,
+            phase: templateTask.phase,
+            category: templateTask.category,
+            projectId: newProject.id,
+            userId: user.id,
+          });
+        }
+      }
+      
+      setProjectFormVisible(false);
+      fetchProjects(user.id);
+      fetchTasks(user.id);
+    } catch (error) {
+      console.error('Error creating project with tasks:', error);
     }
   };
 
@@ -566,6 +606,7 @@ export default function DashboardScreen() {
         visible={projectFormVisible}
         onClose={() => setProjectFormVisible(false)}
         onSubmit={handleCreateProject}
+        onCreateWithTasks={handleCreateProjectWithTasks}
       />
     </PageWrapper>
   );

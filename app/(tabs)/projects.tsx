@@ -2,15 +2,18 @@ import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useProjectStore } from '@/store/projectStore';
+import { useTaskStore } from '@/store/taskStore';
 import { useAuthStore } from '@/store/authStore';
 import ProjectCard from '@/components/ProjectCard';
 import ProjectForm from '@/components/ProjectForm';
 import { PageWrapper } from '@/components/ui';
+import { TemplateTask } from '@/lib/projectTemplates';
 
 export default function ProjectsScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { projects, loading, fetchProjects, createProject, updateProject } = useProjectStore();
+  const { createTask, fetchTasks } = useTaskStore();
   const [projectFormVisible, setProjectFormVisible] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
 
@@ -31,6 +34,43 @@ export default function ProjectsScreen() {
       fetchProjects(user.id);
     } catch (error) {
       console.error('Error creating project:', error);
+    }
+  };
+
+  // Handler for creating project from template with tasks
+  const handleCreateProjectWithTasks = async (
+    projectData: any, 
+    templateTasks: Array<TemplateTask & { dueDate: Date; startDate?: Date }>
+  ) => {
+    if (!user?.id) return;
+    try {
+      const newProject = await createProject({
+        ...projectData,
+        userId: user.id,
+      });
+      
+      if (newProject?.id) {
+        for (const templateTask of templateTasks) {
+          await createTask({
+            title: templateTask.title,
+            description: templateTask.description || '',
+            priority: templateTask.priority,
+            status: templateTask.status || 'to_do',
+            dueDate: templateTask.dueDate,
+            startDate: templateTask.startDate,
+            phase: templateTask.phase,
+            category: templateTask.category,
+            projectId: newProject.id,
+            userId: user.id,
+          });
+        }
+      }
+      
+      setProjectFormVisible(false);
+      fetchProjects(user.id);
+      fetchTasks(user.id);
+    } catch (error) {
+      console.error('Error creating project with tasks:', error);
     }
   };
 
@@ -90,6 +130,7 @@ export default function ProjectsScreen() {
           setSelectedProject(null);
         }}
         onSubmit={selectedProject ? handleUpdateProject : handleCreateProject}
+        onCreateWithTasks={handleCreateProjectWithTasks}
         initialData={selectedProject}
       />
     </PageWrapper>
