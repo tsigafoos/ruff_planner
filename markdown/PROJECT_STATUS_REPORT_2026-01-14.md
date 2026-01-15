@@ -173,7 +173,7 @@ The BarkItDone web application has seen significant progress over the past two d
 
 ## 📋 Testing Status
 
-A comprehensive testing checklist (`TESTING_CHECKLIST.md`) has been created covering:
+A comprehensive testing checklist (`markdown/TESTING_CHECKLIST.md`) has been created covering:
 - ✅ Phase 1: Foundation tests
 - ✅ Phase 2: Waterfall Dashboard tests
 - ✅ Phase 3: Agile Dashboard tests

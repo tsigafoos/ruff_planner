@@ -8,6 +8,7 @@ import ResourcesView from '@/components/resources/ResourcesView';
 import ShareProjectModal from '@/components/ShareProjectModal';
 import TaskCard from '@/components/TaskCard';
 import TaskForm from '@/components/TaskForm';
+import TaskCSVImportModal from '@/components/TaskCSVImportModal';
 import { DependencyCanvas } from '@/components/visualization';
 import { useTheme } from '@/components/useTheme';
 import { useAuthStore } from '@/store/authStore';
@@ -64,6 +65,7 @@ export default function ProjectDetailScreen() {
   const [newTaskFormVisible, setNewTaskFormVisible] = useState(false);
   const [projectFormVisible, setProjectFormVisible] = useState(false);
   const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [csvImportModalVisible, setCsvImportModalVisible] = useState(false);
   const [currentView, setCurrentView] = useState<ProjectView>('dashboard');
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverLane, setDragOverLane] = useState<TaskStatus | null>(null);
@@ -451,6 +453,15 @@ export default function ProjectDetailScreen() {
           )}
           {Platform.OS === 'web' && (
             <TouchableOpacity
+              style={[styles.actionButton, { borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}
+              onPress={() => setCsvImportModalVisible(true)}
+            >
+              <FontAwesome name="upload" size={12} color={theme.text} />
+              <Text style={[styles.actionButtonText, { color: theme.text }]}>Import CSV</Text>
+            </TouchableOpacity>
+          )}
+          {Platform.OS === 'web' && (
+            <TouchableOpacity
               style={[
                 styles.actionButton, 
                 { borderColor: theme.border, backgroundColor: currentView === 'dependencies' ? theme.primary : theme.surfaceSecondary }
@@ -559,6 +570,11 @@ export default function ProjectDetailScreen() {
               onTeamClick={() => {/* TODO: Navigate to team view */}}
               onToolsClick={() => {/* TODO: Navigate to tools view */}}
               onTaskClick={handleEditTask}
+              onTaskUpdate={() => {
+                if (user?.id && id) {
+                  fetchTasksByProject(id, user.id);
+                }
+              }}
             />
           )}
           
@@ -600,6 +616,17 @@ export default function ProjectDetailScreen() {
         onClose={() => setShareModalVisible(false)}
         projectId={id || ''}
         projectName={project?.name || ''}
+      />
+
+      <TaskCSVImportModal
+        visible={csvImportModalVisible}
+        onClose={() => setCsvImportModalVisible(false)}
+        projectId={id || ''}
+        onImportComplete={() => {
+          if (user?.id && id) {
+            fetchTasksByProject(id, user.id);
+          }
+        }}
       />
     </View>
   );

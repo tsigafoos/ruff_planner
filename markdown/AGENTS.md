@@ -206,14 +206,14 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ## Database Migrations
 
-SQL migrations are stored in root directory with naming pattern:
-- `supabase-*.sql` - Various database setup scripts
+SQL migrations are stored in `sql/` directory with naming pattern:
+- `sql/supabase-*.sql` - Various database setup scripts
 
 Key migrations:
-- `supabase-setup.sql` - Core tables (projects, tasks, labels)
-- `supabase-project-migration.sql` - Project enhancements
-- `supabase-task-status-migration.sql` - Task status field
-- `supabase-team-management-migration.sql` - Team features
+- `sql/supabase-setup.sql` - Core tables (projects, tasks, labels)
+- `sql/supabase-project-migration.sql` - Project enhancements
+- `sql/supabase-task-status-migration.sql` - Task status field
+- `sql/supabase-team-management-migration.sql` - Team features
 
 ## Testing
 
@@ -252,7 +252,7 @@ Key migrations:
 
 ## Feature Status Reference
 
-See `BARKITDONE_STATUS_REPORT.md` for detailed feature completion status.
+See `markdown/BARKITDONE_STATUS_REPORT.md` for detailed feature completion status.
 
 **Implemented (>80%):**
 - Task management (CRUD, priorities, statuses, labels)
@@ -271,8 +271,8 @@ See `BARKITDONE_STATUS_REPORT.md` for detailed feature completion status.
 
 ## Additional Documentation
 
-- `README.md` - Project overview and setup
-- `SETUP_GUIDE.md` - Detailed setup instructions
-- `HOSTING_GUIDE.md` - Deployment information
-- `TROUBLESHOOTING.md` - Common issues and solutions
-- `WATERMELONDB_SETUP.md` - Offline database setup
+- `markdown/README.md` - Project overview and setup
+- `markdown/SETUP_GUIDE.md` - Detailed setup instructions
+- `markdown/HOSTING_GUIDE.md` - Deployment information
+- `markdown/TROUBLESHOOTING.md` - Common issues and solutions
+- `markdown/WATERMELONDB_SETUP.md` - Offline database setup

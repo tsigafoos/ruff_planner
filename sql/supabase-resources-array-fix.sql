@@ -1,5 +1,5 @@
 -- Fix resources column to default to array instead of object
--- Run this AFTER supabase-resources-column-setup.sql
+-- Run this AFTER sql/supabase-resources-column-setup.sql
 -- Run this in your Supabase SQL Editor
 
 -- First, ensure the column exists (if you haven't run the setup script)

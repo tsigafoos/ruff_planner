@@ -18,7 +18,7 @@ This plan follows the energy-based, short sprint approach discussed. Each phase 
 > **Goal:** Add `project_phase` field to enable Agile Kanban lanes without breaking Waterfall
 
 ### Step 1.1: Database Migration ✅
-- [x] Create `supabase-project-phase-migration.sql` with:
+- [x] Create `sql/supabase-project-phase-migration.sql` with:
   - Add `project_phase` column to `tasks` table (nullable string/enum)
   - Values: `brainstorm`, `design`, `logic`, `polish`, `done`, or `NULL`
   - Only used when `project_type = 'agile'`

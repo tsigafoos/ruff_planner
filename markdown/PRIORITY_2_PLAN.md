@@ -16,7 +16,7 @@ Enable task dependencies with "blocked by" relationships, visual indicators, and
 ### Step 1: Database & Type Updates (~30 min)
 
 **1.1 - Database Migration**
-- [ ] Create `supabase-task-dependencies-migration.sql`:
+- [ ] Create `sql/supabase-task-dependencies-migration.sql`:
   - Add `assignee_id` column to tasks (UUID, references auth.users)
   - Add `blocked_by` column to tasks (JSONB array of task IDs)
   - Add index on `blocked_by` for query performance
@@ -176,7 +176,7 @@ Enable task dependencies with "blocked by" relationships, visual indicators, and
 ## 📁 Files to Create/Modify
 
 ### New Files
-- `supabase-task-dependencies-migration.sql`
+- `sql/supabase-task-dependencies-migration.sql`
 - `components/visualization/TaskMappingCanvas.tsx`
 
 ### Modified Files
