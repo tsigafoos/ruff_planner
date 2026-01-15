@@ -203,86 +203,81 @@ export default function ProjectForm({
           <ScrollView style={styles.content} showsVerticalScrollIndicator={true}>
             {/* Creation Mode Selector - only for new projects */}
             {!initialData && (
-              <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>How would you like to start?</Text>
-                <View style={styles.creationModeSelector}>
+              <View style={styles.creationModeSection}>
+                <View style={[styles.creationModeTabs, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}>
                   <TouchableOpacity
                     style={[
-                      styles.creationModeOption,
-                      { 
-                        backgroundColor: creationMode === 'scratch' ? theme.primary + '15' : theme.surfaceSecondary,
-                        borderColor: creationMode === 'scratch' ? theme.primary : theme.border,
-                      }
+                      styles.creationModeTab,
+                      creationMode === 'scratch' && [styles.creationModeTabActive, { backgroundColor: theme.surface }],
                     ]}
                     onPress={() => setCreationMode('scratch')}
                   >
                     <FontAwesome 
                       name="pencil" 
-                      size={20} 
+                      size={12} 
                       color={creationMode === 'scratch' ? theme.primary : theme.textSecondary} 
                     />
                     <Text style={[
-                      styles.creationModeTitle,
-                      { color: creationMode === 'scratch' ? theme.primary : theme.text }
+                      styles.creationModeTabText,
+                      { color: creationMode === 'scratch' ? theme.primary : theme.textSecondary }
                     ]}>
                       From Scratch
-                    </Text>
-                    <Text style={[styles.creationModeDesc, { color: theme.textSecondary }]}>
-                      Start with a blank project
                     </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     style={[
-                      styles.creationModeOption,
-                      { 
-                        backgroundColor: creationMode === 'template' ? theme.primary + '15' : theme.surfaceSecondary,
-                        borderColor: creationMode === 'template' ? theme.primary : theme.border,
-                      }
+                      styles.creationModeTab,
+                      creationMode === 'template' && [styles.creationModeTabActive, { backgroundColor: theme.surface }],
                     ]}
                     onPress={() => {
                       setCreationMode('template');
-                      setTemplateModalVisible(true);
+                      if (!selectedTemplate) {
+                        setTemplateModalVisible(true);
+                      }
                     }}
                   >
                     <FontAwesome 
                       name="magic" 
-                      size={20} 
+                      size={12} 
                       color={creationMode === 'template' ? theme.primary : theme.textSecondary} 
                     />
                     <Text style={[
-                      styles.creationModeTitle,
-                      { color: creationMode === 'template' ? theme.primary : theme.text }
+                      styles.creationModeTabText,
+                      { color: creationMode === 'template' ? theme.primary : theme.textSecondary }
                     ]}>
                       From Template
-                    </Text>
-                    <Text style={[styles.creationModeDesc, { color: theme.textSecondary }]}>
-                      Start with pre-built tasks
                     </Text>
                   </TouchableOpacity>
                 </View>
 
                 {/* Selected Template Info */}
                 {creationMode === 'template' && selectedTemplate && (
+                  <View style={[styles.selectedTemplateCompact, { backgroundColor: selectedTemplate.color + '08', borderColor: selectedTemplate.color + '30' }]}>
+                    <FontAwesome name={selectedTemplate.icon as any} size={14} color={selectedTemplate.color} />
+                    <Text style={[styles.selectedTemplateName, { color: theme.text }]}>{selectedTemplate.name}</Text>
+                    <Text style={[styles.selectedTemplateMeta, { color: theme.textSecondary }]}>
+                      ({selectedTemplate.tasks.length} tasks)
+                    </Text>
+                    <TouchableOpacity onPress={() => setTaskPreviewModalVisible(true)}>
+                      <Text style={[styles.selectedTemplateAction, { color: theme.primary }]}>Preview</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setTemplateModalVisible(true)}>
+                      <Text style={[styles.selectedTemplateAction, { color: theme.textSecondary }]}>Change</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Prompt to select template */}
+                {creationMode === 'template' && !selectedTemplate && (
                   <TouchableOpacity
-                    style={[styles.selectedTemplate, { backgroundColor: selectedTemplate.color + '10', borderColor: selectedTemplate.color }]}
+                    style={[styles.selectTemplatePrompt, { borderColor: theme.border }]}
                     onPress={() => setTemplateModalVisible(true)}
                   >
-                    <View style={[styles.templateIconSmall, { backgroundColor: selectedTemplate.color + '20' }]}>
-                      <FontAwesome name={selectedTemplate.icon as any} size={16} color={selectedTemplate.color} />
-                    </View>
-                    <View style={styles.templateInfoSmall}>
-                      <Text style={[styles.templateNameSmall, { color: theme.text }]}>{selectedTemplate.name}</Text>
-                      <Text style={[styles.templateMetaSmall, { color: theme.textSecondary }]}>
-                        {selectedTemplate.tasks.length} tasks • ~{selectedTemplate.estimatedDays} days
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      style={[styles.previewButton, { backgroundColor: theme.primary }]}
-                      onPress={() => setTaskPreviewModalVisible(true)}
-                    >
-                      <Text style={styles.previewButtonText}>Preview Tasks</Text>
-                    </TouchableOpacity>
+                    <FontAwesome name="magic" size={14} color={theme.primary} />
+                    <Text style={[styles.selectTemplateText, { color: theme.primary }]}>
+                      Click to select a template
+                    </Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -741,61 +736,72 @@ const styles = StyleSheet.create({
     minWidth: 100,
   },
   // Creation mode selector styles
-  creationModeSelector: {
+  creationModeSection: {
+    marginBottom: 16,
+  },
+  creationModeTabs: {
     flexDirection: 'row',
-    gap: 12,
-  },
-  creationModeOption: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    alignItems: 'center',
-    gap: 8,
-  },
-  creationModeTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  creationModeDesc: {
-    fontSize: 11,
-    textAlign: 'center',
-  },
-  selectedTemplate: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginTop: 16,
-    gap: 12,
-  },
-  templateIconSmall: {
-    width: 40,
-    height: 40,
     borderRadius: 8,
+    borderWidth: 1,
+    padding: 3,
+  },
+  creationModeTab: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  templateInfoSmall: {
-    flex: 1,
-  },
-  templateNameSmall: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  templateMetaSmall: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  previewButton: {
+    gap: 6,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
   },
-  previewButtonText: {
-    color: '#fff',
+  creationModeTabActive: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  creationModeTabText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  selectedTemplateCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginTop: 8,
+    gap: 8,
+  },
+  selectedTemplateName: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  selectedTemplateMeta: {
     fontSize: 12,
-    fontWeight: '600',
+    flex: 1,
+  },
+  selectedTemplateAction: {
+    fontSize: 12,
+    fontWeight: '500',
+    paddingHorizontal: 8,
+  },
+  selectTemplatePrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    marginTop: 8,
+    gap: 8,
+  },
+  selectTemplateText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
 });
