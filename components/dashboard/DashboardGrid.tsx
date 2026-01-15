@@ -74,32 +74,32 @@ export default function DashboardGrid({
     ? WIDGET_CATALOG 
     : WIDGET_CATALOG.filter(w => w.category === selectedCategory);
 
-  // Get max height based on widget type
-  const getWidgetMaxHeight = (widgetType: WidgetType): number => {
-    // Thin widgets get smaller max height
+  // Get min height based on widget type
+  const getWidgetMinHeight = (widgetType: WidgetType): number => {
+    // Thin widgets get smaller min height
     if (['notes', 'resources', 'mini-calendar', 'team-quick'].includes(widgetType)) {
-      return 280;
+      return 200;
     }
     // Medium widgets
     if (['info-cards', 'task-list', 'project-list', 'team-waiting', 'burndown'].includes(widgetType)) {
-      return 350;
+      return 250;
     }
     // Large widgets (kanban, gantt, etc.)
-    return 450;
+    return 300;
   };
 
   const renderWidget = (widget: DashboardWidget, row: DashboardRow) => {
     const catalogEntry = WIDGET_CATALOG.find(w => w.type === widget.type);
     
     const widthFlex = (widget.columns || 12) / 12;
-    const maxHeight = getWidgetMaxHeight(widget.type);
+    const minHeight = getWidgetMinHeight(widget.type);
     
     return (
       <View 
         key={widget.id} 
         style={[
           styles.widgetContainer,
-          { flex: widthFlex, maxHeight },
+          { flex: widthFlex, minHeight },
         ]}
       >
         {editMode && (
@@ -347,10 +347,10 @@ export default function DashboardGrid({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    // No flex: 1 here since we're inside a ScrollView
   },
   rowWrapper: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   rowHeader: {
     flexDirection: 'row',
@@ -401,12 +401,11 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    alignItems: 'stretch',
   },
   widgetContainer: {
-    minHeight: 180,
     position: 'relative',
     padding: 4,
-    overflow: 'hidden',
   },
   editOverlay: {
     position: 'absolute',

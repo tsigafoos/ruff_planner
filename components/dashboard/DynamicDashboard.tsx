@@ -153,7 +153,11 @@ export default function DynamicDashboard({
       )}
 
       {/* Dashboard Content */}
-      <ScrollView style={styles.gridContainer} showsVerticalScrollIndicator>
+      <ScrollView 
+        style={styles.gridContainer} 
+        contentContainerStyle={styles.gridContentContainer}
+        showsVerticalScrollIndicator
+      >
         {currentDashboard ? (
           <DashboardGrid
             layout={currentDashboard}
@@ -274,7 +278,10 @@ const styles = StyleSheet.create({
   },
   gridContainer: {
     flex: 1,
+  },
+  gridContentContainer: {
     padding: Platform.OS === 'web' ? 16 : 12,
+    paddingBottom: 40,
   },
   emptyState: {
     flex: 1,
