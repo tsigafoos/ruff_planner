@@ -150,3 +150,67 @@ export interface EmailSettings {
   imapPass?: string;
   imapSecure?: boolean;
 }
+
+// ============================================
+// Dynamic Dashboard Types
+// ============================================
+
+// Widget types available for dashboard
+export type WidgetType =
+  | 'gantt'
+  | 'dependency-flow'
+  | 'calendar'
+  | 'kanban'
+  | 'status-lanes'
+  | 'info-cards'
+  | 'burndown'
+  | 'velocity'
+  | 'team-quick'
+  | 'team-waiting'
+  | 'project-list'
+  | 'task-list'
+  | 'mini-calendar';
+
+// Widget width options
+export type WidgetWidth = '25%' | '33%' | '50%' | '66%' | '75%' | '100%';
+
+// Dashboard template types
+export type DashboardTemplate = 'agile' | 'waterfall' | 'maintenance' | 'custom' | 'blank';
+
+// Individual widget configuration
+export interface DashboardWidget {
+  id: string;
+  type: WidgetType;
+  width: WidgetWidth;
+  title?: string;
+  config?: Record<string, any>;
+}
+
+// Row of widgets
+export interface DashboardRow {
+  id: string;
+  widgets: DashboardWidget[];
+}
+
+// Complete dashboard layout
+export interface DashboardLayout {
+  id: string;
+  name: string;
+  template: DashboardTemplate;
+  projectId?: string; // If associated with a specific project
+  userId: string;
+  rows: DashboardRow[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Widget catalog entry (for widget picker)
+export interface WidgetCatalogEntry {
+  type: WidgetType;
+  name: string;
+  description: string;
+  icon: string;
+  defaultWidth: WidgetWidth;
+  supportedWidths: WidgetWidth[];
+  category: 'charts' | 'tasks' | 'team' | 'info';
+}
