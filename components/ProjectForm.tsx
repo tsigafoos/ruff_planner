@@ -5,11 +5,16 @@ import Input from './ui/Input';
 import Button from './ui/Button';
 import DatePicker from './ui/DatePicker';
 import { useTheme } from './useTheme';
+import { TemplateSelectionModal, TaskPreviewModal } from './templates';
+import { ProjectTemplate, TemplateTask } from '@/lib/projectTemplates';
+
+type CreationMode = 'scratch' | 'template';
 
 interface ProjectFormProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (projectData: any) => Promise<void>;
+  onCreateWithTasks?: (projectData: any, tasks: Array<TemplateTask & { dueDate: Date; startDate?: Date }>) => Promise<void>;
   initialData?: any;
 }
 
@@ -17,6 +22,7 @@ export default function ProjectForm({
   visible,
   onClose,
   onSubmit,
+  onCreateWithTasks,
   initialData,
 }: ProjectFormProps) {
   const theme = useTheme();
@@ -25,6 +31,12 @@ export default function ProjectForm({
   const [icon, setIcon] = useState('folder');
   const [projectType, setProjectType] = useState<'waterfall' | 'agile' | 'maintenance'>('waterfall');
   const [loading, setLoading] = useState(false);
+
+  // Template-related state
+  const [creationMode, setCreationMode] = useState<CreationMode>('scratch');
+  const [templateModalVisible, setTemplateModalVisible] = useState(false);
+  const [taskPreviewModalVisible, setTaskPreviewModalVisible] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<ProjectTemplate | null>(null);
 
   // Key questions at top
   const [problemAndAudience, setProblemAndAudience] = useState('');
@@ -67,8 +79,57 @@ export default function ProjectForm({
       setDeadlinesAndBudget('');
       setStakeholders('');
       setRisks('');
+      // Reset template state
+      setCreationMode('scratch');
+      setSelectedTemplate(null);
     }
   }, [initialData, visible]);
+
+  // Handle template selection
+  const handleTemplateSelect = (template: ProjectTemplate) => {
+    setSelectedTemplate(template);
+    setTemplateModalVisible(false);
+    setTaskPreviewModalVisible(true);
+  };
+
+  // Handle creating project from template
+  const handleCreateFromTemplate = async (data: {
+    name: string;
+    projectType: 'waterfall' | 'agile' | 'maintenance';
+    color: string;
+    icon: string;
+    tasks: Array<TemplateTask & { dueDate: Date; startDate?: Date }>;
+  }) => {
+    setLoading(true);
+    try {
+      if (onCreateWithTasks) {
+        // Use dedicated handler if provided
+        await onCreateWithTasks(
+          {
+            name: data.name,
+            color: data.color,
+            icon: data.icon,
+            projectType: data.projectType,
+          },
+          data.tasks
+        );
+      } else {
+        // Fallback: create project first, tasks will need to be created separately
+        await onSubmit({
+          name: data.name,
+          color: data.color,
+          icon: data.icon,
+          projectType: data.projectType,
+        });
+      }
+      setTaskPreviewModalVisible(false);
+      onClose();
+    } catch (error) {
+      console.error('Error creating project from template:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
@@ -140,8 +201,95 @@ export default function ProjectForm({
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={true}>
-            {/* Key Questions Section - only for Waterfall and Agile */}
-            {projectType !== 'maintenance' && (
+            {/* Creation Mode Selector - only for new projects */}
+            {!initialData && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>How would you like to start?</Text>
+                <View style={styles.creationModeSelector}>
+                  <TouchableOpacity
+                    style={[
+                      styles.creationModeOption,
+                      { 
+                        backgroundColor: creationMode === 'scratch' ? theme.primary + '15' : theme.surfaceSecondary,
+                        borderColor: creationMode === 'scratch' ? theme.primary : theme.border,
+                      }
+                    ]}
+                    onPress={() => setCreationMode('scratch')}
+                  >
+                    <FontAwesome 
+                      name="pencil" 
+                      size={20} 
+                      color={creationMode === 'scratch' ? theme.primary : theme.textSecondary} 
+                    />
+                    <Text style={[
+                      styles.creationModeTitle,
+                      { color: creationMode === 'scratch' ? theme.primary : theme.text }
+                    ]}>
+                      From Scratch
+                    </Text>
+                    <Text style={[styles.creationModeDesc, { color: theme.textSecondary }]}>
+                      Start with a blank project
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.creationModeOption,
+                      { 
+                        backgroundColor: creationMode === 'template' ? theme.primary + '15' : theme.surfaceSecondary,
+                        borderColor: creationMode === 'template' ? theme.primary : theme.border,
+                      }
+                    ]}
+                    onPress={() => {
+                      setCreationMode('template');
+                      setTemplateModalVisible(true);
+                    }}
+                  >
+                    <FontAwesome 
+                      name="magic" 
+                      size={20} 
+                      color={creationMode === 'template' ? theme.primary : theme.textSecondary} 
+                    />
+                    <Text style={[
+                      styles.creationModeTitle,
+                      { color: creationMode === 'template' ? theme.primary : theme.text }
+                    ]}>
+                      From Template
+                    </Text>
+                    <Text style={[styles.creationModeDesc, { color: theme.textSecondary }]}>
+                      Start with pre-built tasks
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Selected Template Info */}
+                {creationMode === 'template' && selectedTemplate && (
+                  <TouchableOpacity
+                    style={[styles.selectedTemplate, { backgroundColor: selectedTemplate.color + '10', borderColor: selectedTemplate.color }]}
+                    onPress={() => setTemplateModalVisible(true)}
+                  >
+                    <View style={[styles.templateIconSmall, { backgroundColor: selectedTemplate.color + '20' }]}>
+                      <FontAwesome name={selectedTemplate.icon as any} size={16} color={selectedTemplate.color} />
+                    </View>
+                    <View style={styles.templateInfoSmall}>
+                      <Text style={[styles.templateNameSmall, { color: theme.text }]}>{selectedTemplate.name}</Text>
+                      <Text style={[styles.templateMetaSmall, { color: theme.textSecondary }]}>
+                        {selectedTemplate.tasks.length} tasks • ~{selectedTemplate.estimatedDays} days
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.previewButton, { backgroundColor: theme.primary }]}
+                      onPress={() => setTaskPreviewModalVisible(true)}
+                    >
+                      <Text style={styles.previewButtonText}>Preview Tasks</Text>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {/* Key Questions Section - only for Waterfall and Agile, and scratch mode */}
+            {projectType !== 'maintenance' && (creationMode === 'scratch' || initialData) && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>Key Questions</Text>
               
@@ -425,6 +573,26 @@ export default function ProjectForm({
           </View>
         </View>
       </View>
+
+      {/* Template Selection Modal */}
+      <TemplateSelectionModal
+        visible={templateModalVisible}
+        onClose={() => {
+          setTemplateModalVisible(false);
+          if (!selectedTemplate) {
+            setCreationMode('scratch');
+          }
+        }}
+        onSelect={handleTemplateSelect}
+      />
+
+      {/* Task Preview Modal */}
+      <TaskPreviewModal
+        visible={taskPreviewModalVisible}
+        template={selectedTemplate}
+        onClose={() => setTaskPreviewModalVisible(false)}
+        onConfirm={handleCreateFromTemplate}
+      />
     </Modal>
   );
 }
@@ -571,5 +739,63 @@ const styles = StyleSheet.create({
   },
   footerButton: {
     minWidth: 100,
+  },
+  // Creation mode selector styles
+  creationModeSelector: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  creationModeOption: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+    gap: 8,
+  },
+  creationModeTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  creationModeDesc: {
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  selectedTemplate: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 16,
+    gap: 12,
+  },
+  templateIconSmall: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  templateInfoSmall: {
+    flex: 1,
+  },
+  templateNameSmall: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  templateMetaSmall: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  previewButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  previewButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
