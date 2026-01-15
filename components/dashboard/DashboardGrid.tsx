@@ -74,17 +74,32 @@ export default function DashboardGrid({
     ? WIDGET_CATALOG 
     : WIDGET_CATALOG.filter(w => w.category === selectedCategory);
 
+  // Get max height based on widget type
+  const getWidgetMaxHeight = (widgetType: WidgetType): number => {
+    // Thin widgets get smaller max height
+    if (['notes', 'resources', 'mini-calendar', 'team-quick'].includes(widgetType)) {
+      return 280;
+    }
+    // Medium widgets
+    if (['info-cards', 'task-list', 'project-list', 'team-waiting', 'burndown'].includes(widgetType)) {
+      return 350;
+    }
+    // Large widgets (kanban, gantt, etc.)
+    return 450;
+  };
+
   const renderWidget = (widget: DashboardWidget, row: DashboardRow) => {
     const catalogEntry = WIDGET_CATALOG.find(w => w.type === widget.type);
     
     const widthFlex = (widget.columns || 12) / 12;
+    const maxHeight = getWidgetMaxHeight(widget.type);
     
     return (
       <View 
         key={widget.id} 
         style={[
           styles.widgetContainer,
-          { flex: widthFlex },
+          { flex: widthFlex, maxHeight },
         ]}
       >
         {editMode && (
@@ -391,6 +406,7 @@ const styles = StyleSheet.create({
     minHeight: 180,
     position: 'relative',
     padding: 4,
+    overflow: 'hidden',
   },
   editOverlay: {
     position: 'absolute',

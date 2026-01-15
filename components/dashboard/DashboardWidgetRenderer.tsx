@@ -381,9 +381,14 @@ export default function DashboardWidgetRenderer({
           <Text style={[styles.title, { color: theme.text }]}>{widget.title}</Text>
         </View>
       )}
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.content}
+        contentContainerStyle={styles.contentInner}
+        showsVerticalScrollIndicator
+        nestedScrollEnabled
+      >
         {renderWidgetContent()}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -405,7 +410,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentInner: {
     padding: 12,
+    flexGrow: 1,
   },
   lanesContainer: {
     flexDirection: 'row',
