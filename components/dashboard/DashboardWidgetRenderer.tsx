@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '@/components/useTheme';
-import { DashboardWidget } from '@/types';
+import { DashboardWidget, TaskStatus } from '@/types';
 import { 
   GanttChart, 
   BurndownChart, 
@@ -10,6 +10,10 @@ import {
   DraggableTaskCard,
   MiniCalendar,
   InfoCard,
+  KanbanWidget,
+  CalendarWidget,
+  TeamWaitingWidget,
+  TeamQuickWidget,
 } from '@/components/ui';
 import TaskCard from '@/components/TaskCard';
 
@@ -179,15 +183,11 @@ export default function DashboardWidgetRenderer({
 
       case 'calendar':
         return (
-          <View style={styles.placeholderWidget}>
-            <FontAwesome name="calendar" size={32} color={theme.textTertiary} />
-            <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
-              Full Calendar Widget
-            </Text>
-            <Text style={[styles.placeholderSubtext, { color: theme.textTertiary }]}>
-              Coming soon
-            </Text>
-          </View>
+          <CalendarWidget
+            tasks={tasks}
+            onTaskClick={onTaskClick}
+            showHeader={false}
+          />
         );
 
       case 'info-cards':
@@ -254,29 +254,83 @@ export default function DashboardWidgetRenderer({
 
       case 'kanban':
         return (
-          <View style={styles.placeholderWidget}>
-            <FontAwesome name="columns" size={32} color={theme.textTertiary} />
-            <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
-              Kanban Board Widget
-            </Text>
-            <Text style={[styles.placeholderSubtext, { color: theme.textTertiary }]}>
-              Use Agile Dashboard for full Kanban
-            </Text>
-          </View>
+          <KanbanWidget
+            tasks={tasks}
+            onTaskClick={onTaskClick}
+            showHeader={false}
+          />
         );
 
       case 'team-quick':
-      case 'team-waiting':
+        // Generate team member summaries from tasks
+        const memberSummaries = tasks.reduce((acc: any[], task: any) => {
+          const assignee = task.assignee_id || task.assigneeId || task.user_id || task.userId;
+          if (!assignee) return acc;
+          
+          let member = acc.find(m => m.id === assignee);
+          if (!member) {
+            member = {
+              id: assignee,
+              name: task.assignee_name || 'Team Member',
+              email: task.assignee_email || assignee,
+              activeTasks: 0,
+              completedToday: 0,
+              blockedTasks: 0,
+            };
+            acc.push(member);
+          }
+          
+          const status = getTaskStatus(task);
+          if (status === 'completed') {
+            const completedAt = task.completed_at || task.completedAt;
+            if (completedAt && new Date(completedAt).toDateString() === new Date().toDateString()) {
+              member.completedToday++;
+            }
+          } else if (status === 'blocked') {
+            member.blockedTasks++;
+            member.activeTasks++;
+          } else if (status !== 'cancelled') {
+            member.activeTasks++;
+          }
+          
+          return acc;
+        }, []);
+        
         return (
-          <View style={styles.placeholderWidget}>
-            <FontAwesome name="users" size={32} color={theme.textTertiary} />
-            <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
-              {widget.type === 'team-quick' ? 'Team Quick Actions' : 'Team Waiting List'}
-            </Text>
-            <Text style={[styles.placeholderSubtext, { color: theme.textTertiary }]}>
-              Enable Team Mode in settings
-            </Text>
-          </View>
+          <TeamQuickWidget
+            members={memberSummaries.slice(0, 10)}
+            showHeader={false}
+          />
+        );
+
+      case 'team-waiting':
+        // Generate waiting items from blocked tasks
+        const waitingItems = tasks
+          .filter((task: any) => {
+            const status = getTaskStatus(task);
+            return status === 'blocked' || (task.blocked_by || task.blockedBy)?.length > 0;
+          })
+          .map((task: any) => ({
+            id: task.id,
+            userId: task.assignee_id || task.assigneeId || task.user_id || task.userId || '',
+            userName: task.assignee_name || 'Team Member',
+            userEmail: task.assignee_email || '',
+            taskId: task.id,
+            taskTitle: task.title,
+            blockedBy: task.blocked_by || task.blockedBy,
+            dueDate: task.due_date || task.dueDate,
+            priority: task.priority,
+          }));
+        
+        return (
+          <TeamWaitingWidget
+            items={waitingItems}
+            onViewTask={(taskId) => {
+              const task = tasks.find((t: any) => t.id === taskId);
+              if (task) onTaskClick?.(task);
+            }}
+            showHeader={false}
+          />
         );
 
       default:

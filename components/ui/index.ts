@@ -30,6 +30,12 @@ export { default as SectionCard } from './SectionCard';
 // Page layout
 export { default as PageWrapper } from './PageWrapper';
 
+// Dashboard widgets
+export { default as KanbanWidget } from './KanbanWidget';
+export { default as CalendarWidget } from './CalendarWidget';
+export { default as TeamWaitingWidget } from './TeamWaitingWidget';
+export { default as TeamQuickWidget } from './TeamQuickWidget';
+
 // Type exports
 export type { InfoCardProps } from './InfoCard';
 export type { StatusLaneProps } from './StatusLane';
@@ -44,3 +50,7 @@ export type { MemberCardProps, MemberRole } from './MemberCard';
 export type { CalendarDayProps } from './CalendarDay';
 export type { SectionCardProps } from './SectionCard';
 export type { PageWrapperProps, PageAction } from './PageWrapper';
+export type { KanbanWidgetProps } from './KanbanWidget';
+export type { CalendarWidgetProps } from './CalendarWidget';
+export type { TeamWaitingWidgetProps, WaitingItem } from './TeamWaitingWidget';
+export type { TeamQuickWidgetProps, TeamMemberSummary } from './TeamQuickWidget';
