@@ -34,10 +34,10 @@ const loadSidebarState = () => {
         pinned: pinned === 'true',
       };
     } catch {
-      return { collapsed: false, pinned: false };
+      return { collapsed: true, pinned: false };
     }
   }
-  return { collapsed: false, pinned: false };
+  return { collapsed: true, pinned: false };
 };
 
 // Save sidebar state to localStorage

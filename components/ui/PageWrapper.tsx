@@ -38,6 +38,10 @@ export interface PageWrapperProps {
   };
   /** Whether to show empty state */
   isEmpty?: boolean;
+  /** Content padding - default true, adds horizontal padding like dashboard */
+  padded?: boolean;
+  /** Max content width (web only) - default 1300 */
+  maxWidth?: number;
 }
 
 /**
@@ -56,8 +60,20 @@ export default function PageWrapper({
   scrollable = false,
   emptyState,
   isEmpty = false,
+  padded = true,
+  maxWidth = 1300,
 }: PageWrapperProps) {
   const theme = useTheme();
+
+  // Content wrapper style with padding and max-width
+  const contentWrapperStyle = Platform.OS === 'web' && padded ? {
+    paddingHorizontal: 40,
+    paddingTop: 24,
+    maxWidth: maxWidth,
+  } : padded ? {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  } : {};
 
   // Render header for mobile
   const renderMobileHeader = () => (
@@ -134,7 +150,11 @@ export default function PageWrapper({
   const renderContent = () => {
     if (loading) return renderLoading();
     if (isEmpty && emptyState) return renderEmpty();
-    return children;
+    return (
+      <View style={contentWrapperStyle}>
+        {children}
+      </View>
+    );
   };
 
   const contentElement = scrollable ? (

@@ -61,7 +61,7 @@ export default function TodayScreen() {
             onDelete={() => handleDelete(item.id)}
           />
         )}
-        contentContainerStyle={[styles.list, { paddingBottom: Platform.OS === 'web' ? 40 : 100 }]}
+        contentContainerStyle={styles.list}
       />
 
       <QuickAdd onAdd={handleAddTask} />
@@ -71,6 +71,6 @@ export default function TodayScreen() {
 
 const styles = StyleSheet.create({
   list: {
-    padding: Platform.OS === 'web' ? 24 : 16,
+    paddingBottom: Platform.OS === 'web' ? 40 : 100,
   },
 });

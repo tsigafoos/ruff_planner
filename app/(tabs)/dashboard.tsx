@@ -283,6 +283,7 @@ export default function DashboardScreen() {
       section="Overview"
       title="Dashboard"
       subtitle={`${tasks.length} tasks, ${projects.length} projects`}
+      padded={false}
       actions={[
         {
           label: '+ Task',

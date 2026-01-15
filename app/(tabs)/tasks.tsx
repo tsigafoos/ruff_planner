@@ -152,7 +152,7 @@ export default function TasksScreen() {
             onDelete={() => handleDelete(item.id)}
           />
         )}
-        contentContainerStyle={[styles.list, { paddingBottom: Platform.OS === 'web' ? 40 : 100 }]}
+        contentContainerStyle={styles.list}
       />
 
       <TaskForm
@@ -178,6 +178,6 @@ export default function TasksScreen() {
 
 const styles = StyleSheet.create({
   list: {
-    padding: Platform.OS === 'web' ? 24 : 16,
+    paddingBottom: Platform.OS === 'web' ? 40 : 100,
   },
 });

@@ -80,7 +80,7 @@ export default function ProjectsScreen() {
             onPress={() => router.push(`/project/${item.id}`)}
           />
         )}
-        contentContainerStyle={[styles.list, { paddingBottom: Platform.OS === 'web' ? 40 : 100 }]}
+        contentContainerStyle={styles.list}
       />
 
       <ProjectForm
@@ -98,6 +98,6 @@ export default function ProjectsScreen() {
 
 const styles = StyleSheet.create({
   list: {
-    padding: Platform.OS === 'web' ? 24 : 16,
+    paddingBottom: Platform.OS === 'web' ? 40 : 100,
   },
 });
