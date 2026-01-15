@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
-import { PageHeader, commonActions } from '@/components/layout';
 import ProjectForm from '@/components/ProjectForm';
 import TaskForm from '@/components/TaskForm';
 import { useTheme } from '@/components/useTheme';
-import { StatusLane, DraggableTaskCard, MiniCalendar } from '@/components/ui';
+import { StatusLane, DraggableTaskCard, MiniCalendar, PageWrapper } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
 import { useLabelStore } from '@/store/labelStore';
 import { useProjectStore } from '@/store/projectStore';
@@ -280,18 +279,25 @@ export default function DashboardScreen() {
   }, [draggedTaskId, dragOverLane, tasks, user?.id]);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {Platform.OS === 'web' && (
-        <PageHeader
-          section="Overview"
-          pageName="Dashboard"
-          subtitle={`${tasks.length} tasks, ${projects.length} projects`}
-          actions={[
-            commonActions.addTask(() => setNewTaskFormVisible(true)),
-            commonActions.addProject(() => setProjectFormVisible(true)),
-          ]}
-        />
-      )}
+    <PageWrapper
+      section="Overview"
+      title="Dashboard"
+      subtitle={`${tasks.length} tasks, ${projects.length} projects`}
+      actions={[
+        {
+          label: '+ Task',
+          icon: 'plus',
+          onPress: () => setNewTaskFormVisible(true),
+          variant: 'primary',
+        },
+        {
+          label: '+ Project',
+          icon: 'folder',
+          onPress: () => setProjectFormVisible(true),
+          variant: 'secondary',
+        },
+      ]}
+    >
       <ScrollView style={styles.scrollContent}>
       {/* Projects and Mini Calendar Row */}
       <View style={styles.topSection}>
@@ -532,7 +538,7 @@ export default function DashboardScreen() {
         onSubmit={handleCreateProject}
       />
       </ScrollView>
-    </View>
+    </PageWrapper>
   );
 }
 
