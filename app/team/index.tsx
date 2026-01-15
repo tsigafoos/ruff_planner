@@ -6,8 +6,7 @@ import { useTheme } from '@/components/useTheme';
 import { useAuthStore } from '@/store/authStore';
 import { useTeamStore } from '@/store/teamStore';
 import WebLayout from '@/components/layout/WebLayout';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
+import { Button, Input, MemberCard } from '@/components/ui';
 import { Team, TeamMember, TeamInvite, TeamRole } from '@/types';
 
 const ROLE_CONFIG: Record<TeamRole, { label: string; icon: string; color: string; description: string }> = {
@@ -231,41 +230,25 @@ export default function TeamManagementScreen() {
           </View>
 
           {members.map(member => {
-            const roleConfig = ROLE_CONFIG[member.role];
             const canEdit = isAdmin && member.role !== 'owner' && member.userId !== user?.id;
+            const memberName = member.user?.firstName && member.user?.lastName 
+              ? `${member.user.firstName} ${member.user.lastName}`
+              : undefined;
             
             return (
-              <View key={member.id} style={[styles.memberRow, { borderBottomColor: theme.border }]}>
-                <View style={[styles.memberAvatar, { backgroundColor: theme.primary + '20' }]}>
-                  <Text style={[styles.memberInitial, { color: theme.primary }]}>
-                    {(member.user?.firstName?.[0] || member.user?.email?.[0] || '?').toUpperCase()}
-                  </Text>
-                </View>
-                <View style={styles.memberInfo}>
-                  <Text style={[styles.memberName, { color: theme.text }]}>
-                    {member.user?.firstName && member.user?.lastName 
-                      ? `${member.user.firstName} ${member.user.lastName}`
-                      : member.user?.email || 'Unknown'}
-                  </Text>
-                  <Text style={[styles.memberEmail, { color: theme.textSecondary }]}>
-                    {member.user?.email}
-                  </Text>
-                </View>
-                <View style={[styles.roleBadge, { backgroundColor: roleConfig.color + '20' }]}>
-                  <Text style={[styles.roleText, { color: roleConfig.color }]}>{roleConfig.label}</Text>
-                </View>
-                {canEdit && (
-                  <TouchableOpacity
-                    style={styles.memberActions}
-                    onPress={() => {
-                      setEditingMember(member);
-                      setSelectedRole(member.role);
-                    }}
-                  >
-                    <FontAwesome name="ellipsis-v" size={16} color={theme.textSecondary} />
-                  </TouchableOpacity>
-                )}
-              </View>
+              <MemberCard
+                key={member.id}
+                id={member.id}
+                name={memberName}
+                email={member.user?.email || 'Unknown'}
+                role={member.role}
+                isCurrentUser={member.userId === user?.id}
+                canEdit={canEdit}
+                onActionsPress={() => {
+                  setEditingMember(member);
+                  setSelectedRole(member.role);
+                }}
+              />
             );
           })}
         </View>
@@ -532,47 +515,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
-  },
-  memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    gap: 12,
-  },
-  memberAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  memberInitial: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  memberInfo: {
-    flex: 1,
-  },
-  memberName: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  memberEmail: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  roleBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  roleText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  memberActions: {
-    padding: 8,
   },
   inviteRow: {
     flexDirection: 'row',
