@@ -1,12 +1,14 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Button from './ui/Button';
 import DatePicker from './ui/DatePicker';
 import Input from './ui/Input';
 import PriorityPicker from './ui/PriorityPicker';
 import { useTheme } from './useTheme';
-import { ProjectPhase, MaintenanceCategory } from '../types';
+import { ProjectPhase, MaintenanceCategory, RecurrenceConfig, RecurrenceInterval, DayOfWeek } from '../types';
 import { AGILE_PHASES } from '../store/taskStore';
+import { getDefaultRecurrence, getRecurrenceDescription, RECURRENCE_PRESETS } from '../lib/recurrence';
 
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
 
@@ -66,6 +68,16 @@ export default function TaskForm({
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [completed, setCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Recurrence state
+  const [recurrenceEnabled, setRecurrenceEnabled] = useState(false);
+  const [recurrenceInterval, setRecurrenceInterval] = useState<RecurrenceInterval>('weekly');
+  const [recurrenceCustomDays, setRecurrenceCustomDays] = useState(7);
+  const [recurrenceDaysOfWeek, setRecurrenceDaysOfWeek] = useState<DayOfWeek[]>([]);
+  const [recurrenceDayOfMonth, setRecurrenceDayOfMonth] = useState<number | undefined>();
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>();
+  const [recurrenceEndAfter, setRecurrenceEndAfter] = useState<number | undefined>();
+  const [showRecurrenceDetails, setShowRecurrenceDetails] = useState(false);
 
   // Determine if the selected project is Agile
   const selectedProject = useMemo(() => {
@@ -119,6 +131,28 @@ export default function TaskForm({
       setSelectedLabels([]);
       setCompleted(false);
       setStatus('to_do');
+      // Reset recurrence
+      setRecurrenceEnabled(false);
+      setRecurrenceInterval('weekly');
+      setRecurrenceCustomDays(7);
+      setRecurrenceDaysOfWeek([]);
+      setRecurrenceDayOfMonth(undefined);
+      setRecurrenceEndDate(undefined);
+      setRecurrenceEndAfter(undefined);
+      setShowRecurrenceDetails(false);
+    }
+    
+    // Load recurrence from initialData
+    if (initialData?.recurrence) {
+      const rec = initialData.recurrence;
+      setRecurrenceEnabled(rec.enabled || false);
+      setRecurrenceInterval(rec.interval || 'weekly');
+      setRecurrenceCustomDays(rec.customDays || 7);
+      setRecurrenceDaysOfWeek(rec.daysOfWeek || []);
+      setRecurrenceDayOfMonth(rec.dayOfMonth);
+      setRecurrenceEndDate(rec.endDate ? new Date(rec.endDate) : undefined);
+      setRecurrenceEndAfter(rec.endAfterOccurrences);
+      setShowRecurrenceDetails(rec.enabled || false);
     }
   }, [initialData, visible]);
 
@@ -140,6 +174,23 @@ export default function TaskForm({
     }
   }, [isMaintenanceProject, initialData]);
 
+  // Build recurrence config from state
+  const buildRecurrenceConfig = (): RecurrenceConfig | undefined => {
+    if (!recurrenceEnabled) return undefined;
+    
+    return {
+      enabled: true,
+      interval: recurrenceInterval,
+      customDays: recurrenceInterval === 'custom' ? recurrenceCustomDays : undefined,
+      daysOfWeek: recurrenceInterval === 'weekly' ? recurrenceDaysOfWeek : undefined,
+      dayOfMonth: recurrenceInterval === 'monthly' ? recurrenceDayOfMonth : undefined,
+      endDate: recurrenceEndDate,
+      endAfterOccurrences: recurrenceEndAfter,
+      regenerateOnComplete: true,
+      preserveTime: true,
+    };
+  };
+
   const handleSubmit = async () => {
     if (!title.trim()) return;
     setLoading(true);
@@ -156,6 +207,7 @@ export default function TaskForm({
         category: isMaintenanceProject ? category : null, // Only include category for Maintenance projects
         labelIds: selectedLabels,
         completed: status === 'completed' || completed,
+        recurrence: buildRecurrenceConfig(),
       });
       onClose();
     } catch (error) {
@@ -357,6 +409,155 @@ export default function TaskForm({
               value={dueDate}
               onChange={setDueDate}
             />
+
+            {/* Recurrence Section */}
+            <View style={styles.section}>
+              <TouchableOpacity
+                style={[styles.recurrenceToggle, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}
+                onPress={() => {
+                  setRecurrenceEnabled(!recurrenceEnabled);
+                  setShowRecurrenceDetails(!recurrenceEnabled);
+                }}
+              >
+                <FontAwesome 
+                  name="refresh" 
+                  size={16} 
+                  color={recurrenceEnabled ? theme.primary : theme.textSecondary} 
+                />
+                <Text style={[styles.recurrenceToggleText, { color: recurrenceEnabled ? theme.primary : theme.text }]}>
+                  {recurrenceEnabled ? 'Recurring Task' : 'Make Recurring'}
+                </Text>
+                {recurrenceEnabled && (
+                  <Text style={[styles.recurrenceDesc, { color: theme.textSecondary }]}>
+                    {getRecurrenceDescription({
+                      enabled: true,
+                      interval: recurrenceInterval,
+                      customDays: recurrenceCustomDays,
+                      daysOfWeek: recurrenceDaysOfWeek,
+                      dayOfMonth: recurrenceDayOfMonth,
+                      endDate: recurrenceEndDate,
+                      endAfterOccurrences: recurrenceEndAfter,
+                      regenerateOnComplete: true,
+                      preserveTime: true,
+                    })}
+                  </Text>
+                )}
+                <FontAwesome 
+                  name={showRecurrenceDetails ? 'chevron-up' : 'chevron-down'} 
+                  size={12} 
+                  color={theme.textTertiary} 
+                />
+              </TouchableOpacity>
+
+              {showRecurrenceDetails && recurrenceEnabled && (
+                <View style={[styles.recurrenceDetails, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}>
+                  {/* Quick Presets */}
+                  <Text style={[styles.recurrenceLabel, { color: theme.textSecondary }]}>Repeat</Text>
+                  <View style={styles.recurrencePresets}>
+                    {RECURRENCE_PRESETS.map((preset) => {
+                      const isSelected = recurrenceInterval === preset.config.interval && 
+                        (preset.config.interval !== 'weekly' || 
+                          JSON.stringify(recurrenceDaysOfWeek.sort()) === JSON.stringify((preset.config.daysOfWeek || []).sort()));
+                      return (
+                        <TouchableOpacity
+                          key={preset.label}
+                          style={[
+                            styles.recurrencePresetBtn,
+                            { 
+                              backgroundColor: isSelected ? theme.primary : theme.surface,
+                              borderColor: isSelected ? theme.primary : theme.border,
+                            }
+                          ]}
+                          onPress={() => {
+                            setRecurrenceInterval(preset.config.interval || 'weekly');
+                            setRecurrenceDaysOfWeek(preset.config.daysOfWeek || []);
+                          }}
+                        >
+                          <Text style={[
+                            styles.recurrencePresetText,
+                            { color: isSelected ? '#fff' : theme.text }
+                          ]}>
+                            {preset.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  {/* Custom Days Input */}
+                  {recurrenceInterval === 'custom' && (
+                    <View style={styles.recurrenceCustomRow}>
+                      <Text style={[styles.recurrenceLabel, { color: theme.textSecondary }]}>Every</Text>
+                      <View style={styles.recurrenceCustomInput}>
+                        <TouchableOpacity
+                          style={[styles.recurrenceStepBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                          onPress={() => setRecurrenceCustomDays(Math.max(1, recurrenceCustomDays - 1))}
+                        >
+                          <Text style={{ color: theme.text }}>-</Text>
+                        </TouchableOpacity>
+                        <Text style={[styles.recurrenceCustomValue, { color: theme.text }]}>
+                          {recurrenceCustomDays}
+                        </Text>
+                        <TouchableOpacity
+                          style={[styles.recurrenceStepBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                          onPress={() => setRecurrenceCustomDays(recurrenceCustomDays + 1)}
+                        >
+                          <Text style={{ color: theme.text }}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={[styles.recurrenceLabel, { color: theme.textSecondary }]}>days</Text>
+                    </View>
+                  )}
+
+                  {/* End Condition */}
+                  <View style={styles.recurrenceEndSection}>
+                    <Text style={[styles.recurrenceLabel, { color: theme.textSecondary }]}>End</Text>
+                    <View style={styles.recurrenceEndOptions}>
+                      <TouchableOpacity
+                        style={[
+                          styles.recurrenceEndBtn,
+                          { 
+                            backgroundColor: !recurrenceEndDate && !recurrenceEndAfter ? theme.primary : theme.surface,
+                            borderColor: !recurrenceEndDate && !recurrenceEndAfter ? theme.primary : theme.border,
+                          }
+                        ]}
+                        onPress={() => {
+                          setRecurrenceEndDate(undefined);
+                          setRecurrenceEndAfter(undefined);
+                        }}
+                      >
+                        <Text style={[
+                          styles.recurrenceEndBtnText,
+                          { color: !recurrenceEndDate && !recurrenceEndAfter ? '#fff' : theme.text }
+                        ]}>
+                          Never
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.recurrenceEndBtn,
+                          { 
+                            backgroundColor: recurrenceEndAfter ? theme.primary : theme.surface,
+                            borderColor: recurrenceEndAfter ? theme.primary : theme.border,
+                          }
+                        ]}
+                        onPress={() => {
+                          setRecurrenceEndAfter(recurrenceEndAfter ? undefined : 10);
+                          setRecurrenceEndDate(undefined);
+                        }}
+                      >
+                        <Text style={[
+                          styles.recurrenceEndBtnText,
+                          { color: recurrenceEndAfter ? '#fff' : theme.text }
+                        ]}>
+                          After {recurrenceEndAfter || 10}x
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              )}
+            </View>
 
             <PriorityPicker
               label="Priority"
@@ -653,5 +854,91 @@ const styles = StyleSheet.create({
   },
   footerButton: {
     minWidth: 100,
+  },
+  // Recurrence styles
+  recurrenceToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  recurrenceToggleText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  recurrenceDesc: {
+    flex: 1,
+    fontSize: 12,
+    textAlign: 'right',
+  },
+  recurrenceDetails: {
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 12,
+  },
+  recurrenceLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 6,
+  },
+  recurrencePresets: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  recurrencePresetBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  recurrencePresetText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  recurrenceCustomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  recurrenceCustomInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  recurrenceStepBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recurrenceCustomValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    minWidth: 30,
+    textAlign: 'center',
+  },
+  recurrenceEndSection: {
+    marginTop: 4,
+  },
+  recurrenceEndOptions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  recurrenceEndBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  recurrenceEndBtnText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

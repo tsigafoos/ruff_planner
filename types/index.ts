@@ -4,6 +4,37 @@
 // Task status values (shared across all project types)
 export type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
 
+// ============================================
+// Recurring Task Types
+// ============================================
+
+// Recurrence interval types
+export type RecurrenceInterval = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
+
+// Days of week for weekly recurrence
+export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
+// Recurrence configuration
+export interface RecurrenceConfig {
+  enabled: boolean;
+  interval: RecurrenceInterval;
+  // For custom intervals
+  customDays?: number; // Every X days
+  // For weekly: which days
+  daysOfWeek?: DayOfWeek[];
+  // For monthly: which day of month (1-31, or -1 for last day)
+  dayOfMonth?: number;
+  // End conditions (optional - if none, recurs forever)
+  endDate?: Date; // Stop after this date
+  endAfterOccurrences?: number; // Stop after N occurrences
+  // Tracking
+  occurrenceCount?: number; // How many times has this recurred
+  parentTaskId?: string; // Original task this was generated from
+  // Regeneration settings
+  regenerateOnComplete: boolean; // Create next when completed (vs on due date)
+  preserveTime: boolean; // Keep the same time of day
+}
+
 // Project types
 export type ProjectType = 'waterfall' | 'agile' | 'maintenance';
 
@@ -26,7 +57,8 @@ export interface Task {
   createdAt: Date;
   updatedAt: Date;
   userId: string;
-  recurringPattern?: string;
+  recurringPattern?: string; // Legacy - keep for backward compatibility
+  recurrence?: RecurrenceConfig; // New structured recurrence
   status: TaskStatus; // Primary state (to_do, in_progress, blocked, etc.)
   projectPhase?: ProjectPhase; // Agile-only: brainstorm, design, logic, polish, done
   assigneeId?: string; // Single assignee (user ID)

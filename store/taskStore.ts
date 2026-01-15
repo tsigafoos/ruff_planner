@@ -3,7 +3,8 @@ import { Platform } from 'react-native';
 import { database } from '../lib/db';
 import { supabase } from '../lib/supabase/client';
 import { Task as TaskModel } from '../lib/db';
-import { ProjectPhase, TaskStatus } from '../types';
+import { ProjectPhase, TaskStatus, RecurrenceConfig } from '../types';
+import { createRegeneratedTask } from '../lib/recurrence';
 
 // Valid phase values for Agile workflow
 export const AGILE_PHASES: ProjectPhase[] = ['brainstorm', 'design', 'logic', 'polish', 'done'];
@@ -28,7 +29,7 @@ interface TaskStore {
   updateTask: (taskId: string, updates: any) => Promise<void>;
   updateTaskPhase: (taskId: string, newPhase: ProjectPhase | null) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
-  completeTask: (taskId: string) => Promise<void>;
+  completeTask: (taskId: string) => Promise<{ regeneratedTask?: any }>;
   uncompleteTask: (taskId: string) => Promise<void>;
   // Dependency management
   addBlocker: (taskId: string, blockerTaskId: string) => Promise<{ success: boolean; circular?: boolean }>;
@@ -321,6 +322,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
             label_ids: taskData.labelIds || [],
             user_id: taskData.userId,
             recurring_pattern: taskData.recurringPattern || null,
+            recurrence: taskData.recurrence || null, // New structured recurrence config
             status: taskData.status || 'to_do',
             project_phase: taskData.projectPhase || null, // Agile phase (null for Waterfall)
             assignee_id: taskData.assigneeId || null,
@@ -384,6 +386,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         if (updates.projectId !== undefined) updateData.project_id = updates.projectId;
         if (updates.labelIds !== undefined) updateData.label_ids = updates.labelIds;
         if (updates.recurringPattern !== undefined) updateData.recurring_pattern = updates.recurringPattern;
+        if (updates.recurrence !== undefined) updateData.recurrence = updates.recurrence;
         if (updates.status !== undefined) updateData.status = updates.status;
         if (updates.projectPhase !== undefined) updateData.project_phase = updates.projectPhase;
         if (updates.assigneeId !== undefined) updateData.assignee_id = updates.assigneeId;
@@ -513,32 +516,88 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   completeTask: async (taskId: string) => {
     try {
+      const completedDate = new Date();
+      let regeneratedTask: any = null;
+      
       if (Platform.OS === 'web') {
+        // First, get the task to check for recurrence
+        const currentTasks = get().tasks;
+        const taskToComplete = currentTasks.find((t: any) => t.id === taskId);
+        
+        // Update the task as completed
         const { error } = await supabase
           .from('tasks')
           .update({ 
-            completed_at: new Date().toISOString(),
+            completed_at: completedDate.toISOString(),
             status: 'completed'
           })
           .eq('id', taskId);
         
         if (error) throw error;
         
-        const currentTasks = get().tasks;
+        // Update local state
         const updatedTasks = currentTasks.map((task: any) =>
           task.id === taskId 
-            ? { ...task, completed_at: new Date().toISOString(), status: 'completed' }
+            ? { ...task, completed_at: completedDate.toISOString(), status: 'completed' }
             : task
         );
         set({ tasks: updatedTasks });
+        
+        // Check for recurrence and auto-regenerate
+        if (taskToComplete?.recurrence?.enabled && taskToComplete.recurrence.regenerateOnComplete !== false) {
+          // Convert task to proper format for createRegeneratedTask
+          const taskWithDates = {
+            ...taskToComplete,
+            dueDate: taskToComplete.due_date ? new Date(taskToComplete.due_date) : undefined,
+            startDate: taskToComplete.start_date ? new Date(taskToComplete.start_date) : undefined,
+            labelIds: taskToComplete.label_ids || [],
+          };
+          
+          const newTaskData = createRegeneratedTask(taskWithDates, completedDate);
+          
+          if (newTaskData) {
+            // Create the regenerated task
+            const { data: newTask, error: createError } = await supabase
+              .from('tasks')
+              .insert({
+                title: newTaskData.title,
+                description: newTaskData.description || '',
+                priority: newTaskData.priority || 1,
+                status: 'to_do',
+                due_date: newTaskData.dueDate?.toISOString(),
+                start_date: newTaskData.startDate?.toISOString(),
+                project_id: newTaskData.projectId,
+                project_phase: newTaskData.projectPhase,
+                category: newTaskData.category,
+                label_ids: newTaskData.labelIds || [],
+                user_id: newTaskData.userId,
+                recurrence: newTaskData.recurrence,
+                assignee_id: newTaskData.assigneeId,
+              })
+              .select()
+              .single();
+            
+            if (createError) {
+              console.error('Error creating regenerated task:', createError);
+            } else if (newTask) {
+              regeneratedTask = newTask;
+              // Add regenerated task to local state
+              set({ tasks: [...get().tasks, newTask] });
+            }
+          }
+        }
       } else {
+        // Mobile - WatermelonDB
         const tasksCollection = database.get('tasks');
         const task = await tasksCollection.find(taskId);
         await task.update((taskRecord: any) => {
           taskRecord.completedAt = Date.now();
           taskRecord.status = 'completed';
         });
+        // TODO: Implement mobile recurrence regeneration
       }
+      
+      return { regeneratedTask };
     } catch (error) {
       console.error('Error completing task:', error);
       throw error;
