@@ -6,16 +6,15 @@ import ProjectForm from '@/components/ProjectForm';
 import QuickAdd from '@/components/QuickAdd';
 import ResourcesView from '@/components/resources/ResourcesView';
 import ShareProjectModal from '@/components/ShareProjectModal';
-import TaskCard from '@/components/TaskCard';
 import TaskForm from '@/components/TaskForm';
 import TaskCSVImportModal from '@/components/TaskCSVImportModal';
 import { DependencyCanvas } from '@/components/visualization';
 import { useTheme } from '@/components/useTheme';
+import { StatusLane, DraggableTaskCard } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
 import { useLabelStore } from '@/store/labelStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useTaskStore } from '@/store/taskStore';
-import { useThemeStore } from '@/store/themeStore';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -31,25 +30,6 @@ const STATUS_LANES: { key: TaskStatus; label: string }[] = [
   { key: 'blocked', label: 'Blocked' },
   { key: 'on_hold', label: 'On Hold' },
   { key: 'completed', label: 'Completed' },
-];
-
-// Fixed lane colors - Light mode HSL(225, 2%, 95%→70%), Dark mode HSL(225, 2%, 5%→30%)
-const LIGHT_LANE_COLORS = [
-  { background: 'hsl(225, 2%, 95%)', stroke: 'hsl(225, 2%, 85%)' },
-  { background: 'hsl(225, 2%, 90%)', stroke: 'hsl(225, 2%, 80%)' },
-  { background: 'hsl(225, 2%, 85%)', stroke: 'hsl(225, 2%, 75%)' },
-  { background: 'hsl(225, 2%, 80%)', stroke: 'hsl(225, 2%, 70%)' },
-  { background: 'hsl(225, 2%, 75%)', stroke: 'hsl(225, 2%, 65%)' },
-  { background: 'hsl(225, 2%, 70%)', stroke: 'hsl(225, 2%, 60%)' },
-];
-
-const DARK_LANE_COLORS = [
-  { background: 'hsl(225, 2%, 5%)', stroke: 'hsl(225, 2%, 15%)' },
-  { background: 'hsl(225, 2%, 10%)', stroke: 'hsl(225, 2%, 20%)' },
-  { background: 'hsl(225, 2%, 15%)', stroke: 'hsl(225, 2%, 25%)' },
-  { background: 'hsl(225, 2%, 20%)', stroke: 'hsl(225, 2%, 30%)' },
-  { background: 'hsl(225, 2%, 25%)', stroke: 'hsl(225, 2%, 35%)' },
-  { background: 'hsl(225, 2%, 30%)', stroke: 'hsl(225, 2%, 40%)' },
 ];
 
 export default function ProjectDetailScreen() {
@@ -74,9 +54,6 @@ export default function ProjectDetailScreen() {
   const laneRefs = useRef<{ [key: string]: View | null }>({});
   const cancelledLaneRef = useRef<View | null>(null);
   const theme = useTheme();
-  const { resolvedTheme } = useThemeStore();
-  // Detect dark mode by checking if background is dark
-  const isDark = theme.background === '#0f0f11' || resolvedTheme === 'dark';
 
   const project = projects.find((p: any) => p.id === id);
   const isTodoProject = project?.is_default || project?.name === 'To-Do List' || project?.name === 'To-Do';
@@ -327,7 +304,7 @@ export default function ProjectDetailScreen() {
   const isMaintenance = projectType === 'maintenance';
   const incompleteTasks = tasks.filter((task: any) => !(task.completed_at || task.completedAt));
 
-  // Task Lanes Component
+  // Task Lanes Component - using reusable StatusLane and DraggableTaskCard
   const renderTaskLanes = (fullScreen: boolean = false) => (
     <View style={[fullScreen ? styles.lanesSectionFullScreen : styles.lanesSection, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       {!fullScreen && (
@@ -351,89 +328,39 @@ export default function ProjectDetailScreen() {
       >
         {STATUS_LANES.map((lane, index) => {
           const laneTasks = tasksByStatus[lane.key] || [];
-          const laneColors = isDark ? DARK_LANE_COLORS[index] : LIGHT_LANE_COLORS[index];
-          
           const isDragOver = dragOverLane === lane.key;
+          
           return (
-            <View 
+            <StatusLane
               key={lane.key}
-              ref={(ref) => {
+              laneKey={lane.key}
+              label={lane.label}
+              count={laneTasks.length}
+              isDragOver={isDragOver}
+              isDragActive={!!draggedTaskId}
+              colorIndex={index}
+              dataLaneKey={lane.key}
+              onRefReady={(ref) => {
                 laneRefs.current[lane.key] = ref;
               }}
-              {...(Platform.OS === 'web' ? {
-                // @ts-ignore - data attributes for web
-                'data-lane-key': lane.key,
-              } : {})}
-              style={[
-                styles.lane, 
-                { 
-                  backgroundColor: laneColors.background,
-                  borderColor: isDragOver ? theme.primary : laneColors.stroke,
-                  borderWidth: isDragOver ? 2 : 1,
-                  opacity: draggedTaskId && dragOverLane !== lane.key ? 0.5 : 1,
-                }
-              ]}
             >
-              <View style={[styles.laneHeader, { borderBottomColor: theme.border }]}>
-                <Text style={[styles.laneTitle, { color: isDark ? theme.text : '#1a1a1a' }]}>{lane.label}</Text>
-                <View style={[styles.laneCount, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' }]}>
-                  <Text style={[styles.laneCountText, { color: isDark ? theme.text : '#1a1a1a' }]}>{laneTasks.length}</Text>
-                </View>
-              </View>
-              <ScrollView 
-                style={styles.laneContent}
-                showsVerticalScrollIndicator={true}
-                nestedScrollEnabled={true}
-              >
-                {laneTasks.length > 0 ? (
-                  laneTasks.map((task: any) => {
-                    const isDragging = draggedTaskId === task.id;
-                    return (
-                      <View 
-                        key={task.id} 
-                        style={[
-                          styles.laneTaskWrapper,
-                          isDragging && styles.laneTaskWrapperDragging,
-                          Platform.OS === 'web' && (isDragging ? styles.laneTaskWrapperGrabbing : styles.laneTaskWrapperGrab),
-                        ] as any}
-                        {...(Platform.OS === 'web' ? {
-                          onMouseDown: (e: any) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (!isDragging && !draggedTaskId) {
-                              handleDragStart(task.id, e);
-                            }
-                          },
-                        } : {
-                          onStartShouldSetResponder: () => !isDragging && !draggedTaskId,
-                          onMoveShouldSetResponder: () => !isDragging && !draggedTaskId,
-                          onResponderGrant: (e: any) => {
-                            if (!isDragging && !draggedTaskId) {
-                              handleDragStart(task.id, e);
-                            }
-                          },
-                          onResponderMove: handleDragMove,
-                          onResponderRelease: handleDragEnd,
-                        })}
-                      >
-                        <TaskCard
-                          task={task}
-                          onPress={() => {
-                            if (!draggedTaskId) {
-                              handleEditTask(task);
-                            }
-                          }}
-                        />
-                      </View>
-                    );
-                  })
-                ) : (
-                  <View style={styles.laneEmpty}>
-                    <Text style={[styles.laneEmptyText, { color: isDark ? theme.textTertiary : '#717171' }]}>No tasks</Text>
-                  </View>
-                )}
-              </ScrollView>
-            </View>
+              {laneTasks.map((task: any) => (
+                <DraggableTaskCard
+                  key={task.id}
+                  task={task}
+                  isDragging={draggedTaskId === task.id}
+                  dragActive={!!draggedTaskId}
+                  onPress={() => {
+                    if (!draggedTaskId) {
+                      handleEditTask(task);
+                    }
+                  }}
+                  onDragStart={(e) => handleDragStart(task.id, e)}
+                  onDragMove={handleDragMove}
+                  onDragEnd={handleDragEnd}
+                />
+              ))}
+            </StatusLane>
           );
         })}
       </ScrollView>
@@ -460,48 +387,23 @@ export default function ProjectDetailScreen() {
             style={styles.cancelledTasksContainer}
             contentContainerStyle={styles.cancelledTasksContent}
           >
-            {(tasksByStatus['cancelled'] || []).map((task: any) => {
-              const isDragging = draggedTaskId === task.id;
-              return (
-                <View 
-                  key={task.id} 
-                  style={[
-                    styles.cancelledTaskWrapper,
-                    isDragging && styles.laneTaskWrapperDragging,
-                    Platform.OS === 'web' && (isDragging ? styles.laneTaskWrapperGrabbing : styles.laneTaskWrapperGrab),
-                  ] as any}
-                  {...(Platform.OS === 'web' ? {
-                    'data-lane-key': 'cancelled',
-                    onMouseDown: (e: any) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (!isDragging && !draggedTaskId) {
-                        handleDragStart(task.id, e);
-                      }
-                    },
-                  } : {
-                    onStartShouldSetResponder: () => !isDragging && !draggedTaskId,
-                    onMoveShouldSetResponder: () => !isDragging && !draggedTaskId,
-                    onResponderGrant: (e: any) => {
-                      if (!isDragging && !draggedTaskId) {
-                        handleDragStart(task.id, e);
-                      }
-                    },
-                    onResponderMove: handleDragMove,
-                    onResponderRelease: handleDragEnd,
-                  })}
-                >
-                  <TaskCard
-                    task={task}
-                    onPress={() => {
-                      if (!draggedTaskId) {
-                        handleEditTask(task);
-                      }
-                    }}
-                  />
-                </View>
-              );
-            })}
+            {(tasksByStatus['cancelled'] || []).map((task: any) => (
+              <View key={task.id} style={styles.cancelledTaskWrapper}>
+                <DraggableTaskCard
+                  task={task}
+                  isDragging={draggedTaskId === task.id}
+                  dragActive={!!draggedTaskId}
+                  onPress={() => {
+                    if (!draggedTaskId) {
+                      handleEditTask(task);
+                    }
+                  }}
+                  onDragStart={(e) => handleDragStart(task.id, e)}
+                  onDragMove={handleDragMove}
+                  onDragEnd={handleDragEnd}
+                />
+              </View>
+            ))}
           </ScrollView>
         )}
       </View>
@@ -882,62 +784,6 @@ const styles = StyleSheet.create({
   lanesContent: {
     padding: 16,
     gap: 12,
-  },
-  lane: {
-    width: Platform.OS === 'web' ? 240 : 220,
-    marginRight: 6,
-    borderWidth: 1,
-    borderRadius: 10,
-    maxHeight: Platform.OS === 'web' ? 400 : 350,
-  },
-  laneHeader: {
-    padding: 12,
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  laneTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  laneCount: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  laneCountText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  laneContent: {
-    flex: 1,
-    padding: 8,
-  },
-  laneTaskWrapper: {
-    marginBottom: 8,
-  },
-  laneTaskWrapperDragging: {
-    opacity: 0.5,
-  },
-  laneTaskWrapperGrab: Platform.select({
-    web: {
-      cursor: 'grab',
-    },
-    default: {},
-  }),
-  laneTaskWrapperGrabbing: Platform.select({
-    web: {
-      cursor: 'grabbing',
-    },
-    default: {},
-  }),
-  laneEmpty: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  laneEmptyText: {
-    fontSize: 13,
   },
   // Todo Project Styles
   todoContainer: {
