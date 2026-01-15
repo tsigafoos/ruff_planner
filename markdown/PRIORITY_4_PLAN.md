@@ -339,7 +339,7 @@ export function canManageTeam(userId: string, team: Team, members: TeamMember[])
 ## 📋 Implementation Order (Step by Step)
 
 ### Step 1: Database Migration
-- [ ] Create `supabase-team-collaboration-migration.sql`
+- [ ] Create `sql/supabase-team-collaboration-migration.sql`
 - [ ] Add all tables and indexes
 - [ ] Update profiles table
 

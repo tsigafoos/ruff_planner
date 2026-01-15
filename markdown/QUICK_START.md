@@ -36,7 +36,7 @@ npm install
 ### D. Set Up Database
 1. In Supabase dashboard → **SQL Editor**
 2. Click **New Query**
-3. Open the file `supabase-setup.sql` from this project
+3. Open the file `sql/supabase-setup.sql` from this project
 4. Copy ALL the SQL code
 5. Paste it into the SQL Editor
 6. Click **Run** (or press Ctrl+Enter)
@@ -108,7 +108,7 @@ The app is now running. You can:
 
 ## 🐛 Having Issues?
 
-See `SETUP_GUIDE.md` for detailed troubleshooting.
+See `markdown/SETUP_GUIDE.md` for detailed troubleshooting.
 
 ## Common Problems
 
@@ -128,4 +128,4 @@ See `SETUP_GUIDE.md` for detailed troubleshooting.
 
 ---
 
-**Next Steps**: Check out `SETUP_GUIDE.md` for more details and `README.md` for architecture info.
+**Next Steps**: Check out `markdown/SETUP_GUIDE.md` for more details and `markdown/README.md` for architecture info.

@@ -41,7 +41,7 @@ A third project type for ongoing support/maintenance work:
 - [ ] Add `category` field to Task type for maintenance classification
 
 **1.2 - Database Migration**
-- [ ] Create `supabase-maintenance-mode-migration.sql`:
+- [ ] Create `sql/supabase-maintenance-mode-migration.sql`:
   - Add `category` column to tasks table (for maintenance tickets)
 
 ---
@@ -157,7 +157,7 @@ A third project type for ongoing support/maintenance work:
 ## 📁 Files to Create/Modify
 
 ### New Files
-- `supabase-maintenance-mode-migration.sql`
+- `sql/supabase-maintenance-mode-migration.sql`
 - `components/dashboards/MaintenanceDashboard.tsx`
 
 ### Modified Files

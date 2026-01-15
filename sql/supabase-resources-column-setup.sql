@@ -1,5 +1,5 @@
 -- Add resources column to projects table if it doesn't exist
--- Run this FIRST before supabase-resources-array-fix.sql
+-- Run this FIRST before sql/supabase-resources-array-fix.sql
 -- Run this in your Supabase SQL Editor
 
 -- Add resources column if it doesn't exist

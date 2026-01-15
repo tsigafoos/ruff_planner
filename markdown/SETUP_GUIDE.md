@@ -56,7 +56,7 @@ npm install
 
 1. In your Supabase dashboard, go to **SQL Editor** (in the sidebar)
 2. Click **New Query**
-3. Copy the entire contents of `supabase-setup.sql`
+3. Copy the entire contents of `sql/supabase-setup.sql`
 4. Paste it into the SQL Editor
 5. Click **Run** (or press Ctrl+Enter / Cmd+Enter)
 6. You should see "Success. No rows returned" - this is normal!
@@ -199,7 +199,7 @@ Once everything is working:
 
 ## Need Help?
 
-- Check the main `README.md` for architecture details
+- Check the main `markdown/README.md` for architecture details
 - Review Supabase docs: https://supabase.com/docs
 - Check Expo docs: https://docs.expo.dev
 - Review WatermelonDB docs: https://nozbe.github.io/WatermelonDB/

@@ -1,6 +1,8 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../useTheme';
+import { useTaskStore } from '@/store/taskStore';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface WaterfallDashboardProps {
   project: any;
@@ -10,10 +12,19 @@ interface WaterfallDashboardProps {
   onTeamClick?: () => void;
   onToolsClick?: () => void;
   onTaskClick?: (task: any) => void;
+  onTaskUpdate?: () => void; // Callback to refresh tasks after update
 }
 
-export default function WaterfallDashboard({ project, tasks, onProjectUpdate, onAddTask, onTeamClick, onToolsClick, onTaskClick }: WaterfallDashboardProps) {
+export default function WaterfallDashboard({ project, tasks, onProjectUpdate, onAddTask, onTeamClick, onToolsClick, onTaskClick, onTaskUpdate }: WaterfallDashboardProps): JSX.Element {
   const theme = useTheme();
+  const { updateTask } = useTaskStore();
+  const [draggingHandle, setDraggingHandle] = useState<{ taskId: string; type: 'start' | 'end' } | null>(null);
+  const [dragStartX, setDragStartX] = useState<number>(0);
+  const [dragStartPercent, setDragStartPercent] = useState<number>(0);
+  const [currentDragX, setCurrentDragX] = useState<number | null>(null);
+  const [tempDragDate, setTempDragDate] = useState<Date | null>(null);
+  const ganttBarContainerRef = useRef<{ [key: string]: View | null }>({});
+  const ganttChartContainerRef = useRef<View | null>(null);
   
   // Parse data
   const milestones = Array.isArray(project.milestones) ? project.milestones : [];
@@ -87,6 +98,272 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
   // Get top 5 risks
   const topRisks = risks.slice(0, 5);
 
+  // Calculate date from position in Gantt chart
+  const getDateFromPosition = (percent: number, projectStart: Date, projectEnd: Date): Date => {
+    const totalMs = projectEnd.getTime() - projectStart.getTime();
+    const offsetMs = (percent / 100) * totalMs;
+    return new Date(projectStart.getTime() + offsetMs);
+  };
+
+  // Handle drag start for Gantt bar handles
+  const handleGanttDragStart = (taskId: string | number, type: 'start' | 'end', e: any) => {
+    const taskIdStr = String(taskId);
+    const x = Platform.OS === 'web' ? e.clientX : e.nativeEvent.pageX;
+    const ganttContainer = ganttChartContainerRef.current;
+    
+    if (!ganttContainer) return;
+    
+    // Get Gantt chart container position and width (not the task bar)
+    if (Platform.OS === 'web') {
+      const element = (ganttContainer as any) as HTMLElement;
+      const rect = element.getBoundingClientRect();
+      const relativeX = x - rect.left;
+      const percent = (relativeX / rect.width) * 100;
+      setDraggingHandle({ taskId: taskIdStr, type });
+      setDragStartX(x);
+      setDragStartPercent(percent);
+      setCurrentDragX(x);
+    } else {
+      ganttContainer.measure((fx, fy, width, height, px, py) => {
+        const relativeX = x - px;
+        const percent = (relativeX / width) * 100;
+        setDraggingHandle({ taskId: taskIdStr, type });
+        setDragStartX(x);
+        setDragStartPercent(percent);
+        setCurrentDragX(x);
+      });
+    }
+  };
+
+  // Handle drag move
+  const handleGanttDragMove = (e: any, projectStart: Date, projectEnd: Date) => {
+    if (!draggingHandle) return;
+    
+    const x = Platform.OS === 'web' ? e.clientX : e.nativeEvent.pageX;
+    const deltaX = x - dragStartX;
+    
+    const container = ganttBarContainerRef.current[draggingHandle.taskId];
+    if (!container) return;
+    
+    if (Platform.OS === 'web') {
+      const element = (container as any) as HTMLElement;
+      const rect = element.getBoundingClientRect();
+      const deltaPercent = (deltaX / rect.width) * 100;
+      const newPercent = Math.max(0, Math.min(100, dragStartPercent + deltaPercent));
+      
+      // Update the task date in real-time (visual feedback)
+      const newDate = getDateFromPosition(newPercent, projectStart, projectEnd);
+      // We'll update on drag end to avoid too many API calls
+    }
+  };
+
+  // Handle drag end
+  const handleGanttDragEnd = async (projectStart: Date, projectEnd: Date) => {
+    if (!draggingHandle) return;
+    
+    const task = tasks.find((t: any) => t.id === draggingHandle.taskId);
+    if (!task) {
+      setDraggingHandle(null);
+      return;
+    }
+    
+    const container = ganttBarContainerRef.current[draggingHandle.taskId];
+    if (!container) {
+      setDraggingHandle(null);
+      return;
+    }
+    
+    try {
+      if (Platform.OS === 'web') {
+        const element = (container as any) as HTMLElement;
+        const rect = element.getBoundingClientRect();
+        
+        // Get current mouse position
+        const getCurrentX = () => {
+          // We need to track the last mouse position
+          return dragStartX; // This will be updated by the move handler
+        };
+        
+        // For now, calculate from the drag distance
+        const currentX = dragStartX; // This should be the last known position
+        const relativeX = currentX - rect.left;
+        const newPercent = Math.max(0, Math.min(100, (relativeX / rect.width) * 100));
+        const newDate = getDateFromPosition(newPercent, projectStart, projectEnd);
+        
+        // Round to nearest day
+        newDate.setHours(0, 0, 0, 0);
+        
+        if (draggingHandle.type === 'start') {
+          await updateTask(draggingHandle.taskId, {
+            startDate: newDate,
+          });
+        } else {
+          await updateTask(draggingHandle.taskId, {
+            dueDate: newDate,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating task date:', error);
+    } finally {
+      setDraggingHandle(null);
+    }
+  };
+
+  // Set up global mouse/touch handlers for web
+  useEffect(() => {
+    if (Platform.OS === 'web' && draggingHandle && ganttChartContainerRef.current) {
+      const ganttContainer = ganttChartContainerRef.current;
+      
+      const handleMouseMove = (e: MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!ganttContainer) return;
+        
+        const element = (ganttContainer as any) as HTMLElement;
+        const rect = element.getBoundingClientRect();
+        const relativeX = e.clientX - rect.left;
+        const newPercent = Math.max(0, Math.min(100, (relativeX / rect.width) * 100));
+        
+        // Calculate project dates
+        let projectStart: Date;
+        let projectEnd: Date;
+        
+        if (project.start_date && project.end_date) {
+          projectStart = new Date(project.start_date);
+          projectEnd = new Date(project.end_date);
+        } else {
+          const taskDates = tasks
+            .map((task: any) => {
+              const created = task.created_at ? new Date(task.created_at) : null;
+              const due = task.due_date ? new Date(task.due_date) : (task.dueDate ? new Date(task.dueDate) : null);
+              return [created, due].filter(Boolean) as Date[];
+            })
+            .flat();
+          
+          if (taskDates.length === 0) {
+            projectStart = new Date();
+            projectEnd = new Date();
+            projectEnd.setDate(projectEnd.getDate() + 30);
+          } else {
+            projectStart = new Date(Math.min(...taskDates.map(d => d.getTime())));
+            projectEnd = new Date(Math.max(...taskDates.map(d => d.getTime())));
+            projectEnd.setDate(projectEnd.getDate() + 7);
+          }
+        }
+        
+        const newDate = getDateFromPosition(newPercent, projectStart, projectEnd);
+        newDate.setHours(0, 0, 0, 0);
+        
+        setCurrentDragX(e.clientX);
+        setTempDragDate(newDate);
+      };
+
+      const handleMouseUp = async (e: MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!ganttContainer || !draggingHandle) {
+          setDraggingHandle(null);
+          setCurrentDragX(null);
+          setTempDragDate(null);
+          return;
+        }
+        
+        // Use the current mouse position or the last known drag position
+        const finalX = e.clientX;
+        const element = (ganttContainer as any) as HTMLElement;
+        const rect = element.getBoundingClientRect();
+        const relativeX = finalX - rect.left;
+        const newPercent = Math.max(0, Math.min(100, (relativeX / rect.width) * 100));
+        
+        // Calculate project dates (same logic as in renderGanttChart)
+        let projectStart: Date;
+        let projectEnd: Date;
+        
+        if (project.start_date && project.end_date) {
+          projectStart = new Date(project.start_date);
+          projectEnd = new Date(project.end_date);
+        } else {
+          const taskDates = tasks
+            .map((task: any) => {
+              const created = task.created_at ? new Date(task.created_at) : null;
+              const due = task.due_date ? new Date(task.due_date) : (task.dueDate ? new Date(task.dueDate) : null);
+              return [created, due].filter(Boolean) as Date[];
+            })
+            .flat();
+          
+          if (taskDates.length === 0) {
+            projectStart = new Date();
+            projectEnd = new Date();
+            projectEnd.setDate(projectEnd.getDate() + 30);
+          } else {
+            projectStart = new Date(Math.min(...taskDates.map(d => d.getTime())));
+            projectEnd = new Date(Math.max(...taskDates.map(d => d.getTime())));
+            projectEnd.setDate(projectEnd.getDate() + 7);
+          }
+        }
+        
+        const newDate = getDateFromPosition(newPercent, projectStart, projectEnd);
+        newDate.setHours(0, 0, 0, 0);
+        
+        const task = tasks.find((t: any) => String(t.id) === draggingHandle.taskId);
+        if (task) {
+          try {
+            if (draggingHandle.type === 'start') {
+              // Don't allow start date to be after due date
+              const currentDue = task.due_date ? new Date(task.due_date) : (task.dueDate ? new Date(task.dueDate) : null);
+              if (currentDue && newDate > currentDue) {
+                // Set to one day before due date
+                const adjustedDate = new Date(currentDue);
+                adjustedDate.setDate(adjustedDate.getDate() - 1);
+                await updateTask(draggingHandle.taskId, {
+                  startDate: adjustedDate,
+                });
+              } else {
+                await updateTask(draggingHandle.taskId, {
+                  startDate: newDate,
+                });
+              }
+            } else {
+              // Don't allow due date to be before start date
+              const currentStart = task.start_date ? new Date(task.start_date) : (task.startDate ? new Date(task.startDate) : null);
+              if (currentStart && newDate < currentStart) {
+                // Set to one day after start date
+                const adjustedDate = new Date(currentStart);
+                adjustedDate.setDate(adjustedDate.getDate() + 1);
+                await updateTask(draggingHandle.taskId, {
+                  dueDate: adjustedDate,
+                });
+              } else {
+                await updateTask(draggingHandle.taskId, {
+                  dueDate: newDate,
+                });
+              }
+            }
+            // Refresh tasks after update
+            onTaskUpdate?.();
+          } catch (error) {
+            console.error('Error updating task date:', error);
+          }
+        }
+        
+        setDraggingHandle(null);
+        setCurrentDragX(null);
+        setTempDragDate(null);
+      };
+
+      window.addEventListener('mousemove', handleMouseMove, { passive: false });
+      window.addEventListener('mouseup', handleMouseUp, { passive: false });
+
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [draggingHandle, dragStartX, currentDragX, tempDragDate, tasks, project, updateTask, onTaskUpdate]);
+
   // Render Gantt chart
   const renderGanttChart = () => {
     if (tasks.length === 0) {
@@ -138,7 +415,10 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
     const middleDate = new Date(projectStart.getTime() + (projectEnd.getTime() - projectStart.getTime()) / 2);
 
     return (
-      <View style={styles.ganttContainer}>
+      <View 
+        ref={(ref) => { ganttChartContainerRef.current = ref; }}
+        style={styles.ganttContainer}
+      >
         {/* Priority Legend */}
         <View style={styles.ganttLegend}>
           <View style={styles.legendItem}>
@@ -161,9 +441,22 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
 
         {/* Tasks */}
         {tasks.map((task: any, idx: number) => {
-          const startDateRaw = task.start_date || task.startDate;
+          const taskIdStr = String(task.id || idx);
+          const isDraggingThis = draggingHandle?.taskId === taskIdStr;
+          
+          // Use temporary drag date for visual feedback during drag
+          let startDateRaw = task.start_date || task.startDate;
+          let dueDateRaw = task.due_date || task.dueDate;
+          
+          if (isDraggingThis && tempDragDate) {
+            if (draggingHandle.type === 'start') {
+              startDateRaw = tempDragDate;
+            } else {
+              dueDateRaw = tempDragDate;
+            }
+          }
+          
           const startDate = startDateRaw ? new Date(startDateRaw) : (task.created_at ? new Date(task.created_at) : projectStart);
-          const dueDateRaw = task.due_date || task.dueDate;
           const dueDate = dueDateRaw ? new Date(dueDateRaw) : new Date(projectEnd); // Use project end if no due date
           
           const taskStart = startDate < projectStart ? projectStart : startDate;
@@ -179,13 +472,15 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
           const isCompleted = !!(task.completed_at || task.completedAt || task.status === 'completed');
 
           return (
-            <TouchableOpacity 
+            <View 
               key={task.id || idx} 
               style={styles.ganttRow}
-              onPress={() => onTaskClick?.(task)}
-              activeOpacity={0.7}
             >
-              <View style={styles.ganttTaskInfo}>
+              <TouchableOpacity 
+                style={styles.ganttTaskInfo}
+                onPress={() => onTaskClick?.(task)}
+                activeOpacity={0.7}
+              >
                 {isCompleted && (
                   <FontAwesome name="check-circle" size={14} color="#10B981" style={styles.ganttCheckIcon} />
                 )}
@@ -199,8 +494,14 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
                 >
                   {task.title}
                 </Text>
-              </View>
-              <View style={[styles.ganttBarContainer, { backgroundColor: theme.border + '30' }]}>
+              </TouchableOpacity>
+              <View 
+                ref={(ref) => {
+                  const key = String(task.id || idx);
+                  ganttBarContainerRef.current[key] = ref;
+                }}
+                style={[styles.ganttBarContainer, { backgroundColor: theme.border + '30' }]}
+              >
                 {/* Today marker (rendered behind bars) */}
                 {showTodayMarker && (
                   <View 
@@ -229,9 +530,85 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
                       <FontAwesome name="check" size={10} color={taskColor} />
                     </View>
                   )}
+                  
+                  {/* Start handle (left side) */}
+                  {Platform.OS === 'web' ? (
+                    // @ts-ignore - Using div for web-specific drag handles
+                    <div
+                      onMouseDown={(e: any) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        handleGanttDragStart(task.id || idx, 'start', e);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        left: '-6px',
+                        top: 0,
+                        width: '12px',
+                        height: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        backgroundColor: draggingHandle?.taskId === String(task.id || idx) && draggingHandle?.type === 'start' 
+                          ? theme.primary 
+                          : theme.surface,
+                        border: `2px solid ${taskColor}`,
+                        borderRadius: '2px',
+                        cursor: 'ew-resize',
+                        zIndex: 10,
+                      } as React.CSSProperties}
+                    >
+                      <div
+                        style={{
+                          width: '4px',
+                          height: '12px',
+                          backgroundColor: taskColor,
+                          borderRadius: '2px',
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                  
+                  {/* End handle (right side) */}
+                  {Platform.OS === 'web' ? (
+                    // @ts-ignore - Using div for web-specific drag handles
+                    <div
+                      onMouseDown={(e: any) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        handleGanttDragStart(task.id || idx, 'end', e);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: '-6px',
+                        top: 0,
+                        width: '12px',
+                        height: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        backgroundColor: draggingHandle?.taskId === String(task.id || idx) && draggingHandle?.type === 'end' 
+                          ? theme.primary 
+                          : theme.surface,
+                        border: `2px solid ${taskColor}`,
+                        borderRadius: '2px',
+                        cursor: 'ew-resize',
+                        zIndex: 10,
+                      } as React.CSSProperties}
+                    >
+                      <div
+                        style={{
+                          width: '4px',
+                          height: '12px',
+                          backgroundColor: taskColor,
+                          borderRadius: '2px',
+                        }}
+                      />
+                    </div>
+                  ) : null}
                 </View>
               </View>
-            </TouchableOpacity>
+            </View>
           );
         })}
 
@@ -240,14 +617,17 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
           <View style={styles.ganttMilestones}>
             <Text style={[styles.ganttMilestonesLabel, { color: theme.textSecondary }]}>Milestones:</Text>
             <View style={styles.ganttMilestonesList}>
-              {milestones.slice(0, 3).map((milestone: string, idx: number) => (
-                <View key={idx} style={styles.ganttMilestoneItem}>
-                  <FontAwesome name="flag" size={12} color={theme.warning} />
-                  <Text style={[styles.ganttMilestoneText, { color: theme.text }]} numberOfLines={1}>
-                    {milestone}
-                  </Text>
-                </View>
-              ))}
+              {milestones.slice(0, 3).map((milestone: any, idx: number) => {
+                const milestoneText = typeof milestone === 'string' ? milestone : (milestone?.name || String(milestone));
+                return (
+                  <View key={idx} style={styles.ganttMilestoneItem}>
+                    <FontAwesome name="flag" size={12} color={theme.warning} />
+                    <Text style={[styles.ganttMilestoneText, { color: theme.text }]} numberOfLines={1}>
+                      {milestoneText}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
           </View>
         )}
@@ -446,7 +826,7 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
               ~{Math.ceil(milestones.length * completionPercent / 100)} estimated complete
             </Text>
           </View>
-          {milestones.map((milestone: string, idx: number) => {
+          {milestones.map((milestone: any, idx: number) => {
             // Estimate milestone status based on project progress
             const milestoneProgress = (idx + 1) / milestones.length;
             const projectProgress = completionPercent / 100;
@@ -459,6 +839,7 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
               'upcoming': { color: theme.textTertiary, icon: 'circle-o' as const, label: 'Upcoming' },
             };
             const config = statusConfig[status];
+            const milestoneText = typeof milestone === 'string' ? milestone : (milestone?.name || String(milestone));
             
             return (
               <View key={idx} style={[styles.milestoneItem, { borderBottomColor: theme.border + '40' }]}>
@@ -473,7 +854,7 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
                   { color: theme.text },
                   status === 'complete' && styles.milestoneTextComplete
                 ]}>
-                  {milestone}
+                  {milestoneText}
                 </Text>
                 <View style={[styles.milestoneStatusBadge, { backgroundColor: config.color + '15' }]}>
                   <Text style={[styles.milestoneStatusText, { color: config.color }]}>
@@ -493,23 +874,29 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
           {resources.people && Array.isArray(resources.people) && resources.people.length > 0 && (
             <View style={styles.resourceGroup}>
               <Text style={[styles.resourceGroupTitle, { color: theme.textSecondary }]}>People</Text>
-              {resources.people.map((person: string, idx: number) => (
-                <View key={idx} style={styles.resourceItem}>
-                  <FontAwesome name="user" size={16} color={theme.accent} />
-                  <Text style={[styles.resourceText, { color: theme.text }]}>{person}</Text>
-                </View>
-              ))}
+              {resources.people.map((person: any, idx: number) => {
+                const personName = typeof person === 'string' ? person : (person?.name || String(person));
+                return (
+                  <View key={idx} style={styles.resourceItem}>
+                    <FontAwesome name="user" size={16} color={theme.accent} />
+                    <Text style={[styles.resourceText, { color: theme.text }]}>{personName}</Text>
+                  </View>
+                );
+              })}
             </View>
           )}
           {resources.tools && Array.isArray(resources.tools) && resources.tools.length > 0 && (
             <View style={styles.resourceGroup}>
               <Text style={[styles.resourceGroupTitle, { color: theme.textSecondary }]}>Tools</Text>
-              {resources.tools.map((tool: string, idx: number) => (
-                <View key={idx} style={styles.resourceItem}>
-                  <FontAwesome name="wrench" size={16} color={theme.warning} />
-                  <Text style={[styles.resourceText, { color: theme.text }]}>{tool}</Text>
-                </View>
-              ))}
+              {resources.tools.map((tool: any, idx: number) => {
+                const toolName = typeof tool === 'string' ? tool : (tool?.name || String(tool));
+                return (
+                  <View key={idx} style={styles.resourceItem}>
+                    <FontAwesome name="wrench" size={16} color={theme.warning} />
+                    <Text style={[styles.resourceText, { color: theme.text }]}>{toolName}</Text>
+                  </View>
+                );
+              })}
             </View>
           )}
         </View>
@@ -527,10 +914,11 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
               </Text>
             </View>
           </View>
-          {deliverables.map((deliverable: string, idx: number) => {
+          {deliverables.map((deliverable: any, idx: number) => {
             // Estimate deliverable completion based on project progress
             const deliverableProgress = (idx + 1) / deliverables.length;
             const isLikelyComplete = (completionPercent / 100) >= deliverableProgress;
+            const deliverableText = typeof deliverable === 'string' ? deliverable : (deliverable?.name || String(deliverable));
             
             return (
               <View key={idx} style={[styles.deliverableItem, { borderBottomColor: theme.border + '40' }]}>
@@ -549,7 +937,7 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
                   { color: theme.text },
                   isLikelyComplete && styles.deliverableTextComplete
                 ]}>
-                  {deliverable}
+                  {deliverableText}
                 </Text>
               </View>
             );
@@ -561,12 +949,15 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
       {teamRoles.length > 0 && (
         <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Team Roles & Responsibilities</Text>
-          {teamRoles.map((role: string, idx: number) => (
-            <View key={idx} style={styles.listItem}>
-              <View style={[styles.bullet, { backgroundColor: theme.textSecondary }]} />
-              <Text style={[styles.listText, { color: theme.text }]}>{role}</Text>
-            </View>
-          ))}
+          {teamRoles.map((role: any, idx: number) => {
+            const roleText = typeof role === 'string' ? role : (role?.name || String(role));
+            return (
+              <View key={idx} style={styles.listItem}>
+                <View style={[styles.bullet, { backgroundColor: theme.textSecondary }]} />
+                <Text style={[styles.listText, { color: theme.text }]}>{roleText}</Text>
+              </View>
+            );
+          })}
         </View>
       )}
 
@@ -574,12 +965,15 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
       {dependencies.length > 0 && (
         <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Dependencies</Text>
-          {dependencies.map((dep: string, idx: number) => (
-            <View key={idx} style={styles.listItem}>
-              <View style={[styles.bullet, styles.bulletInfo, { backgroundColor: theme.accent }]} />
-              <Text style={[styles.listText, { color: theme.text }]}>{dep}</Text>
-            </View>
-          ))}
+          {dependencies.map((dep: any, idx: number) => {
+            const depText = typeof dep === 'string' ? dep : (dep?.name || String(dep));
+            return (
+              <View key={idx} style={styles.listItem}>
+                <View style={[styles.bullet, styles.bulletInfo, { backgroundColor: theme.accent }]} />
+                <Text style={[styles.listText, { color: theme.text }]}>{depText}</Text>
+              </View>
+            );
+          })}
         </View>
       )}
 
@@ -587,12 +981,15 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
       {successCriteria.length > 0 && (
         <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Success Criteria / KPIs</Text>
-          {successCriteria.map((criteria: string, idx: number) => (
-            <View key={idx} style={styles.listItem}>
-              <View style={[styles.bullet, styles.bulletSuccess, { backgroundColor: theme.success }]} />
-              <Text style={[styles.listText, { color: theme.text }]}>{criteria}</Text>
-            </View>
-          ))}
+          {successCriteria.map((criteria: any, idx: number) => {
+            const criteriaText = typeof criteria === 'string' ? criteria : (criteria?.name || String(criteria));
+            return (
+              <View key={idx} style={styles.listItem}>
+                <View style={[styles.bullet, styles.bulletSuccess, { backgroundColor: theme.success }]} />
+                <Text style={[styles.listText, { color: theme.text }]}>{criteriaText}</Text>
+              </View>
+            );
+          })}
         </View>
       )}
 
@@ -600,12 +997,15 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
       {assumptions.length > 0 && (
         <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Assumptions</Text>
-          {assumptions.map((assumption: string, idx: number) => (
-            <View key={idx} style={styles.listItem}>
-              <View style={[styles.bullet, { backgroundColor: theme.textSecondary }]} />
-              <Text style={[styles.listText, { color: theme.text }]}>{assumption}</Text>
-            </View>
-          ))}
+          {assumptions.map((assumption: any, idx: number) => {
+            const assumptionText = typeof assumption === 'string' ? assumption : (assumption?.name || String(assumption));
+            return (
+              <View key={idx} style={styles.listItem}>
+                <View style={[styles.bullet, { backgroundColor: theme.textSecondary }]} />
+                <Text style={[styles.listText, { color: theme.text }]}>{assumptionText}</Text>
+              </View>
+            );
+          })}
         </View>
       )}
 
@@ -654,9 +1054,11 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
               <Text style={[styles.riskLegendText, { color: theme.textSecondary }]}>Low</Text>
             </View>
           </View>
-          {topRisks.map((risk: string, idx: number) => {
+          {topRisks.map((risk: any, idx: number) => {
+            // Handle both string and object formats
+            const riskText = typeof risk === 'string' ? risk : (risk?.name || String(risk));
             // Assign severity based on position (first = highest priority) and keywords
-            const riskLower = risk.toLowerCase();
+            const riskLower = riskText.toLowerCase();
             const hasHighKeywords = riskLower.includes('critical') || riskLower.includes('major') || riskLower.includes('severe');
             const hasLowKeywords = riskLower.includes('minor') || riskLower.includes('low') || riskLower.includes('unlikely');
             
@@ -682,7 +1084,7 @@ export default function WaterfallDashboard({ project, tasks, onProjectUpdate, on
                   <FontAwesome name={config.icon} size={12} color={config.color} />
                   <Text style={[styles.riskSeverityText, { color: config.color }]}>{config.label}</Text>
                 </View>
-                <Text style={[styles.riskText, { color: theme.text }]}>{risk}</Text>
+                <Text style={[styles.riskText, { color: theme.text }]}>{riskText}</Text>
               </View>
             );
           })}
@@ -1139,5 +1541,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  ganttHandle: {
+    position: 'absolute',
+    top: 0,
+    width: 12,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderRadius: 2,
+    zIndex: 10,
+  },
+  ganttHandleStart: {
+    left: -6,
+  },
+  ganttHandleEnd: {
+    right: -6,
+  },
+  ganttHandleGrip: {
+    width: 4,
+    height: 12,
+    borderRadius: 2,
   },
 });

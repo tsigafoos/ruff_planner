@@ -111,4 +111,4 @@ Still to be implemented (can be added later):
 
 ## If Something Doesn't Work
 
-Check the `TROUBLESHOOTING.md` file or let me know what error you're seeing!
+Check the `markdown/TROUBLESHOOTING.md` file or let me know what error you're seeing!

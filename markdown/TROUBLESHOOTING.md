@@ -29,7 +29,7 @@
 ## Database Errors
 
 ### Problem: "Table doesn't exist"
-- Make sure you ran the `supabase-setup.sql` script
+- Make sure you ran the `sql/supabase-setup.sql` script
 - Check Supabase dashboard → Table Editor to see if tables exist
 
 ### Problem: "Permission denied"
