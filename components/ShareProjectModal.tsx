@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from './useTheme';
 import { useAuthStore } from '@/store/authStore';
@@ -31,7 +31,7 @@ export default function ShareProjectModal({
 }: ShareProjectModalProps) {
   const theme = useTheme();
   const { user } = useAuthStore();
-  const { profile } = useProfileStore();
+  const { profile, loading: profileLoading, fetchProfile } = useProfileStore();
   const { 
     teams, 
     fetchTeams,
@@ -53,6 +53,8 @@ export default function ShareProjectModal({
 
   useEffect(() => {
     if (visible && user?.id) {
+      // Fetch latest profile to check team_mode_enabled
+      fetchProfile(user.id);
       fetchTeams(user.id);
       fetchProjectShares(projectId);
     }
@@ -97,6 +99,22 @@ export default function ShareProjectModal({
   const currentShares = projectShares.filter(s => s.projectId === projectId);
   const teamShareIds = currentShares.filter(s => s.teamId).map(s => s.teamId);
   const availableTeams = teams.filter(t => !teamShareIds.includes(t.id));
+
+  // Show loading while fetching profile
+  if (profileLoading) {
+    return (
+      <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+        <View style={styles.overlay}>
+          <View style={[styles.container, { backgroundColor: theme.surface }]}>
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={theme.primary} />
+              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Loading...</Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
 
   if (!teamModeEnabled) {
     return (
@@ -498,6 +516,15 @@ const styles = StyleSheet.create({
   roleOptionDesc: {
     fontSize: 12,
     marginTop: 4,
+  },
+  loadingContainer: {
+    padding: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 14,
   },
   emptyState: {
     padding: 32,
