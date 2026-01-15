@@ -50,7 +50,7 @@ export default function ProjectForm({
   const [endDate, setEndDate] = useState<Date | undefined>();
 
   const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
-  const icons = ['folder-open', 'briefcase', 'code', 'server', 'globe', 'shopping-cart', 'utensils', 'dumbbell', 'book', 'graduation-cap', 'medkit', 'car', 'home', 'gamepad', 'music', 'camera', 'comments', 'wallet', 'tools', 'rocket'];
+  const icons = ['folder-open', 'briefcase', 'code', 'server', 'globe', 'shopping-cart', 'cutlery', 'heartbeat', 'book', 'graduation-cap', 'medkit', 'car', 'home', 'gamepad', 'music', 'camera', 'comments', 'money', 'wrench', 'rocket'];
 
   useEffect(() => {
     if (initialData) {
