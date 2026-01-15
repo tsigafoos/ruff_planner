@@ -27,6 +27,9 @@ export { default as MemberCard } from './MemberCard';
 export { default as CalendarDay } from './CalendarDay';
 export { default as SectionCard } from './SectionCard';
 
+// Page layout
+export { default as PageWrapper } from './PageWrapper';
+
 // Type exports
 export type { InfoCardProps } from './InfoCard';
 export type { StatusLaneProps } from './StatusLane';
@@ -40,3 +43,4 @@ export type { LabelCardProps } from './LabelCard';
 export type { MemberCardProps, MemberRole } from './MemberCard';
 export type { CalendarDayProps } from './CalendarDay';
 export type { SectionCardProps } from './SectionCard';
+export type { PageWrapperProps, PageAction } from './PageWrapper';

@@ -1,15 +1,12 @@
-import { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import { useEffect } from 'react';
+import { FlatList, View, StyleSheet, Platform } from 'react-native';
 import { useLabelStore } from '@/store/labelStore';
 import { useAuthStore } from '@/store/authStore';
-import { useTheme } from '@/components/useTheme';
-import { PageHeader } from '@/components/layout';
-import { LabelCard } from '@/components/ui';
+import { PageWrapper, LabelCard } from '@/components/ui';
 
 export default function LabelsScreen() {
   const { user } = useAuthStore();
   const { labels, loading, fetchLabels } = useLabelStore();
-  const theme = useTheme();
 
   useEffect(() => {
     if (user?.id) {
@@ -18,76 +15,46 @@ export default function LabelsScreen() {
   }, [user?.id]);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {Platform.OS === 'web' ? (
-        <PageHeader
-          section="Settings"
-          pageName="Labels"
-          subtitle={`${labels.length} labels`}
-          actions={[
-            {
-              label: 'Add Label',
-              icon: 'plus',
-              onPress: () => console.log('Add Label - coming soon'),
-              variant: 'primary',
-            },
-          ]}
-        />
-      ) : (
-        <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-          <Text style={[styles.title, { color: theme.text }]}>Labels</Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{labels.length} labels</Text>
-        </View>
-      )}
-
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={labels}
-          keyExtractor={(item: any) => item.id}
-          numColumns={Platform.OS === 'web' ? 4 : 2}
-          renderItem={({ item }) => (
-            <View style={styles.labelWrapper}>
-              <LabelCard
-                id={item.id}
-                name={item.name}
-                color={item.color}
-              />
-            </View>
-          )}
-          contentContainerStyle={[styles.list, { paddingBottom: Platform.OS === 'web' ? 40 : 100 }]}
-          ListEmptyComponent={
-            <View style={styles.center}>
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No labels yet</Text>
-              <Text style={[styles.emptySubtext, { color: theme.textTertiary }]}>Create a label to get started</Text>
-            </View>
-          }
-        />
-      )}
-    </View>
+    <PageWrapper
+      section="Settings"
+      title="Labels"
+      subtitle={`${labels.length} labels`}
+      loading={loading}
+      isEmpty={labels.length === 0}
+      emptyState={{
+        icon: 'tags',
+        title: 'No labels yet',
+        subtitle: 'Create a label to get started',
+      }}
+      actions={[
+        {
+          label: 'Add Label',
+          icon: 'plus',
+          onPress: () => console.log('Add Label - coming soon'),
+          variant: 'primary',
+        },
+      ]}
+    >
+      <FlatList
+        data={labels}
+        keyExtractor={(item: any) => item.id}
+        numColumns={Platform.OS === 'web' ? 4 : 2}
+        renderItem={({ item }) => (
+          <View style={styles.labelWrapper}>
+            <LabelCard
+              id={item.id}
+              name={item.name}
+              color={item.color}
+            />
+          </View>
+        )}
+        contentContainerStyle={[styles.list, { paddingBottom: Platform.OS === 'web' ? 40 : 100 }]}
+      />
+    </PageWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    padding: Platform.OS === 'web' ? 24 : 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-  },
-  title: {
-    fontSize: Platform.OS === 'web' ? 28 : 32,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-  },
   list: {
     padding: Platform.OS === 'web' ? 24 : 16,
   },
@@ -95,18 +62,5 @@ const styles = StyleSheet.create({
     flex: 1,
     margin: 8,
     maxWidth: Platform.OS === 'web' ? '22%' : '48%',
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
   },
 });

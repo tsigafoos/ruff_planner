@@ -1,16 +1,14 @@
 import { useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import { FlatList, StyleSheet, Platform } from 'react-native';
 import { useTaskStore } from '@/store/taskStore';
 import { useAuthStore } from '@/store/authStore';
 import TaskCard from '@/components/TaskCard';
 import QuickAdd from '@/components/QuickAdd';
-import { useTheme } from '@/components/useTheme';
-import { PageHeader } from '@/components/layout';
+import { PageWrapper } from '@/components/ui';
 
 export default function UpcomingScreen() {
   const { user } = useAuthStore();
   const { tasks, loading, fetchTasksDueUpcoming } = useTaskStore();
-  const theme = useTheme();
 
   useEffect(() => {
     if (user?.id) {
@@ -23,75 +21,32 @@ export default function UpcomingScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {Platform.OS === 'web' ? (
-        <PageHeader
-          section="Tasks"
-          pageName="Upcoming"
-          subtitle={`${tasks.length} tasks`}
-        />
-      ) : (
-        <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-          <Text style={[styles.title, { color: theme.text }]}>Upcoming</Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{tasks.length} tasks</Text>
-        </View>
-      )}
-
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={tasks}
-          keyExtractor={(item: any) => item.id}
-          renderItem={({ item }) => <TaskCard task={item} />}
-          contentContainerStyle={[styles.list, { paddingBottom: Platform.OS === 'web' ? 40 : 100 }]}
-          ListEmptyComponent={
-            <View style={styles.center}>
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No upcoming tasks</Text>
-              <Text style={[styles.emptySubtext, { color: theme.textTertiary }]}>Add a task to get started</Text>
-            </View>
-          }
-        />
-      )}
+    <PageWrapper
+      section="Tasks"
+      title="Upcoming"
+      subtitle={`${tasks.length} tasks`}
+      loading={loading}
+      isEmpty={tasks.length === 0}
+      emptyState={{
+        icon: 'calendar',
+        title: 'No upcoming tasks',
+        subtitle: 'Add a task to get started',
+      }}
+    >
+      <FlatList
+        data={tasks}
+        keyExtractor={(item: any) => item.id}
+        renderItem={({ item }) => <TaskCard task={item} />}
+        contentContainerStyle={[styles.list, { paddingBottom: Platform.OS === 'web' ? 40 : 100 }]}
+      />
 
       <QuickAdd onAdd={handleAddTask} />
-    </View>
+    </PageWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    padding: Platform.OS === 'web' ? 24 : 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-  },
-  title: {
-    fontSize: Platform.OS === 'web' ? 28 : 32,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-  },
   list: {
     padding: Platform.OS === 'web' ? 24 : 16,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
   },
 });
