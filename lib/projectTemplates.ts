@@ -32,7 +32,9 @@ export type TemplateCategory =
   | 'operations'
   | 'personal'
   | 'design'
-  | 'business';
+  | 'business'
+  | 'recurring'
+  | 'data';
 
 // Category metadata
 export const TEMPLATE_CATEGORIES: Record<TemplateCategory, { label: string; icon: string; color: string }> = {
@@ -42,6 +44,8 @@ export const TEMPLATE_CATEGORIES: Record<TemplateCategory, { label: string; icon
   personal: { label: 'Personal', icon: 'user', color: '#10B981' },
   design: { label: 'Design', icon: 'paint-brush', color: '#8B5CF6' },
   business: { label: 'Business', icon: 'briefcase', color: '#3B82F6' },
+  recurring: { label: 'Recurring & Ongoing', icon: 'refresh', color: '#14B8A6' },
+  data: { label: 'Data & Reporting', icon: 'database', color: '#0EA5E9' },
 };
 
 // ============================================
@@ -290,6 +294,226 @@ const eventPlanningTemplate: ProjectTemplate = {
 };
 
 // ============================================
+// DATA & REPORTING TEMPLATES
+// ============================================
+
+const ongoingDataReportTemplate: ProjectTemplate = {
+  id: 'ongoing-data-report',
+  name: 'Ongoing Data Report',
+  description: 'Regular data collection and reporting cycle',
+  icon: 'line-chart',
+  color: '#0EA5E9',
+  category: 'data',
+  projectType: 'maintenance',
+  estimatedDays: 30,
+  tasks: [
+    // Weekly recurring pattern (can be duplicated for each week)
+    { title: 'Data collection - Week 1', description: 'Gather data from all sources', priority: 1, dueOffsetDays: 5, category: 'other' },
+    { title: 'Data validation - Week 1', description: 'Validate and clean collected data', priority: 1, dueOffsetDays: 6, category: 'other' },
+    { title: 'Generate report - Week 1', description: 'Create weekly report', priority: 1, dueOffsetDays: 7, category: 'other' },
+    { title: 'Data collection - Week 2', description: 'Gather data from all sources', priority: 1, dueOffsetDays: 12, category: 'other' },
+    { title: 'Data validation - Week 2', description: 'Validate and clean collected data', priority: 1, dueOffsetDays: 13, category: 'other' },
+    { title: 'Generate report - Week 2', description: 'Create weekly report', priority: 1, dueOffsetDays: 14, category: 'other' },
+    { title: 'Data collection - Week 3', description: 'Gather data from all sources', priority: 1, dueOffsetDays: 19, category: 'other' },
+    { title: 'Data validation - Week 3', description: 'Validate and clean collected data', priority: 1, dueOffsetDays: 20, category: 'other' },
+    { title: 'Generate report - Week 3', description: 'Create weekly report', priority: 1, dueOffsetDays: 21, category: 'other' },
+    { title: 'Data collection - Week 4', description: 'Gather data from all sources', priority: 1, dueOffsetDays: 26, category: 'other' },
+    { title: 'Data validation - Week 4', description: 'Validate and clean collected data', priority: 1, dueOffsetDays: 27, category: 'other' },
+    { title: 'Generate monthly summary', description: 'Compile monthly summary report', priority: 1, dueOffsetDays: 28, category: 'other' },
+    { title: 'Stakeholder presentation', description: 'Present findings to stakeholders', priority: 2, dueOffsetDays: 30, category: 'other' },
+  ],
+};
+
+const dashboardCreationTemplate: ProjectTemplate = {
+  id: 'dashboard-creation',
+  name: 'Dashboard Creation',
+  description: 'Build a data dashboard from scratch',
+  icon: 'dashboard',
+  color: '#8B5CF6',
+  category: 'data',
+  projectType: 'waterfall',
+  estimatedDays: 28,
+  tasks: [
+    // Discovery
+    { title: 'Identify stakeholders', description: 'List all dashboard users and their needs', priority: 1, dueOffsetDays: 2, startOffsetDays: 0 },
+    { title: 'Define KPIs and metrics', description: 'Document key metrics to display', priority: 1, dueOffsetDays: 4, startOffsetDays: 2 },
+    { title: 'Map data sources', description: 'Identify where data will come from', priority: 1, dueOffsetDays: 6, startOffsetDays: 4 },
+    // Design
+    { title: 'Create wireframes', description: 'Sketch dashboard layout', priority: 1, dueOffsetDays: 9, startOffsetDays: 6 },
+    { title: 'Design mockups', description: 'Create visual mockups', priority: 2, dueOffsetDays: 12, startOffsetDays: 9 },
+    { title: 'Get stakeholder approval', description: 'Review designs with stakeholders', priority: 1, dueOffsetDays: 14, startOffsetDays: 12 },
+    // Build
+    { title: 'Set up data connections', description: 'Connect to data sources', priority: 1, dueOffsetDays: 17, startOffsetDays: 14 },
+    { title: 'Build visualizations', description: 'Create charts and graphs', priority: 1, dueOffsetDays: 21, startOffsetDays: 17 },
+    { title: 'Add filters and interactivity', description: 'Implement user controls', priority: 2, dueOffsetDays: 23, startOffsetDays: 21 },
+    // Deploy
+    { title: 'Testing and QA', description: 'Test all functionality', priority: 1, dueOffsetDays: 25, startOffsetDays: 23 },
+    { title: 'User training', description: 'Train users on dashboard', priority: 2, dueOffsetDays: 27, startOffsetDays: 25 },
+    { title: 'Go live', description: 'Deploy dashboard to production', priority: 1, dueOffsetDays: 28, startOffsetDays: 27 },
+  ],
+};
+
+const intervalDataSubmissionTemplate: ProjectTemplate = {
+  id: 'interval-data-submission',
+  name: 'Interval Data Submission',
+  description: 'Regular interval data submission workflow',
+  icon: 'clock-o',
+  color: '#14B8A6',
+  category: 'recurring',
+  projectType: 'maintenance',
+  estimatedDays: 30,
+  tasks: [
+    // Daily pattern for first week as example
+    { title: 'Day 1: Collect source data', description: 'Gather data from primary sources', priority: 1, dueOffsetDays: 1, category: 'other' },
+    { title: 'Day 1: Validate entries', description: 'Check data quality and completeness', priority: 1, dueOffsetDays: 1, category: 'other' },
+    { title: 'Day 1: Submit to system', description: 'Upload data to submission portal', priority: 1, dueOffsetDays: 1, category: 'other' },
+    { title: 'Day 2: Collect source data', description: 'Gather data from primary sources', priority: 1, dueOffsetDays: 2, category: 'other' },
+    { title: 'Day 2: Validate entries', description: 'Check data quality and completeness', priority: 1, dueOffsetDays: 2, category: 'other' },
+    { title: 'Day 2: Submit to system', description: 'Upload data to submission portal', priority: 1, dueOffsetDays: 2, category: 'other' },
+    { title: 'Weekly reconciliation', description: 'Reconcile weekly submissions', priority: 1, dueOffsetDays: 7, category: 'other' },
+    { title: 'Weekly error correction', description: 'Fix any identified discrepancies', priority: 2, dueOffsetDays: 8, category: 'bug' },
+    { title: 'Week 2 submissions', description: 'Continue daily submission cycle', priority: 1, dueOffsetDays: 14, category: 'other' },
+    { title: 'Week 2 reconciliation', description: 'Reconcile week 2 submissions', priority: 1, dueOffsetDays: 14, category: 'other' },
+    { title: 'Mid-month review', description: 'Review submission accuracy', priority: 2, dueOffsetDays: 15, category: 'other' },
+    { title: 'Week 3 submissions', description: 'Continue daily submission cycle', priority: 1, dueOffsetDays: 21, category: 'other' },
+    { title: 'Week 4 submissions', description: 'Continue daily submission cycle', priority: 1, dueOffsetDays: 28, category: 'other' },
+    { title: 'Monthly close-out', description: 'Complete month-end submission', priority: 1, dueOffsetDays: 30, category: 'other' },
+    { title: 'Monthly audit trail', description: 'Generate audit documentation', priority: 2, dueOffsetDays: 30, category: 'other' },
+  ],
+};
+
+const auditPreparationTemplate: ProjectTemplate = {
+  id: 'audit-preparation',
+  name: 'Audit Preparation',
+  description: 'Prepare for internal or external audit',
+  icon: 'search',
+  color: '#F59E0B',
+  category: 'operations',
+  projectType: 'waterfall',
+  estimatedDays: 45,
+  tasks: [
+    // Planning
+    { title: 'Review audit scope', description: 'Understand what will be audited', priority: 1, dueOffsetDays: 3, startOffsetDays: 0 },
+    { title: 'Identify key contacts', description: 'List audit team and stakeholders', priority: 1, dueOffsetDays: 5, startOffsetDays: 3 },
+    { title: 'Create document checklist', description: 'List all required documentation', priority: 1, dueOffsetDays: 7, startOffsetDays: 5 },
+    { title: 'Set up audit folder structure', description: 'Organize document storage', priority: 2, dueOffsetDays: 8, startOffsetDays: 7 },
+    // Document Gathering
+    { title: 'Collect financial records', description: 'Gather all financial documentation', priority: 1, dueOffsetDays: 15, startOffsetDays: 8 },
+    { title: 'Collect operational records', description: 'Gather operational documentation', priority: 1, dueOffsetDays: 18, startOffsetDays: 10 },
+    { title: 'Collect compliance records', description: 'Gather compliance documentation', priority: 1, dueOffsetDays: 20, startOffsetDays: 12 },
+    { title: 'Review for completeness', description: 'Check all documents are present', priority: 1, dueOffsetDays: 22, startOffsetDays: 20 },
+    // Pre-Audit
+    { title: 'Internal review', description: 'Conduct internal pre-audit review', priority: 1, dueOffsetDays: 28, startOffsetDays: 22 },
+    { title: 'Address gaps', description: 'Fix any identified issues', priority: 1, dueOffsetDays: 32, startOffsetDays: 28 },
+    { title: 'Prepare staff', description: 'Brief staff on audit procedures', priority: 2, dueOffsetDays: 35, startOffsetDays: 32 },
+    { title: 'Final document review', description: 'Last check of all materials', priority: 1, dueOffsetDays: 38, startOffsetDays: 35 },
+    // Audit Support
+    { title: 'Auditor kickoff meeting', description: 'Initial meeting with auditors', priority: 1, dueOffsetDays: 40, startOffsetDays: 40 },
+    { title: 'Support audit requests', description: 'Respond to auditor inquiries', priority: 1, dueOffsetDays: 43, startOffsetDays: 40 },
+    { title: 'Exit meeting', description: 'Closing meeting with auditors', priority: 1, dueOffsetDays: 45, startOffsetDays: 43 },
+  ],
+};
+
+const applicationDevelopmentTemplate: ProjectTemplate = {
+  id: 'application-development',
+  name: 'Application Development',
+  description: 'Full application development lifecycle',
+  icon: 'laptop',
+  color: '#6366F1',
+  category: 'software',
+  projectType: 'agile',
+  estimatedDays: 90,
+  tasks: [
+    // Discovery & Planning
+    { title: 'Stakeholder interviews', description: 'Gather requirements from stakeholders', priority: 1, dueOffsetDays: 5, phase: 'brainstorm' },
+    { title: 'Document requirements', description: 'Write detailed requirements spec', priority: 1, dueOffsetDays: 10, phase: 'brainstorm' },
+    { title: 'Technical feasibility', description: 'Assess technical requirements', priority: 1, dueOffsetDays: 12, phase: 'brainstorm' },
+    { title: 'Architecture planning', description: 'Design system architecture', priority: 1, dueOffsetDays: 15, phase: 'brainstorm' },
+    { title: 'Project timeline', description: 'Create detailed project plan', priority: 2, dueOffsetDays: 17, phase: 'brainstorm' },
+    // Design
+    { title: 'User research', description: 'Conduct user research sessions', priority: 2, dueOffsetDays: 22, phase: 'design' },
+    { title: 'Information architecture', description: 'Define app structure and flow', priority: 1, dueOffsetDays: 25, phase: 'design' },
+    { title: 'Wireframes', description: 'Create wireframes for all screens', priority: 1, dueOffsetDays: 30, phase: 'design' },
+    { title: 'Visual design', description: 'Create high-fidelity mockups', priority: 1, dueOffsetDays: 38, phase: 'design' },
+    { title: 'Design review', description: 'Review and approve designs', priority: 1, dueOffsetDays: 40, phase: 'design' },
+    // Development
+    { title: 'Environment setup', description: 'Set up dev/staging/prod environments', priority: 1, dueOffsetDays: 43, phase: 'logic' },
+    { title: 'Database design', description: 'Design and implement database', priority: 1, dueOffsetDays: 48, phase: 'logic' },
+    { title: 'API development', description: 'Build backend APIs', priority: 1, dueOffsetDays: 58, phase: 'logic' },
+    { title: 'Frontend development', description: 'Build user interface', priority: 1, dueOffsetDays: 70, phase: 'logic' },
+    { title: 'Integration', description: 'Connect frontend to backend', priority: 1, dueOffsetDays: 73, phase: 'logic' },
+    // Testing & Launch
+    { title: 'Unit testing', description: 'Write and run unit tests', priority: 1, dueOffsetDays: 76, phase: 'polish' },
+    { title: 'Integration testing', description: 'Test system integration', priority: 1, dueOffsetDays: 79, phase: 'polish' },
+    { title: 'User acceptance testing', description: 'UAT with stakeholders', priority: 1, dueOffsetDays: 83, phase: 'polish' },
+    { title: 'Bug fixes', description: 'Fix issues from testing', priority: 1, dueOffsetDays: 86, phase: 'polish' },
+    { title: 'Documentation', description: 'Create user and technical docs', priority: 2, dueOffsetDays: 88, phase: 'polish' },
+    { title: 'Production deployment', description: 'Deploy to production', priority: 1, dueOffsetDays: 90, phase: 'polish' },
+  ],
+};
+
+// ============================================
+// RECURRING & CLIENT TEMPLATES
+// ============================================
+
+const clientMaintenanceTemplate: ProjectTemplate = {
+  id: 'client-maintenance',
+  name: 'Client Maintenance Account',
+  description: 'Ongoing client account management and support',
+  icon: 'handshake-o',
+  color: '#14B8A6',
+  category: 'recurring',
+  projectType: 'maintenance',
+  estimatedDays: 30,
+  tasks: [
+    // Weekly check-ins
+    { title: 'Week 1: Client check-in call', description: 'Regular status call with client', priority: 1, dueOffsetDays: 5, category: 'other' },
+    { title: 'Week 1: Review open tickets', description: 'Review and prioritize support tickets', priority: 1, dueOffsetDays: 5, category: 'bug' },
+    { title: 'Week 1: System health check', description: 'Monitor system performance', priority: 2, dueOffsetDays: 5, category: 'other' },
+    { title: 'Week 2: Client check-in call', description: 'Regular status call with client', priority: 1, dueOffsetDays: 12, category: 'other' },
+    { title: 'Week 2: Review open tickets', description: 'Review and prioritize support tickets', priority: 1, dueOffsetDays: 12, category: 'bug' },
+    { title: 'Week 2: Apply updates/patches', description: 'Install any pending updates', priority: 2, dueOffsetDays: 14, category: 'update' },
+    { title: 'Week 3: Client check-in call', description: 'Regular status call with client', priority: 1, dueOffsetDays: 19, category: 'other' },
+    { title: 'Week 3: Review open tickets', description: 'Review and prioritize support tickets', priority: 1, dueOffsetDays: 19, category: 'bug' },
+    { title: 'Week 3: Performance review', description: 'Analyze performance metrics', priority: 2, dueOffsetDays: 21, category: 'other' },
+    { title: 'Week 4: Client check-in call', description: 'Regular status call with client', priority: 1, dueOffsetDays: 26, category: 'other' },
+    { title: 'Week 4: Review open tickets', description: 'Review and prioritize support tickets', priority: 1, dueOffsetDays: 26, category: 'bug' },
+    { title: 'Monthly status report', description: 'Compile monthly status report', priority: 1, dueOffsetDays: 28, category: 'other' },
+    { title: 'Invoice and billing', description: 'Process monthly billing', priority: 1, dueOffsetDays: 30, category: 'other' },
+    { title: 'Plan next month priorities', description: 'Set priorities for next period', priority: 2, dueOffsetDays: 30, category: 'other' },
+  ],
+};
+
+const ongoingSupportTemplate: ProjectTemplate = {
+  id: 'ongoing-support',
+  name: 'Ongoing Support',
+  description: 'Recurring support and maintenance tasks',
+  icon: 'life-ring',
+  color: '#EC4899',
+  category: 'recurring',
+  projectType: 'maintenance',
+  estimatedDays: 30,
+  tasks: [
+    // Daily/Weekly recurring
+    { title: 'Daily: Monitor alerts', description: 'Check monitoring dashboards', priority: 1, dueOffsetDays: 1, category: 'other' },
+    { title: 'Daily: Triage new tickets', description: 'Review and assign new tickets', priority: 1, dueOffsetDays: 1, category: 'bug' },
+    { title: 'Week 1: Resolve P1 tickets', description: 'Address critical issues', priority: 1, dueOffsetDays: 3, category: 'bug' },
+    { title: 'Week 1: Resolve P2 tickets', description: 'Address high priority issues', priority: 1, dueOffsetDays: 5, category: 'bug' },
+    { title: 'Week 1: Team standup notes', description: 'Document team discussions', priority: 3, dueOffsetDays: 5, category: 'other' },
+    { title: 'Week 1: Backlog grooming', description: 'Review and prioritize backlog', priority: 2, dueOffsetDays: 7, category: 'other' },
+    { title: 'Week 2: Resolve P1 tickets', description: 'Address critical issues', priority: 1, dueOffsetDays: 10, category: 'bug' },
+    { title: 'Week 2: Resolve P2 tickets', description: 'Address high priority issues', priority: 1, dueOffsetDays: 12, category: 'bug' },
+    { title: 'Week 2: Knowledge base updates', description: 'Update documentation', priority: 3, dueOffsetDays: 14, category: 'other' },
+    { title: 'Week 3: Resolve P1 tickets', description: 'Address critical issues', priority: 1, dueOffsetDays: 17, category: 'bug' },
+    { title: 'Week 3: Resolve P2 tickets', description: 'Address high priority issues', priority: 1, dueOffsetDays: 19, category: 'bug' },
+    { title: 'Week 3: Process improvements', description: 'Identify improvement opportunities', priority: 3, dueOffsetDays: 21, category: 'improvement' },
+    { title: 'Week 4: Resolve remaining tickets', description: 'Clear ticket backlog', priority: 1, dueOffsetDays: 26, category: 'bug' },
+    { title: 'Monthly metrics report', description: 'Compile support metrics', priority: 1, dueOffsetDays: 28, category: 'other' },
+    { title: 'Team retrospective', description: 'Review what worked, what didnt', priority: 2, dueOffsetDays: 30, category: 'other' },
+  ],
+};
+
+// ============================================
 // EXPORT ALL TEMPLATES
 // ============================================
 
@@ -298,15 +522,24 @@ export const PROJECT_TEMPLATES: ProjectTemplate[] = [
   launchMvpTemplate,
   bugFixSprintTemplate,
   featureRolloutTemplate,
+  applicationDevelopmentTemplate,
   // Marketing
   campaignLaunchTemplate,
   contentCalendarTemplate,
   // Operations
   onboardingChecklistTemplate,
   quarterlyReviewTemplate,
+  auditPreparationTemplate,
   // Personal
   vacationPlanningTemplate,
   eventPlanningTemplate,
+  // Data & Reporting
+  ongoingDataReportTemplate,
+  dashboardCreationTemplate,
+  intervalDataSubmissionTemplate,
+  // Recurring & Client
+  clientMaintenanceTemplate,
+  ongoingSupportTemplate,
 ];
 
 // Get templates by category
