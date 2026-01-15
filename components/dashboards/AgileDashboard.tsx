@@ -616,86 +616,60 @@ export default function AgileDashboard({
                 {/* Chart content */}
                 <View style={styles.burndownChartContent}>
                   {/* Grid lines */}
-                  <View style={[styles.burndownGridLine, { top: 0, borderColor: theme.border }]} />
+                  <View style={[styles.burndownGridLine, { top: '0%', borderColor: theme.border }]} />
                   <View style={[styles.burndownGridLine, { top: '50%', borderColor: theme.border }]} />
-                  <View style={[styles.burndownGridLine, { bottom: 0, borderColor: theme.border }]} />
+                  <View style={[styles.burndownGridLine, { top: '100%', borderColor: theme.border }]} />
 
-                  {/* Stacked Area Chart */}
-                  {Platform.OS === 'web' ? (
-                    (() => {
+                  {/* Bars */}
+                  <View style={styles.burndownBars}>
+                    {Array.from({ length: sprintDays }).map((_, idx) => {
+                      const dayProgress = (idx + 1) / sprintDays;
+                      const idealRemaining = Math.max(0, totalTasks * (1 - dayProgress));
+                      const actualProgress = completionRate / 100;
+                      // Simulate actual based on current progress
+                      const simulatedActual = idx < sprintDays * 0.5 
+                        ? totalTasks * (1 - (actualProgress * (idx + 1) / (sprintDays * 0.5)))
+                        : incompleteTasks.length;
+                      const actualRemaining = idx < sprintDays * actualProgress * 1.2 
+                        ? Math.max(0, simulatedActual)
+                        : incompleteTasks.length;
+                      
                       const chartHeight = 100;
-                      const chartWidth = 100;
-                      const notDoneCount = incompleteTasks.length;
-                      const maxTasks = Math.max(totalTasks, notDoneCount, 1);
+                      const idealHeight = (idealRemaining / Math.max(totalTasks, 1)) * chartHeight;
+                      const actualHeight = (actualRemaining / Math.max(totalTasks, 1)) * chartHeight;
                       
-                      // All lines start at (0, totalTasks) and end at (14, 0)
-                      const startX = 0;
-                      const startY = 0; // In SVG coordinates, 0 is top, so maxTasks maps to 0
-                      const endX = 100;
-                      const endY = 100; // 0 tasks maps to bottom (100)
-                      
-                      // Ideal line: straight line from (0, 0) to (100, 100) in SVG coordinates
-                      // (0, maxTasks) -> (0, 0) and (14, 0) -> (100, 100)
-                      const idealPath = `M ${startX} ${startY} L ${endX} ${endY}`;
-                      const idealAreaPath = `M ${startX} ${startY} L ${endX} ${endY} L ${endX} ${chartHeight} L ${startX} ${chartHeight} Z`;
-                      
-                      // Actual line: tracks NOT DONE tasks, starts at (0, totalTasks), ends at (14, notDoneCount)
-                      const actualDataPoints = Array.from({ length: sprintDays + 1 }).map((_, idx) => {
-                        const dayProgress = idx / sprintDays;
-                        let notDoneRemaining;
-                        if (idx === 0) {
-                          notDoneRemaining = totalTasks;
-                        } else if (idx === sprintDays) {
-                          notDoneRemaining = notDoneCount;
-                        } else {
-                          // Interpolate between start and current NOT DONE count
-                          const progress = 1 - dayProgress;
-                          notDoneRemaining = Math.max(notDoneCount, totalTasks * progress);
-                        }
-                        
-                        const actualY = (notDoneRemaining / maxTasks) * chartHeight;
-                        const x = (idx / sprintDays) * chartWidth;
-                        
-                        return { x, y: actualY };
-                      });
-                      
-                      // Ensure the last point shows current NOT DONE count
-                      actualDataPoints[sprintDays] = {
-                        x: endX,
-                        y: (notDoneCount / maxTasks) * chartHeight
-                      };
-                      
-                      const actualPath = actualDataPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-                      const actualAreaPath = actualDataPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ` L ${endX} ${chartHeight} L ${startX} ${chartHeight} Z`;
-                      
-                      // Trend line: thick, straight line from (0, 0) to (100, 100) - sloped from left to right
-                      const trendPath = `M ${startX} ${startY} L ${endX} ${endY}`;
-                      
-                      const idealColor = '#3B82F6'; // Blue
-                      const actualColor = '#10B981'; // Green
-                      const trendColor = '#9CA3AF'; // Gray
+                      // Determine if this is "today" (roughly based on progress)
+                      const isToday = idx === Math.floor(sprintDays * Math.min(0.9, actualProgress + 0.3));
                       
                       return (
-                        // @ts-ignore - SVG elements for web
-                        <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-                          {/* Ideal area (filled) */}
-                          <path d={idealAreaPath} fill={idealColor} fillOpacity="0.3" />
-                          {/* Actual area (filled) - tracks NOT DONE */}
-                          <path d={actualAreaPath} fill={actualColor} fillOpacity="0.3" />
-                          {/* Trend line (thick, solid, sloped from left to right) */}
-                          <path d={trendPath} stroke={trendColor} strokeWidth="3" fill="none" />
-                          {/* Ideal line (border) */}
-                          <path d={idealPath} stroke={idealColor} strokeWidth="1.5" fill="none" />
-                          {/* Actual line (border) - tracks NOT DONE */}
-                          <path d={actualPath} stroke={actualColor} strokeWidth="1.5" fill="none" />
-                        </svg>
+                        <View key={idx} style={styles.burndownDay}>
+                          <View style={styles.burndownBarGroup}>
+                            {/* Ideal line marker */}
+                            <View 
+                              style={[
+                                styles.burndownIdealMarker, 
+                                { bottom: `${idealHeight}%`, backgroundColor: '#9CA3AF' }
+                              ]} 
+                            />
+                            {/* Actual bar (area) */}
+                            <View 
+                              style={[
+                                styles.burndownActualBar, 
+                                { 
+                                  height: `${actualHeight}%`,
+                                  backgroundColor: actualHeight > idealHeight ? '#EF444440' : '#3B82F640',
+                                }
+                              ]} 
+                            />
+                            {/* Today marker */}
+                            {isToday && (
+                              <View style={[styles.burndownTodayLine, { backgroundColor: theme.primary }]} />
+                            )}
+                          </View>
+                        </View>
                       );
-                    })()
-                  ) : (
-                    <View style={styles.burndownLinesContainer}>
-                      <Text style={[styles.burndownAxisLabel, { color: theme.textTertiary }]}>Area chart available on web</Text>
-                    </View>
-                  )}
+                    })}
+                  </View>
 
                   {/* X-axis labels */}
                   <View style={styles.burndownXAxis}>
@@ -709,16 +683,16 @@ export default function AgileDashboard({
               {/* Legend */}
               <View style={styles.burndownLegend}>
                 <View style={styles.legendItem}>
-                  <View style={[styles.legendLine, { backgroundColor: '#3B82F6' }]} />
-                  <Text style={[styles.legendText, { color: theme.textSecondary }]}>Ideal</Text>
+                  <View style={[styles.legendLine, { backgroundColor: '#9CA3AF' }]} />
+                  <Text style={[styles.legendText, { color: theme.textSecondary }]}>Ideal Burndown</Text>
                 </View>
                 <View style={styles.legendItem}>
-                  <View style={[styles.legendLine, { backgroundColor: '#10B981' }]} />
-                  <Text style={[styles.legendText, { color: theme.textSecondary }]}>Actual</Text>
+                  <View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} />
+                  <Text style={[styles.legendText, { color: theme.textSecondary }]}>On/Ahead</Text>
                 </View>
                 <View style={styles.legendItem}>
-                  <View style={[styles.legendLine, { backgroundColor: '#9CA3AF', borderStyle: 'dashed' }]} />
-                  <Text style={[styles.legendText, { color: theme.textSecondary }]}>Trend</Text>
+                  <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
+                  <Text style={[styles.legendText, { color: theme.textSecondary }]}>Behind</Text>
                 </View>
               </View>
             </View>
@@ -1153,12 +1127,41 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderStyle: 'dashed',
   },
-  burndownLinesContainer: {
+  burndownBars: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: '100%',
+    gap: 2,
+  },
+  burndownDay: {
+    flex: 1,
+    height: '100%',
+  },
+  burndownBarGroup: {
+    flex: 1,
+    position: 'relative',
+  },
+  burndownIdealMarker: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
+    height: 3,
+    borderRadius: 1.5,
+  },
+  burndownActualBar: {
+    position: 'absolute',
+    left: 2,
+    right: 2,
     bottom: 0,
+    borderRadius: 2,
+  },
+  burndownTodayLine: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: '50%',
+    width: 2,
+    marginLeft: -1,
   },
   burndownXAxis: {
     flexDirection: 'row',

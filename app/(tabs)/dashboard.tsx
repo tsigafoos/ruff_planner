@@ -10,7 +10,7 @@ import { useThemeStore } from '@/store/themeStore';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek, subMonths } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
@@ -62,6 +62,12 @@ export default function DashboardScreen() {
   
   // Mini calendar state
   const [calendarDate, setCalendarDate] = useState(new Date());
+  
+  // Drag and drop state
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [dragOverLane, setDragOverLane] = useState<TaskStatus | null>(null);
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
+  const laneRefs = useRef<{ [key: string]: View | null }>({});
 
   useEffect(() => {
     if (user?.id) {
@@ -196,6 +202,115 @@ export default function DashboardScreen() {
     return userId === user?.id ? user.email || 'You' : userId;
   };
 
+  // Drag and drop handlers
+  const handleDragStart = (taskId: string, e: any) => {
+    const x = Platform.OS === 'web' ? e.clientX : e.nativeEvent.pageX;
+    const y = Platform.OS === 'web' ? e.clientY : e.nativeEvent.pageY;
+    dragStartPos.current = { x, y };
+    setDraggedTaskId(taskId);
+  };
+
+  const handleDragMove = (e: any) => {
+    if (!draggedTaskId) return;
+    
+    const x = Platform.OS === 'web' ? e.clientX : e.nativeEvent.pageX;
+    const y = Platform.OS === 'web' ? e.clientY : e.nativeEvent.pageY;
+    
+    // Validate coordinates are finite numbers
+    if (!isFinite(x) || !isFinite(y)) return;
+
+    // Check which lane we're over
+    if (Platform.OS === 'web') {
+      try {
+        const element = document.elementFromPoint(x, y);
+        if (element) {
+          let current: Element | null = element;
+          while (current) {
+            const laneKey = current.getAttribute('data-lane-key');
+            if (laneKey && STATUS_LANES.some(l => l.key === laneKey)) {
+              setDragOverLane(laneKey as TaskStatus);
+              return;
+            }
+            current = current.parentElement;
+          }
+        }
+      } catch (error) {
+        console.warn('Error in elementFromPoint:', error);
+      }
+    } else {
+      Object.keys(laneRefs.current).forEach((laneKey) => {
+        const laneRef = laneRefs.current[laneKey];
+        if (laneRef) {
+          laneRef.measure((fx, fy, width, height, px, py) => {
+            if (x >= px && x <= px + width && y >= py && y <= py + height) {
+              setDragOverLane(laneKey as TaskStatus);
+            }
+          });
+        }
+      });
+    }
+  };
+
+  const handleDragEnd = async () => {
+    if (!draggedTaskId || !user?.id || !dragOverLane) {
+      setDraggedTaskId(null);
+      setDragOverLane(null);
+      dragStartPos.current = null;
+      return;
+    }
+
+    const task = tasks.find(t => t.id === draggedTaskId);
+    if (!task) {
+      setDraggedTaskId(null);
+      setDragOverLane(null);
+      dragStartPos.current = null;
+      return;
+    }
+
+    const currentStatus = getTaskStatus(task);
+    if (currentStatus === dragOverLane) {
+      setDraggedTaskId(null);
+      setDragOverLane(null);
+      dragStartPos.current = null;
+      return;
+    }
+
+    try {
+      await updateTask(draggedTaskId, {
+        status: dragOverLane,
+        completed: dragOverLane === 'completed',
+      });
+      fetchTasks(user.id);
+    } catch (error) {
+      console.error('Error updating task status:', error);
+    } finally {
+      setDraggedTaskId(null);
+      setDragOverLane(null);
+      dragStartPos.current = null;
+    }
+  };
+
+  // Set up global mouse/touch move and end handlers for web
+  useEffect(() => {
+    if (Platform.OS === 'web' && draggedTaskId) {
+      const handleMouseMove = (e: MouseEvent) => {
+        handleDragMove(e);
+      };
+
+      const handleMouseUp = () => {
+        handleDragEnd();
+      };
+
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [draggedTaskId, dragOverLane, tasks, user?.id]);
+
   // Mini Calendar Component
   const renderMiniCalendar = () => {
     const monthStart = startOfMonth(calendarDate);
@@ -211,7 +326,7 @@ export default function DashboardScreen() {
           <TouchableOpacity onPress={() => setCalendarDate(subMonths(calendarDate, 1))}>
             <FontAwesome name="angle-left" size={14} color={theme.textSecondary} />
           </TouchableOpacity>
-          <Text style={[styles.miniCalendarTitle, { color: theme.text }]}>
+          <Text style={[styles.miniCalendarTitle, { color: theme.text }] as any}>
             {format(calendarDate, 'MMM yyyy')}
           </Text>
           <TouchableOpacity onPress={() => setCalendarDate(addMonths(calendarDate, 1))}>
@@ -427,15 +542,25 @@ export default function DashboardScreen() {
             {STATUS_LANES.map((lane, index) => {
               const laneTasks = tasksByStatus[lane.key] || [];
               const laneColors = isDark ? DARK_LANE_COLORS[index] : LIGHT_LANE_COLORS[index];
+              const isDragOver = dragOverLane === lane.key;
               
               return (
                 <View 
-                  key={lane.key} 
+                  key={lane.key}
+                  ref={(ref) => {
+                    laneRefs.current[lane.key] = ref;
+                  }}
+                  {...(Platform.OS === 'web' ? {
+                    // @ts-ignore - data attributes for web
+                    'data-lane-key': lane.key,
+                  } : {})}
                   style={[
                     styles.lane, 
                     { 
                       backgroundColor: laneColors.background,
-                      borderColor: laneColors.stroke,
+                      borderColor: isDragOver ? theme.primary : laneColors.stroke,
+                      borderWidth: isDragOver ? 2 : 1,
+                      opacity: draggedTaskId && dragOverLane !== lane.key ? 0.5 : 1,
                     }
                   ]}
                 >
@@ -451,14 +576,47 @@ export default function DashboardScreen() {
                     nestedScrollEnabled={true}
                   >
                     {laneTasks.length > 0 ? (
-                      laneTasks.map((task: any) => (
-                        <View key={task.id} style={styles.laneTaskWrapper}>
-                          <TaskCard
-                            task={task}
-                            onPress={() => handleEditTask(task)}
-                          />
-                        </View>
-                      ))
+                      laneTasks.map((task: any) => {
+                        const isDragging = draggedTaskId === task.id;
+                        return (
+                          <View 
+                            key={task.id} 
+                            style={[
+                              styles.laneTaskWrapper,
+                              isDragging && styles.laneTaskWrapperDragging,
+                              Platform.OS === 'web' && (isDragging ? styles.laneTaskWrapperGrabbing : styles.laneTaskWrapperGrab),
+                            ] as any}
+                            {...(Platform.OS === 'web' ? {
+                              onMouseDown: (e: any) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (!isDragging && !draggedTaskId) {
+                                  handleDragStart(task.id, e);
+                                }
+                              },
+                            } : {
+                              onStartShouldSetResponder: () => !isDragging && !draggedTaskId,
+                              onMoveShouldSetResponder: () => !isDragging && !draggedTaskId,
+                              onResponderGrant: (e: any) => {
+                                if (!isDragging && !draggedTaskId) {
+                                  handleDragStart(task.id, e);
+                                }
+                              },
+                              onResponderMove: handleDragMove,
+                              onResponderRelease: handleDragEnd,
+                            })}
+                          >
+                            <TaskCard
+                              task={task}
+                              onPress={() => {
+                                if (!draggedTaskId) {
+                                  handleEditTask(task);
+                                }
+                              }}
+                            />
+                          </View>
+                        );
+                      })
                     ) : (
                       <View style={styles.laneEmpty}>
                         <Text style={[styles.laneEmptyText, { color: isDark ? theme.textTertiary : '#717171' }]}>No tasks</Text>
@@ -770,6 +928,21 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingHorizontal: 0,
   },
+  laneTaskWrapperDragging: {
+    opacity: 0.5,
+  },
+  laneTaskWrapperGrab: Platform.select({
+    web: {
+      cursor: 'grab',
+    },
+    default: {},
+  }),
+  laneTaskWrapperGrabbing: Platform.select({
+    web: {
+      cursor: 'grabbing',
+    },
+    default: {},
+  }),
   laneEmpty: {
     padding: 24,
     alignItems: 'center',

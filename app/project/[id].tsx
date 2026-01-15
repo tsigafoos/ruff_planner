@@ -542,8 +542,6 @@ export default function ProjectDetailScreen() {
                   refreshTasks();
                 }}
                 onAddTask={() => setNewTaskFormVisible(true)}
-                onResourceClick={() => setResourcesVisible(true)}
-                onEditClick={() => setProjectFormVisible(true)}
               />
             ) : (
               <WaterfallDashboard
