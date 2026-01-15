@@ -1,15 +1,18 @@
+import { useEffect, useRef, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { useRouter } from 'expo-router';
 import { PageHeader, commonActions } from '@/components/layout';
 import ProjectForm from '@/components/ProjectForm';
-import TaskCard from '@/components/TaskCard';
 import TaskForm from '@/components/TaskForm';
 import { useTheme } from '@/components/useTheme';
+import { StatusLane, DraggableTaskCard, MiniCalendar } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
 import { useLabelStore } from '@/store/labelStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useTaskStore } from '@/store/taskStore';
 import { useThemeStore } from '@/store/themeStore';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek, subMonths } from 'date-fns';
+import { format } from 'date-fns';
 
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
 
@@ -19,25 +22,6 @@ const STATUS_LANES: { key: TaskStatus; label: string }[] = [
   { key: 'blocked', label: 'Blocked' },
   { key: 'on_hold', label: 'On Hold' },
   { key: 'completed', label: 'Completed' },
-];
-
-// Fixed lane colors - Light mode HSL(225, 2%, 95%→70%), Dark mode HSL(225, 2%, 5%→30%)
-const LIGHT_LANE_COLORS = [
-  { background: 'hsl(225, 2%, 95%)', stroke: 'hsl(225, 2%, 85%)' },
-  { background: 'hsl(225, 2%, 90%)', stroke: 'hsl(225, 2%, 80%)' },
-  { background: 'hsl(225, 2%, 85%)', stroke: 'hsl(225, 2%, 75%)' },
-  { background: 'hsl(225, 2%, 80%)', stroke: 'hsl(225, 2%, 70%)' },
-  { background: 'hsl(225, 2%, 75%)', stroke: 'hsl(225, 2%, 65%)' },
-  { background: 'hsl(225, 2%, 70%)', stroke: 'hsl(225, 2%, 60%)' },
-];
-
-const DARK_LANE_COLORS = [
-  { background: 'hsl(225, 2%, 5%)', stroke: 'hsl(225, 2%, 15%)' },
-  { background: 'hsl(225, 2%, 10%)', stroke: 'hsl(225, 2%, 20%)' },
-  { background: 'hsl(225, 2%, 15%)', stroke: 'hsl(225, 2%, 25%)' },
-  { background: 'hsl(225, 2%, 20%)', stroke: 'hsl(225, 2%, 30%)' },
-  { background: 'hsl(225, 2%, 25%)', stroke: 'hsl(225, 2%, 35%)' },
-  { background: 'hsl(225, 2%, 30%)', stroke: 'hsl(225, 2%, 40%)' },
 ];
 
 export default function DashboardScreen() {
@@ -57,9 +41,6 @@ export default function DashboardScreen() {
   const [projectFormVisible, setProjectFormVisible] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [projectTasks, setProjectTasks] = useState<{ [projectId: string]: any[] }>({});
-  
-  // Mini calendar state
-  const [calendarDate, setCalendarDate] = useState(new Date());
   
   // Drag and drop state
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -88,17 +69,6 @@ export default function DashboardScreen() {
     acc[status].push(task);
     return acc;
   }, {} as Record<TaskStatus, any[]>);
-
-  // Get tasks for a specific date (for mini calendar)
-  const getTasksForDate = (date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    return tasks.filter((task: any) => {
-      const dueDate = task.due_date || task.dueDate;
-      if (!dueDate) return false;
-      const taskDate = format(new Date(dueDate), 'yyyy-MM-dd');
-      return taskDate === dateStr && !(task.completed_at || task.completedAt);
-    });
-  };
 
   const handleEditTask = (task: any) => {
     const normalizedTask = {
@@ -309,80 +279,6 @@ export default function DashboardScreen() {
     }
   }, [draggedTaskId, dragOverLane, tasks, user?.id]);
 
-  // Mini Calendar Component
-  const renderMiniCalendar = () => {
-    const monthStart = startOfMonth(calendarDate);
-    const monthEnd = endOfMonth(calendarDate);
-    const calendarStart = startOfWeek(monthStart);
-    const calendarEnd = endOfWeek(monthEnd);
-    const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-    const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-    return (
-      <View style={[styles.miniCalendar, { backgroundColor: theme.surface, borderColor: theme.border }] as any}>
-        <View style={[styles.miniCalendarHeader, { borderBottomColor: theme.border }] as any}>
-          <TouchableOpacity onPress={() => setCalendarDate(subMonths(calendarDate, 1))}>
-            <FontAwesome name="angle-left" size={14} color={theme.textSecondary} />
-          </TouchableOpacity>
-          <Text style={[styles.miniCalendarTitle, { color: theme.text }] as any}>
-            {format(calendarDate, 'MMM yyyy')}
-          </Text>
-          <TouchableOpacity onPress={() => setCalendarDate(addMonths(calendarDate, 1))}>
-            <FontAwesome name="angle-right" size={14} color={theme.textSecondary} />
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.miniCalendarWeekDays}>
-          {weekDays.map((day, idx) => (
-            <Text key={idx} style={[styles.miniCalendarWeekDay, { color: theme.textTertiary }]}>{day}</Text>
-          ))}
-        </View>
-        
-        <View style={styles.miniCalendarGrid}>
-          {days.map((day, index) => {
-            const isCurrentMonth = isSameMonth(day, calendarDate);
-            const isToday = isSameDay(day, new Date());
-            const dayTasks = getTasksForDate(day);
-            const hasTasks = dayTasks.length > 0;
-
-            return (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.miniCalendarDay,
-                  !isCurrentMonth && { opacity: 0.3 },
-                  isToday && { backgroundColor: theme.primary + '20', borderRadius: 4 },
-                ]}
-                onPress={() => router.push('/(tabs)/calendar')}
-              >
-                <Text
-                  style={[
-                    styles.miniCalendarDayText,
-                    { color: isCurrentMonth ? theme.text : theme.textTertiary },
-                    isToday && { color: theme.primary, fontWeight: '700' },
-                  ]}
-                >
-                  {format(day, 'd')}
-                </Text>
-                {hasTasks && (
-                  <View style={[styles.miniCalendarDot, { backgroundColor: theme.primary }]} />
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        
-        <TouchableOpacity 
-          style={[styles.miniCalendarLink, { borderTopColor: theme.border }]}
-          onPress={() => router.push('/(tabs)/calendar')}
-        >
-          <Text style={[styles.miniCalendarLinkText, { color: theme.primary }]}>View Full Calendar</Text>
-          <FontAwesome name="angle-right" size={14} color={theme.primary} />
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {Platform.OS === 'web' && (
@@ -522,7 +418,12 @@ export default function DashboardScreen() {
         </View>
 
         {/* Mini Calendar */}
-        {Platform.OS === 'web' && renderMiniCalendar()}
+        {Platform.OS === 'web' && (
+          <MiniCalendar 
+            tasks={tasks}
+            onViewFullCalendar={() => router.push('/(tabs)/calendar')}
+          />
+        )}
       </View>
 
       {/* Task Lanes Section */}
@@ -545,95 +446,41 @@ export default function DashboardScreen() {
         ) : (
           <ScrollView 
             horizontal 
-            showsHorizontalScrollIndicator={false}
+            showsHorizontalScrollIndicator={true}
             style={styles.lanesContainer}
             contentContainerStyle={styles.lanesContent}
           >
             {STATUS_LANES.map((lane, index) => {
               const laneTasks = tasksByStatus[lane.key] || [];
-              const laneColors = isDark ? DARK_LANE_COLORS[index] : LIGHT_LANE_COLORS[index];
               const isDragOver = dragOverLane === lane.key;
               
               return (
-                <View 
+                <StatusLane
                   key={lane.key}
-                  ref={(ref) => {
+                  laneKey={lane.key}
+                  label={lane.label}
+                  count={laneTasks.length}
+                  isDragOver={isDragOver}
+                  isDragActive={!!draggedTaskId}
+                  colorIndex={index}
+                  onRefReady={(ref) => {
                     laneRefs.current[lane.key] = ref;
                   }}
-                  {...(Platform.OS === 'web' ? {
-                    // @ts-ignore - data attributes for web
-                    'data-lane-key': lane.key,
-                  } : {})}
-                  style={[
-                    styles.lane, 
-                    { 
-                      backgroundColor: laneColors.background,
-                      borderColor: isDragOver ? theme.primary : laneColors.stroke,
-                      borderWidth: isDragOver ? 2 : 1,
-                      opacity: draggedTaskId && dragOverLane !== lane.key ? 0.5 : 1,
-                    }
-                  ]}
+                  dataLaneKey={lane.key}
                 >
-                  <View style={[styles.laneHeader, { borderBottomColor: theme.border }]}>
-                    <Text style={[styles.laneTitle, { color: isDark ? theme.text : '#1a1a1a' }]}>{lane.label}</Text>
-                    <View style={[styles.laneCount, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' }]}>
-                      <Text style={[styles.laneCountText, { color: isDark ? theme.text : '#1a1a1a' }]}>{laneTasks.length}</Text>
-                    </View>
-                  </View>
-                  <ScrollView 
-                    style={styles.laneContent as ViewStyle}
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled={true}
-                  >
-                    {laneTasks.length > 0 ? (
-                      laneTasks.map((task: any) => {
-                        const isDragging = draggedTaskId === task.id;
-                        return (
-                          <View 
-                            key={task.id} 
-                            style={[
-                              styles.laneTaskWrapper,
-                              isDragging && styles.laneTaskWrapperDragging,
-                              Platform.OS === 'web' && (isDragging ? styles.laneTaskWrapperGrabbing : styles.laneTaskWrapperGrab),
-                            ] as any}
-                            {...(Platform.OS === 'web' ? {
-                              onMouseDown: (e: any) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                if (!isDragging && !draggedTaskId) {
-                                  handleDragStart(task.id, e);
-                                }
-                              },
-                            } : {
-                              onStartShouldSetResponder: () => !isDragging && !draggedTaskId,
-                              onMoveShouldSetResponder: () => !isDragging && !draggedTaskId,
-                              onResponderGrant: (e: any) => {
-                                if (!isDragging && !draggedTaskId) {
-                                  handleDragStart(task.id, e);
-                                }
-                              },
-                              onResponderMove: handleDragMove,
-                              onResponderRelease: handleDragEnd,
-                            })}
-                          >
-                            <TaskCard
-                              task={task}
-                              onPress={() => {
-                                if (!draggedTaskId) {
-                                  handleEditTask(task);
-                                }
-                              }}
-                            />
-                          </View>
-                        );
-                      })
-                    ) : (
-                      <View style={styles.laneEmpty}>
-                        <Text style={[styles.laneEmptyText, { color: isDark ? theme.textTertiary : '#717171' }]}>No tasks</Text>
-                      </View>
-                    )}
-                  </ScrollView>
-                </View>
+                  {laneTasks.map((task: any) => (
+                    <DraggableTaskCard
+                      key={task.id}
+                      task={task}
+                      isDragging={draggedTaskId === task.id}
+                      dragActive={!!draggedTaskId}
+                      onPress={() => handleEditTask(task)}
+                      onDragStart={(e) => handleDragStart(task.id, e)}
+                      onDragMove={handleDragMove}
+                      onDragEnd={handleDragEnd}
+                    />
+                  ))}
+                </StatusLane>
               );
             })}
           </ScrollView>
@@ -746,70 +593,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
-  // Mini Calendar Styles
-  miniCalendar: {
-    width: Platform.OS === 'web' ? 280 : '100%',
-    borderWidth: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-    alignSelf: Platform.OS === 'web' ? 'flex-end' : undefined,
-  },
-  miniCalendarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-  },
-  miniCalendarTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  miniCalendarWeekDays: {
-    flexDirection: 'row',
-    paddingHorizontal: 8,
-    paddingTop: 8,
-  },
-  miniCalendarWeekDay: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  miniCalendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 8,
-  },
-  miniCalendarDay: {
-    width: '14.28%',
-    aspectRatio: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  miniCalendarDayText: {
-    fontSize: 12,
-  },
-  miniCalendarDot: {
-    position: 'absolute',
-    bottom: 2,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
-  miniCalendarLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: 12,
-    borderTopWidth: 1,
-  },
-  miniCalendarLinkText: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
   // Project styles
   projectsListContainer: {
     flex: 1,
@@ -900,69 +683,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: Platform.OS === 'web' ? 14 : 14,
   },
-  // Lane styles
+  // Lane styles (layout containers only - component styles are in StatusLane)
   lanesContainer: {
     flexGrow: 0,
   },
   lanesContent: {
     paddingRight: Platform.OS === 'web' ? 40 : 16,
-  },
-  lane: {
-    width: Platform.OS === 'web' ? 240 : 220,
-    marginRight: 8,
-    borderWidth: 1,
-    borderRadius: 10,
-    maxHeight: Platform.OS === 'web' ? '60vh' : 500,
-  },
-  laneHeader: {
-    padding: 12,
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  laneTitle: {
-    fontSize: Platform.OS === 'web' ? 14 : 16,
-    fontWeight: '600',
-  },
-  laneCount: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  laneCountText: {
-    fontSize: Platform.OS === 'web' ? 12 : 13,
-    fontWeight: '600',
-  },
-  laneContent: {
-    flex: 1,
-    padding: 8,
-  },
-  laneTaskWrapper: {
-    marginBottom: 8,
-    paddingHorizontal: 0,
-  },
-  laneTaskWrapperDragging: {
-    opacity: 0.5,
-  },
-  laneTaskWrapperGrab: Platform.select({
-    web: {
-      cursor: 'grab',
-    },
-    default: {},
-  }),
-  laneTaskWrapperGrabbing: Platform.select({
-    web: {
-      cursor: 'grabbing',
-    },
-    default: {},
-  }),
-  laneEmpty: {
-    padding: 24,
-    alignItems: 'center',
-  },
-  laneEmptyText: {
-    fontSize: Platform.OS === 'web' ? 13 : 14,
   },
   emptyText: {
     fontSize: Platform.OS === 'web' ? 14 : 16,
