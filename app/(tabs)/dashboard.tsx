@@ -5,6 +5,7 @@ import ProjectForm from '@/components/ProjectForm';
 import TaskForm from '@/components/TaskForm';
 import { useTheme } from '@/components/useTheme';
 import { StatusLane, DraggableTaskCard, MiniCalendar, PageWrapper } from '@/components/ui';
+import { DynamicDashboard } from '@/components/dashboard';
 import { useAuthStore } from '@/store/authStore';
 import { useLabelStore } from '@/store/labelStore';
 import { useProjectStore } from '@/store/projectStore';
@@ -12,6 +13,8 @@ import { useTaskStore } from '@/store/taskStore';
 import { useThemeStore } from '@/store/themeStore';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { format } from 'date-fns';
+
+type DashboardViewMode = 'static' | 'dynamic';
 
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
 
@@ -40,6 +43,7 @@ export default function DashboardScreen() {
   const [projectFormVisible, setProjectFormVisible] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [projectTasks, setProjectTasks] = useState<{ [projectId: string]: any[] }>({});
+  const [viewMode, setViewMode] = useState<DashboardViewMode>('static');
   
   // Drag and drop state
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -286,6 +290,12 @@ export default function DashboardScreen() {
       padded={false}
       actions={[
         {
+          label: viewMode === 'static' ? 'Customize' : 'Classic View',
+          icon: viewMode === 'static' ? 'th-large' : 'list',
+          onPress: () => setViewMode(viewMode === 'static' ? 'dynamic' : 'static'),
+          variant: 'secondary',
+        },
+        {
           label: '+ Task',
           icon: 'plus',
           onPress: () => setNewTaskFormVisible(true),
@@ -299,6 +309,19 @@ export default function DashboardScreen() {
         },
       ]}
     >
+      {/* Dynamic Dashboard View */}
+      {viewMode === 'dynamic' && user?.id && (
+        <DynamicDashboard
+          userId={user.id}
+          tasks={tasks}
+          projects={projects}
+          onTaskClick={handleEditTask}
+          onProjectClick={(project) => router.push(`/project/${project.id}`)}
+        />
+      )}
+
+      {/* Static Dashboard View */}
+      {viewMode === 'static' && (
       <ScrollView style={styles.scrollContent}>
       {/* Projects and Mini Calendar Row */}
       <View style={styles.topSection}>
@@ -513,6 +536,9 @@ export default function DashboardScreen() {
         </View>
       </View>
 
+      </ScrollView>
+      )}
+
       {/* Edit Task Form */}
       <TaskForm
         visible={taskFormVisible}
@@ -538,7 +564,6 @@ export default function DashboardScreen() {
         onClose={() => setProjectFormVisible(false)}
         onSubmit={handleCreateProject}
       />
-      </ScrollView>
     </PageWrapper>
   );
 }
