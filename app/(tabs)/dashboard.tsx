@@ -315,8 +315,11 @@ export default function DashboardScreen() {
           userId={user.id}
           tasks={tasks}
           projects={projects}
+          resources={[]} // Resources can be loaded per-project in project dashboards
           onTaskClick={handleEditTask}
           onProjectClick={(project) => router.push(`/project/${project.id}`)}
+          showTabs={true}
+          showToolbar={true}
         />
       )}
 
