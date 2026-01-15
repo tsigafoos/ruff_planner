@@ -21,6 +21,12 @@ export { default as GanttChart } from './GanttChart';
 export { default as BurndownChart } from './BurndownChart';
 export { default as DependencyFlowchart } from './DependencyFlowchart';
 
+// Entity cards
+export { default as LabelCard } from './LabelCard';
+export { default as MemberCard } from './MemberCard';
+export { default as CalendarDay } from './CalendarDay';
+export { default as SectionCard } from './SectionCard';
+
 // Type exports
 export type { InfoCardProps } from './InfoCard';
 export type { StatusLaneProps } from './StatusLane';
@@ -30,3 +36,7 @@ export type { MiniCalendarProps } from './MiniCalendar';
 export type { GanttChartProps, GanttTask } from './GanttChart';
 export type { BurndownChartProps } from './BurndownChart';
 export type { DependencyFlowchartProps, DependencyTask } from './DependencyFlowchart';
+export type { LabelCardProps } from './LabelCard';
+export type { MemberCardProps, MemberRole } from './MemberCard';
+export type { CalendarDayProps } from './CalendarDay';
+export type { SectionCardProps } from './SectionCard';

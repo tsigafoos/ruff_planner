@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useTheme } from '@/components/useTheme';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { PageHeader } from '@/components/layout';
+import { CalendarDay } from '@/components/ui';
 import { 
   startOfWeek, 
   endOfWeek, 
@@ -102,53 +103,19 @@ export default function CalendarScreen() {
           ))}
         </View>
         <View style={styles.monthGrid}>
-          {days.map((day, index) => {
-            const isCurrentMonth = isSameMonth(day, currentDate);
-            const isToday = isSameDay(day, new Date());
-            const isSelected = isSameDay(day, selectedDate);
-            const dayTasks = getTasksForDate(day);
-            const dayProjects = getProjectsForDate(day);
-
-            return (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.dayCell,
-                  { borderColor: theme.border },
-                  !isCurrentMonth && { opacity: 0.3 },
-                  isToday && { backgroundColor: theme.primary + '15', borderColor: theme.primary },
-                  isSelected && { backgroundColor: theme.primary + '08' },
-                ]}
-                onPress={() => setSelectedDate(day)}
-              >
-                <Text
-                  style={[
-                    styles.dayNumber,
-                    { color: isCurrentMonth ? theme.text : theme.textTertiary },
-                    isToday && { color: theme.primary, fontWeight: '700' },
-                  ]}
-                >
-                  {format(day, 'd')}
-                </Text>
-                {dayTasks.length > 0 && (
-                  <View style={styles.dayIndicator}>
-                    <View style={[styles.indicatorDot, { backgroundColor: theme.accent }]} />
-                    <Text style={[styles.indicatorText, { color: theme.textSecondary }]}>
-                      {dayTasks.length}
-                    </Text>
-                  </View>
-                )}
-                {dayProjects.length > 0 && (
-                  <View style={styles.dayIndicator}>
-                    <View style={[styles.indicatorDot, { backgroundColor: theme.primary }]} />
-                    <Text style={[styles.indicatorText, { color: theme.textSecondary }]}>
-                      {dayProjects.length}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+          {days.map((day, index) => (
+            <CalendarDay
+              key={index}
+              date={day}
+              dayNumber={parseInt(format(day, 'd'))}
+              isCurrentMonth={isSameMonth(day, currentDate)}
+              isToday={isSameDay(day, new Date())}
+              isSelected={isSameDay(day, selectedDate)}
+              taskCount={getTasksForDate(day).length}
+              projectCount={getProjectsForDate(day).length}
+              onPress={() => setSelectedDate(day)}
+            />
+          ))}
         </View>
       </View>
     );
@@ -503,32 +470,6 @@ const styles = StyleSheet.create({
   monthGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-  },
-  dayCell: {
-    width: '14.28%',
-    aspectRatio: Platform.OS === 'web' ? 1.2 : 1,
-    borderWidth: 1,
-    padding: 8,
-    alignItems: 'flex-start',
-  },
-  dayNumber: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  dayIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  indicatorDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 4,
-  },
-  indicatorText: {
-    fontSize: 10,
   },
   weekContainer: {
     flexDirection: 'row',

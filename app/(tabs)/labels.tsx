@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { useLabelStore } from '@/store/labelStore';
 import { useAuthStore } from '@/store/authStore';
 import { useTheme } from '@/components/useTheme';
 import { PageHeader } from '@/components/layout';
+import { LabelCard } from '@/components/ui';
 
 export default function LabelsScreen() {
   const { user } = useAuthStore();
@@ -50,25 +51,11 @@ export default function LabelsScreen() {
           numColumns={Platform.OS === 'web' ? 4 : 2}
           renderItem={({ item }) => (
             <View style={styles.labelWrapper}>
-              <TouchableOpacity
-                style={[
-                  styles.labelCard,
-                  {
-                    backgroundColor: theme.surface,
-                    borderColor: theme.border,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.colorDot,
-                    { backgroundColor: item.color || theme.primary },
-                  ]}
-                />
-                <Text style={[styles.labelName, { color: theme.text }]}>
-                  {item.name}
-                </Text>
-              </TouchableOpacity>
+              <LabelCard
+                id={item.id}
+                name={item.name}
+                color={item.color}
+              />
             </View>
           )}
           contentContainerStyle={[styles.list, { paddingBottom: Platform.OS === 'web' ? 40 : 100 }]}
@@ -108,23 +95,6 @@ const styles = StyleSheet.create({
     flex: 1,
     margin: 8,
     maxWidth: Platform.OS === 'web' ? '22%' : '48%',
-  },
-  labelCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 12,
-  },
-  colorDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-  },
-  labelName: {
-    fontSize: 16,
-    fontWeight: '500',
   },
   center: {
     flex: 1,
