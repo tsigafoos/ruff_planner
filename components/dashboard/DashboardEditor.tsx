@@ -17,12 +17,12 @@ interface DashboardEditorProps {
 export default function DashboardEditor({ visible, onClose }: DashboardEditorProps) {
   const theme = useTheme();
   const { 
-    currentLayout, 
-    addWidget, 
+    currentDashboard, 
+    addWidgetToRow, 
     addRow, 
     applyTemplate, 
     resetToTemplate,
-    saveLayout,
+    saveDashboard,
     setEditMode,
   } = useDashboardStore();
 
@@ -31,27 +31,19 @@ export default function DashboardEditor({ visible, onClose }: DashboardEditorPro
   const [templatePickerVisible, setTemplatePickerVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  if (!visible || !currentLayout) return null;
+  if (!visible || !currentDashboard) return null;
 
   const handleAddWidget = (widgetEntry: WidgetCatalogEntry) => {
     if (!selectedRow) {
       // Add a new row first
       addRow();
       // Get the new row ID (last row)
-      const newRowId = currentLayout.rows[currentLayout.rows.length - 1]?.id;
+      const newRowId = currentDashboard.rows[currentDashboard.rows.length - 1]?.id;
       if (newRowId) {
-        addWidget(newRowId, {
-          type: widgetEntry.type,
-          width: widgetEntry.defaultWidth,
-          title: widgetEntry.name,
-        });
+        addWidgetToRow(newRowId, widgetEntry.type, widgetEntry.defaultColumns);
       }
     } else {
-      addWidget(selectedRow, {
-        type: widgetEntry.type,
-        width: widgetEntry.defaultWidth,
-        title: widgetEntry.name,
-      });
+      addWidgetToRow(selectedRow, widgetEntry.type, widgetEntry.defaultColumns);
     }
     setWidgetPickerVisible(false);
     setSelectedRow(null);
@@ -63,7 +55,7 @@ export default function DashboardEditor({ visible, onClose }: DashboardEditorPro
   };
 
   const handleSave = async () => {
-    await saveLayout();
+    await saveDashboard();
     setEditMode(false);
     onClose();
   };
@@ -96,7 +88,7 @@ export default function DashboardEditor({ visible, onClose }: DashboardEditorPro
             <View>
               <Text style={[styles.title, { color: theme.text }]}>Edit Dashboard</Text>
               <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-                {currentLayout.name} • {currentLayout.template} template
+                {currentDashboard.name} • {currentDashboard.template} template
               </Text>
             </View>
             <TouchableOpacity onPress={onClose}>
@@ -145,10 +137,10 @@ export default function DashboardEditor({ visible, onClose }: DashboardEditorPro
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>Current Layout</Text>
               <Text style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>
-                {currentLayout.rows.length} rows, {currentLayout.rows.reduce((sum, r) => sum + r.widgets.length, 0)} widgets
+                {currentDashboard.rows.length} rows, {currentDashboard.rows.reduce((sum, r) => sum + r.widgets.length, 0)} widgets
               </Text>
               
-              {currentLayout.rows.map((row, rowIndex) => (
+              {currentDashboard.rows.map((row, rowIndex) => (
                 <View 
                   key={row.id} 
                   style={[
@@ -275,10 +267,10 @@ export default function DashboardEditor({ visible, onClose }: DashboardEditorPro
                   style={[
                     styles.templateOption, 
                     { 
-                      backgroundColor: currentLayout.template === template.key 
+                      backgroundColor: currentDashboard.template === template.key 
                         ? theme.primary + '15' 
                         : theme.surfaceSecondary, 
-                      borderColor: currentLayout.template === template.key 
+                      borderColor: currentDashboard.template === template.key 
                         ? theme.primary 
                         : theme.border 
                     }
@@ -294,7 +286,7 @@ export default function DashboardEditor({ visible, onClose }: DashboardEditorPro
                       {template.description}
                     </Text>
                   </View>
-                  {currentLayout.template === template.key && (
+                  {currentDashboard.template === template.key && (
                     <FontAwesome name="check-circle" size={20} color={theme.primary} />
                   )}
                 </TouchableOpacity>

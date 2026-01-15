@@ -169,26 +169,37 @@ export type WidgetType =
   | 'team-waiting'
   | 'project-list'
   | 'task-list'
-  | 'mini-calendar';
+  | 'mini-calendar'
+  | 'notes'
+  | 'resources';
 
-// Widget width options
+// Widget width - 12 column grid system
+// Number represents columns out of 12
+export type WidgetColumns = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+
+// Legacy widget width options (for backwards compatibility)
 export type WidgetWidth = '25%' | '33%' | '50%' | '66%' | '75%' | '100%';
 
 // Dashboard template types
 export type DashboardTemplate = 'agile' | 'waterfall' | 'maintenance' | 'custom' | 'blank';
+
+// Dashboard scope - global or project-specific
+export type DashboardScope = 'global' | 'project';
 
 // Individual widget configuration
 export interface DashboardWidget {
   id: string;
   type: WidgetType;
   width: WidgetWidth;
+  columns?: WidgetColumns; // New 12-column grid width
   title?: string;
   config?: Record<string, any>;
 }
 
-// Row of widgets
+// Row/Lane of widgets
 export interface DashboardRow {
   id: string;
+  name?: string; // Optional lane name
   widgets: DashboardWidget[];
 }
 
@@ -196,12 +207,16 @@ export interface DashboardRow {
 export interface DashboardLayout {
   id: string;
   name: string;
+  emoji?: string; // Custom emoji/icon for the dashboard
   template: DashboardTemplate;
+  scope: DashboardScope; // Global or project-specific
   projectId?: string; // If associated with a specific project
   userId: string;
   rows: DashboardRow[];
   createdAt: Date;
   updatedAt: Date;
+  isDefault?: boolean; // Is this the home/default dashboard
+  order?: number; // Tab order
 }
 
 // Widget catalog entry (for widget picker)
@@ -211,6 +226,9 @@ export interface WidgetCatalogEntry {
   description: string;
   icon: string;
   defaultWidth: WidgetWidth;
+  defaultColumns: WidgetColumns; // Default column span
+  minColumns: WidgetColumns; // Minimum columns needed
+  maxColumns: WidgetColumns; // Maximum columns allowed
   supportedWidths: WidgetWidth[];
-  category: 'charts' | 'tasks' | 'team' | 'info';
+  category: 'charts' | 'tasks' | 'team' | 'info' | 'utility';
 }

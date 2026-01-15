@@ -4,19 +4,25 @@ import {
   DashboardRow, 
   DashboardWidget, 
   DashboardTemplate,
+  DashboardScope,
   WidgetType,
   WidgetWidth,
+  WidgetColumns,
   WidgetCatalogEntry,
 } from '@/types';
 
 // Widget catalog - available widgets for the dashboard
 export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
+  // Charts - typically wide
   {
     type: 'gantt',
     name: 'Gantt Chart',
     description: 'Timeline visualization of tasks',
     icon: 'bar-chart',
     defaultWidth: '100%',
+    defaultColumns: 12,
+    minColumns: 6,
+    maxColumns: 12,
     supportedWidths: ['50%', '66%', '75%', '100%'],
     category: 'charts',
   },
@@ -26,6 +32,9 @@ export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
     description: 'Sprint burndown progress',
     icon: 'line-chart',
     defaultWidth: '50%',
+    defaultColumns: 6,
+    minColumns: 4,
+    maxColumns: 12,
     supportedWidths: ['33%', '50%', '66%', '100%'],
     category: 'charts',
   },
@@ -35,15 +44,22 @@ export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
     description: 'Task dependency visualization',
     icon: 'sitemap',
     defaultWidth: '100%',
+    defaultColumns: 12,
+    minColumns: 6,
+    maxColumns: 12,
     supportedWidths: ['50%', '66%', '75%', '100%'],
     category: 'charts',
   },
+  // Tasks - various sizes
   {
     type: 'kanban',
     name: 'Kanban Board',
     description: 'Drag-and-drop task columns',
     icon: 'columns',
     defaultWidth: '100%',
+    defaultColumns: 12,
+    minColumns: 8,
+    maxColumns: 12,
     supportedWidths: ['66%', '75%', '100%'],
     category: 'tasks',
   },
@@ -53,6 +69,9 @@ export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
     description: 'Horizontal task lanes by status',
     icon: 'bars',
     defaultWidth: '100%',
+    defaultColumns: 12,
+    minColumns: 6,
+    maxColumns: 12,
     supportedWidths: ['50%', '66%', '75%', '100%'],
     category: 'tasks',
   },
@@ -62,6 +81,9 @@ export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
     description: 'Simple task list view',
     icon: 'list',
     defaultWidth: '50%',
+    defaultColumns: 6,
+    minColumns: 3,
+    maxColumns: 12,
     supportedWidths: ['33%', '50%', '66%', '100%'],
     category: 'tasks',
   },
@@ -71,6 +93,9 @@ export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
     description: 'Calendar with task indicators',
     icon: 'calendar',
     defaultWidth: '50%',
+    defaultColumns: 6,
+    minColumns: 4,
+    maxColumns: 12,
     supportedWidths: ['33%', '50%', '66%', '100%'],
     category: 'tasks',
   },
@@ -80,15 +105,22 @@ export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
     description: 'Compact calendar widget',
     icon: 'calendar-o',
     defaultWidth: '33%',
+    defaultColumns: 4,
+    minColumns: 3,
+    maxColumns: 6,
     supportedWidths: ['25%', '33%', '50%'],
     category: 'tasks',
   },
+  // Info - various sizes
   {
     type: 'info-cards',
     name: 'Info Cards',
     description: 'Metrics and statistics display',
     icon: 'info-circle',
     defaultWidth: '100%',
+    defaultColumns: 12,
+    minColumns: 4,
+    maxColumns: 12,
     supportedWidths: ['50%', '66%', '75%', '100%'],
     category: 'info',
   },
@@ -98,15 +130,22 @@ export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
     description: 'List of projects with status',
     icon: 'folder',
     defaultWidth: '50%',
+    defaultColumns: 6,
+    minColumns: 3,
+    maxColumns: 12,
     supportedWidths: ['33%', '50%', '66%', '100%'],
     category: 'info',
   },
+  // Team - compact to medium
   {
     type: 'team-quick',
     name: 'Team Quick Actions',
     description: 'Quick team management',
     icon: 'users',
     defaultWidth: '33%',
+    defaultColumns: 4,
+    minColumns: 3,
+    maxColumns: 6,
     supportedWidths: ['25%', '33%', '50%'],
     category: 'team',
   },
@@ -116,8 +155,36 @@ export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
     description: "Who's waiting on what",
     icon: 'clock-o',
     defaultWidth: '50%',
+    defaultColumns: 6,
+    minColumns: 4,
+    maxColumns: 8,
     supportedWidths: ['33%', '50%', '66%'],
     category: 'team',
+  },
+  // Utility - thin widgets
+  {
+    type: 'notes',
+    name: 'Notes',
+    description: 'Quick notes and reminders',
+    icon: 'sticky-note',
+    defaultWidth: '25%',
+    defaultColumns: 3,
+    minColumns: 2,
+    maxColumns: 6,
+    supportedWidths: ['25%', '33%', '50%'],
+    category: 'utility',
+  },
+  {
+    type: 'resources',
+    name: 'Resources Directory',
+    description: 'Project resources and files',
+    icon: 'folder-open',
+    defaultWidth: '25%',
+    defaultColumns: 3,
+    minColumns: 2,
+    maxColumns: 6,
+    supportedWidths: ['25%', '33%', '50%'],
+    category: 'utility',
   },
 ];
 
@@ -127,20 +194,20 @@ export const DASHBOARD_TEMPLATES: Record<DashboardTemplate, DashboardRow[]> = {
     {
       id: 'agile-row-1',
       widgets: [
-        { id: 'agile-w1', type: 'info-cards', width: '100%' },
+        { id: 'agile-w1', type: 'info-cards', width: '100%', columns: 12 },
       ],
     },
     {
       id: 'agile-row-2',
       widgets: [
-        { id: 'agile-w2', type: 'kanban', width: '100%' },
+        { id: 'agile-w2', type: 'kanban', width: '100%', columns: 12 },
       ],
     },
     {
       id: 'agile-row-3',
       widgets: [
-        { id: 'agile-w3', type: 'burndown', width: '50%' },
-        { id: 'agile-w4', type: 'team-waiting', width: '50%' },
+        { id: 'agile-w3', type: 'burndown', width: '50%', columns: 6 },
+        { id: 'agile-w4', type: 'team-waiting', width: '50%', columns: 6 },
       ],
     },
   ],
@@ -148,20 +215,20 @@ export const DASHBOARD_TEMPLATES: Record<DashboardTemplate, DashboardRow[]> = {
     {
       id: 'waterfall-row-1',
       widgets: [
-        { id: 'waterfall-w1', type: 'info-cards', width: '100%' },
+        { id: 'waterfall-w1', type: 'info-cards', width: '100%', columns: 12 },
       ],
     },
     {
       id: 'waterfall-row-2',
       widgets: [
-        { id: 'waterfall-w2', type: 'gantt', width: '100%' },
+        { id: 'waterfall-w2', type: 'gantt', width: '100%', columns: 12 },
       ],
     },
     {
       id: 'waterfall-row-3',
       widgets: [
-        { id: 'waterfall-w3', type: 'status-lanes', width: '66%' },
-        { id: 'waterfall-w4', type: 'mini-calendar', width: '33%' },
+        { id: 'waterfall-w3', type: 'status-lanes', width: '66%', columns: 8 },
+        { id: 'waterfall-w4', type: 'mini-calendar', width: '33%', columns: 4 },
       ],
     },
   ],
@@ -169,20 +236,20 @@ export const DASHBOARD_TEMPLATES: Record<DashboardTemplate, DashboardRow[]> = {
     {
       id: 'maintenance-row-1',
       widgets: [
-        { id: 'maint-w1', type: 'info-cards', width: '100%' },
+        { id: 'maint-w1', type: 'info-cards', width: '100%', columns: 12 },
       ],
     },
     {
       id: 'maintenance-row-2',
       widgets: [
-        { id: 'maint-w2', type: 'task-list', width: '50%' },
-        { id: 'maint-w3', type: 'team-waiting', width: '50%' },
+        { id: 'maint-w2', type: 'task-list', width: '50%', columns: 6 },
+        { id: 'maint-w3', type: 'team-waiting', width: '50%', columns: 6 },
       ],
     },
     {
       id: 'maintenance-row-3',
       widgets: [
-        { id: 'maint-w4', type: 'status-lanes', width: '100%' },
+        { id: 'maint-w4', type: 'status-lanes', width: '100%', columns: 12 },
       ],
     },
   ],
@@ -193,30 +260,77 @@ export const DASHBOARD_TEMPLATES: Record<DashboardTemplate, DashboardRow[]> = {
 // Generate unique ID
 const generateId = () => Math.random().toString(36).substring(2, 11);
 
+// Convert columns to width percentage
+export const columnsToWidth = (columns: WidgetColumns): WidgetWidth => {
+  const map: Record<WidgetColumns, WidgetWidth> = {
+    1: '25%',
+    2: '25%',
+    3: '25%',
+    4: '33%',
+    5: '50%',
+    6: '50%',
+    7: '66%',
+    8: '66%',
+    9: '75%',
+    10: '75%',
+    11: '100%',
+    12: '100%',
+  };
+  return map[columns];
+};
+
+// Convert width to columns
+export const widthToColumns = (width: WidgetWidth): WidgetColumns => {
+  const map: Record<WidgetWidth, WidgetColumns> = {
+    '25%': 3,
+    '33%': 4,
+    '50%': 6,
+    '66%': 8,
+    '75%': 9,
+    '100%': 12,
+  };
+  return map[width];
+};
+
 interface DashboardStore {
   // State
-  layouts: DashboardLayout[];
-  currentLayout: DashboardLayout | null;
+  dashboards: DashboardLayout[];
+  currentDashboard: DashboardLayout | null;
+  activeDashboardId: string | null;
   editMode: boolean;
   loading: boolean;
   
   // Actions
   setEditMode: (editing: boolean) => void;
-  setCurrentLayout: (layout: DashboardLayout | null) => void;
+  setActiveDashboard: (dashboardId: string) => void;
+  setCurrentDashboard: (dashboard: DashboardLayout | null) => void;
   
-  // Layout CRUD
-  createLayout: (name: string, template: DashboardTemplate, projectId?: string, userId?: string) => DashboardLayout;
-  updateLayout: (layoutId: string, updates: Partial<DashboardLayout>) => void;
-  deleteLayout: (layoutId: string) => void;
+  // Dashboard CRUD
+  createDashboard: (
+    name: string, 
+    options?: {
+      template?: DashboardTemplate;
+      scope?: DashboardScope;
+      projectId?: string;
+      emoji?: string;
+      laneCount?: number;
+      userId?: string;
+    }
+  ) => DashboardLayout;
+  updateDashboard: (dashboardId: string, updates: Partial<DashboardLayout>) => void;
+  deleteDashboard: (dashboardId: string) => void;
+  reorderDashboards: (dashboardIds: string[]) => void;
   
   // Widget management
-  addWidget: (rowId: string, widget: Omit<DashboardWidget, 'id'>) => void;
+  addWidgetToRow: (rowId: string, widgetType: WidgetType, columns?: WidgetColumns) => void;
   updateWidget: (widgetId: string, updates: Partial<DashboardWidget>) => void;
   removeWidget: (widgetId: string) => void;
   moveWidget: (widgetId: string, targetRowId: string, targetIndex: number) => void;
+  resizeWidget: (widgetId: string, columns: WidgetColumns) => void;
   
   // Row management
-  addRow: (index?: number) => void;
+  addRow: (index?: number, name?: string) => void;
+  updateRow: (rowId: string, updates: Partial<DashboardRow>) => void;
   removeRow: (rowId: string) => void;
   moveRow: (rowId: string, direction: 'up' | 'down') => void;
   
@@ -225,121 +339,188 @@ interface DashboardStore {
   resetToTemplate: () => void;
   
   // Persistence
-  saveLayout: () => Promise<void>;
-  loadLayout: (projectId?: string, userId?: string) => Promise<void>;
+  saveDashboard: () => Promise<void>;
+  loadDashboards: (userId: string) => Promise<void>;
+  
+  // Home dashboard
+  getHomeDashboard: () => DashboardLayout | null;
 }
 
 export const useDashboardStore = create<DashboardStore>((set, get) => ({
-  layouts: [],
-  currentLayout: null,
+  dashboards: [],
+  currentDashboard: null,
+  activeDashboardId: null,
   editMode: false,
   loading: false,
   
   setEditMode: (editing) => set({ editMode: editing }),
   
-  setCurrentLayout: (layout) => set({ currentLayout: layout }),
-  
-  createLayout: (name, template, projectId, userId) => {
-    const templateRows = DASHBOARD_TEMPLATES[template] || [];
-    const layout: DashboardLayout = {
-      id: generateId(),
-      name,
-      template,
-      projectId,
-      userId: userId || '',
-      rows: JSON.parse(JSON.stringify(templateRows)), // Deep copy
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    
-    set((state) => ({
-      layouts: [...state.layouts, layout],
-      currentLayout: layout,
-    }));
-    
-    return layout;
-  },
-  
-  updateLayout: (layoutId, updates) => {
-    set((state) => {
-      const layouts = state.layouts.map((l) =>
-        l.id === layoutId ? { ...l, ...updates, updatedAt: new Date() } : l
-      );
-      const currentLayout = state.currentLayout?.id === layoutId
-        ? { ...state.currentLayout, ...updates, updatedAt: new Date() }
-        : state.currentLayout;
-      return { layouts, currentLayout };
+  setActiveDashboard: (dashboardId) => {
+    const dashboard = get().dashboards.find(d => d.id === dashboardId);
+    set({ 
+      activeDashboardId: dashboardId,
+      currentDashboard: dashboard || null,
     });
   },
   
-  deleteLayout: (layoutId) => {
+  setCurrentDashboard: (dashboard) => set({ currentDashboard: dashboard }),
+  
+  createDashboard: (name, options = {}) => {
+    const {
+      template = 'blank',
+      scope = 'global',
+      projectId,
+      emoji,
+      laneCount = 3,
+      userId = '',
+    } = options;
+    
+    // Create initial rows based on laneCount or template
+    let rows: DashboardRow[];
+    if (template !== 'blank' && template !== 'custom') {
+      rows = JSON.parse(JSON.stringify(DASHBOARD_TEMPLATES[template] || []));
+    } else {
+      // Create empty lanes based on laneCount
+      rows = Array.from({ length: laneCount }, (_, i) => ({
+        id: generateId(),
+        name: `Lane ${i + 1}`,
+        widgets: [],
+      }));
+    }
+    
+    const dashboard: DashboardLayout = {
+      id: generateId(),
+      name,
+      emoji,
+      template,
+      scope,
+      projectId: scope === 'project' ? projectId : undefined,
+      userId,
+      rows,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isDefault: false,
+      order: get().dashboards.length,
+    };
+    
     set((state) => ({
-      layouts: state.layouts.filter((l) => l.id !== layoutId),
-      currentLayout: state.currentLayout?.id === layoutId ? null : state.currentLayout,
+      dashboards: [...state.dashboards, dashboard],
+      currentDashboard: dashboard,
+      activeDashboardId: dashboard.id,
     }));
+    
+    return dashboard;
   },
   
-  addWidget: (rowId, widget) => {
+  updateDashboard: (dashboardId, updates) => {
     set((state) => {
-      if (!state.currentLayout) return state;
+      const dashboards = state.dashboards.map((d) =>
+        d.id === dashboardId ? { ...d, ...updates, updatedAt: new Date() } : d
+      );
+      const currentDashboard = state.currentDashboard?.id === dashboardId
+        ? { ...state.currentDashboard, ...updates, updatedAt: new Date() }
+        : state.currentDashboard;
+      return { dashboards, currentDashboard };
+    });
+  },
+  
+  deleteDashboard: (dashboardId) => {
+    set((state) => {
+      const dashboards = state.dashboards.filter((d) => d.id !== dashboardId);
+      const wasActive = state.activeDashboardId === dashboardId;
+      return {
+        dashboards,
+        currentDashboard: wasActive ? dashboards[0] || null : state.currentDashboard,
+        activeDashboardId: wasActive ? dashboards[0]?.id || null : state.activeDashboardId,
+      };
+    });
+  },
+  
+  reorderDashboards: (dashboardIds) => {
+    set((state) => {
+      const dashboards = dashboardIds.map((id, index) => {
+        const dashboard = state.dashboards.find(d => d.id === id);
+        return dashboard ? { ...dashboard, order: index } : null;
+      }).filter(Boolean) as DashboardLayout[];
+      return { dashboards };
+    });
+  },
+  
+  addWidgetToRow: (rowId, widgetType, columns) => {
+    const catalogEntry = WIDGET_CATALOG.find(w => w.type === widgetType);
+    const defaultColumns = columns || catalogEntry?.defaultColumns || 6;
+    
+    set((state) => {
+      if (!state.currentDashboard) return state;
       
       const newWidget: DashboardWidget = {
-        ...widget,
         id: generateId(),
+        type: widgetType,
+        width: columnsToWidth(defaultColumns),
+        columns: defaultColumns,
+        title: catalogEntry?.name,
       };
       
-      const rows = state.currentLayout.rows.map((row) => {
+      const rows = state.currentDashboard.rows.map((row) => {
         if (row.id === rowId) {
           return { ...row, widgets: [...row.widgets, newWidget] };
         }
         return row;
       });
       
-      return {
-        currentLayout: { ...state.currentLayout, rows, updatedAt: new Date() },
-      };
+      const updatedDashboard = { ...state.currentDashboard, rows, updatedAt: new Date() };
+      const dashboards = state.dashboards.map(d => 
+        d.id === updatedDashboard.id ? updatedDashboard : d
+      );
+      
+      return { currentDashboard: updatedDashboard, dashboards };
     });
   },
   
   updateWidget: (widgetId, updates) => {
     set((state) => {
-      if (!state.currentLayout) return state;
+      if (!state.currentDashboard) return state;
       
-      const rows = state.currentLayout.rows.map((row) => ({
+      const rows = state.currentDashboard.rows.map((row) => ({
         ...row,
         widgets: row.widgets.map((w) =>
           w.id === widgetId ? { ...w, ...updates } : w
         ),
       }));
       
-      return {
-        currentLayout: { ...state.currentLayout, rows, updatedAt: new Date() },
-      };
+      const updatedDashboard = { ...state.currentDashboard, rows, updatedAt: new Date() };
+      const dashboards = state.dashboards.map(d => 
+        d.id === updatedDashboard.id ? updatedDashboard : d
+      );
+      
+      return { currentDashboard: updatedDashboard, dashboards };
     });
   },
   
   removeWidget: (widgetId) => {
     set((state) => {
-      if (!state.currentLayout) return state;
+      if (!state.currentDashboard) return state;
       
-      const rows = state.currentLayout.rows.map((row) => ({
+      const rows = state.currentDashboard.rows.map((row) => ({
         ...row,
         widgets: row.widgets.filter((w) => w.id !== widgetId),
       }));
       
-      return {
-        currentLayout: { ...state.currentLayout, rows, updatedAt: new Date() },
-      };
+      const updatedDashboard = { ...state.currentDashboard, rows, updatedAt: new Date() };
+      const dashboards = state.dashboards.map(d => 
+        d.id === updatedDashboard.id ? updatedDashboard : d
+      );
+      
+      return { currentDashboard: updatedDashboard, dashboards };
     });
   },
   
   moveWidget: (widgetId, targetRowId, targetIndex) => {
     set((state) => {
-      if (!state.currentLayout) return state;
+      if (!state.currentDashboard) return state;
       
-      // Find and remove widget from current position
       let movedWidget: DashboardWidget | null = null;
-      let rows = state.currentLayout.rows.map((row) => {
+      let rows = state.currentDashboard.rows.map((row) => {
         const widgetIndex = row.widgets.findIndex((w) => w.id === widgetId);
         if (widgetIndex !== -1) {
           movedWidget = row.widgets[widgetIndex];
@@ -353,7 +534,6 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       
       if (!movedWidget) return state;
       
-      // Insert widget at new position
       rows = rows.map((row) => {
         if (row.id === targetRowId) {
           const newWidgets = [...row.widgets];
@@ -363,53 +543,85 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
         return row;
       });
       
-      return {
-        currentLayout: { ...state.currentLayout, rows, updatedAt: new Date() },
-      };
+      const updatedDashboard = { ...state.currentDashboard, rows, updatedAt: new Date() };
+      const dashboards = state.dashboards.map(d => 
+        d.id === updatedDashboard.id ? updatedDashboard : d
+      );
+      
+      return { currentDashboard: updatedDashboard, dashboards };
     });
   },
   
-  addRow: (index) => {
+  resizeWidget: (widgetId, columns) => {
+    get().updateWidget(widgetId, {
+      columns,
+      width: columnsToWidth(columns),
+    });
+  },
+  
+  addRow: (index, name) => {
     set((state) => {
-      if (!state.currentLayout) return state;
+      if (!state.currentDashboard) return state;
       
       const newRow: DashboardRow = {
         id: generateId(),
+        name: name || `Lane ${state.currentDashboard.rows.length + 1}`,
         widgets: [],
       };
       
-      const rows = [...state.currentLayout.rows];
+      const rows = [...state.currentDashboard.rows];
       if (index !== undefined) {
         rows.splice(index, 0, newRow);
       } else {
         rows.push(newRow);
       }
       
-      return {
-        currentLayout: { ...state.currentLayout, rows, updatedAt: new Date() },
-      };
+      const updatedDashboard = { ...state.currentDashboard, rows, updatedAt: new Date() };
+      const dashboards = state.dashboards.map(d => 
+        d.id === updatedDashboard.id ? updatedDashboard : d
+      );
+      
+      return { currentDashboard: updatedDashboard, dashboards };
+    });
+  },
+  
+  updateRow: (rowId, updates) => {
+    set((state) => {
+      if (!state.currentDashboard) return state;
+      
+      const rows = state.currentDashboard.rows.map((row) =>
+        row.id === rowId ? { ...row, ...updates } : row
+      );
+      
+      const updatedDashboard = { ...state.currentDashboard, rows, updatedAt: new Date() };
+      const dashboards = state.dashboards.map(d => 
+        d.id === updatedDashboard.id ? updatedDashboard : d
+      );
+      
+      return { currentDashboard: updatedDashboard, dashboards };
     });
   },
   
   removeRow: (rowId) => {
     set((state) => {
-      if (!state.currentLayout) return state;
+      if (!state.currentDashboard) return state;
       
-      return {
-        currentLayout: {
-          ...state.currentLayout,
-          rows: state.currentLayout.rows.filter((r) => r.id !== rowId),
-          updatedAt: new Date(),
-        },
-      };
+      const rows = state.currentDashboard.rows.filter((r) => r.id !== rowId);
+      
+      const updatedDashboard = { ...state.currentDashboard, rows, updatedAt: new Date() };
+      const dashboards = state.dashboards.map(d => 
+        d.id === updatedDashboard.id ? updatedDashboard : d
+      );
+      
+      return { currentDashboard: updatedDashboard, dashboards };
     });
   },
   
   moveRow: (rowId, direction) => {
     set((state) => {
-      if (!state.currentLayout) return state;
+      if (!state.currentDashboard) return state;
       
-      const rows = [...state.currentLayout.rows];
+      const rows = [...state.currentDashboard.rows];
       const index = rows.findIndex((r) => r.id === rowId);
       if (index === -1) return state;
       
@@ -418,75 +630,101 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       
       [rows[index], rows[newIndex]] = [rows[newIndex], rows[index]];
       
-      return {
-        currentLayout: { ...state.currentLayout, rows, updatedAt: new Date() },
-      };
+      const updatedDashboard = { ...state.currentDashboard, rows, updatedAt: new Date() };
+      const dashboards = state.dashboards.map(d => 
+        d.id === updatedDashboard.id ? updatedDashboard : d
+      );
+      
+      return { currentDashboard: updatedDashboard, dashboards };
     });
   },
   
   applyTemplate: (template) => {
     set((state) => {
-      if (!state.currentLayout) return state;
+      if (!state.currentDashboard) return state;
       
-      const templateRows = DASHBOARD_TEMPLATES[template] || [];
+      const templateRows = JSON.parse(JSON.stringify(DASHBOARD_TEMPLATES[template] || []));
       
-      return {
-        currentLayout: {
-          ...state.currentLayout,
-          template,
-          rows: JSON.parse(JSON.stringify(templateRows)),
-          updatedAt: new Date(),
-        },
+      const updatedDashboard = {
+        ...state.currentDashboard,
+        template,
+        rows: templateRows,
+        updatedAt: new Date(),
       };
+      const dashboards = state.dashboards.map(d => 
+        d.id === updatedDashboard.id ? updatedDashboard : d
+      );
+      
+      return { currentDashboard: updatedDashboard, dashboards };
     });
   },
   
   resetToTemplate: () => {
-    const { currentLayout } = get();
-    if (currentLayout) {
-      get().applyTemplate(currentLayout.template);
+    const { currentDashboard } = get();
+    if (currentDashboard) {
+      get().applyTemplate(currentDashboard.template);
     }
   },
   
-  saveLayout: async () => {
-    const { currentLayout } = get();
-    if (!currentLayout) return;
+  saveDashboard: async () => {
+    const { currentDashboard, dashboards } = get();
+    if (!currentDashboard) return;
     
-    // TODO: Save to Supabase
-    // For now, save to localStorage
     try {
-      const key = currentLayout.projectId 
-        ? `dashboard-layout-${currentLayout.projectId}`
-        : `dashboard-layout-user-${currentLayout.userId}`;
-      localStorage.setItem(key, JSON.stringify(currentLayout));
+      // Save all dashboards to localStorage
+      const key = `dashboards-user-${currentDashboard.userId}`;
+      localStorage.setItem(key, JSON.stringify(dashboards));
     } catch (error) {
-      console.error('Error saving layout:', error);
+      console.error('Error saving dashboards:', error);
     }
   },
   
-  loadLayout: async (projectId, userId) => {
+  loadDashboards: async (userId) => {
     set({ loading: true });
     
     try {
-      // TODO: Load from Supabase
-      // For now, load from localStorage
-      const key = projectId 
-        ? `dashboard-layout-${projectId}`
-        : `dashboard-layout-user-${userId}`;
+      const key = `dashboards-user-${userId}`;
       const stored = localStorage.getItem(key);
       
       if (stored) {
-        const layout = JSON.parse(stored) as DashboardLayout;
-        set({ currentLayout: layout, loading: false });
+        const dashboards = JSON.parse(stored) as DashboardLayout[];
+        const homeDashboard = dashboards.find(d => d.isDefault) || dashboards[0];
+        set({ 
+          dashboards, 
+          currentDashboard: homeDashboard || null,
+          activeDashboardId: homeDashboard?.id || null,
+          loading: false,
+        });
       } else {
-        // Create default layout
-        const template: DashboardTemplate = 'waterfall';
-        get().createLayout('Default Dashboard', template, projectId, userId);
-        set({ loading: false });
+        // Create default home dashboard
+        const homeDashboard: DashboardLayout = {
+          id: generateId(),
+          name: 'Home',
+          emoji: '🏠',
+          template: 'custom',
+          scope: 'global',
+          userId,
+          rows: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isDefault: true,
+          order: 0,
+        };
+        
+        set({ 
+          dashboards: [homeDashboard],
+          currentDashboard: homeDashboard,
+          activeDashboardId: homeDashboard.id,
+          loading: false,
+        });
       }
     } catch (error) {
-      console.error('Error loading layout:', error);
+      console.error('Error loading dashboards:', error);
       set({ loading: false });
     }
+  },
+  
+  getHomeDashboard: () => {
+    return get().dashboards.find(d => d.isDefault) || get().dashboards[0] || null;
   },
 }));

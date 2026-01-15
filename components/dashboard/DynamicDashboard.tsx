@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '@/components/useTheme';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { DashboardTemplate } from '@/types';
 import DashboardGrid from './DashboardGrid';
-import DashboardEditor from './DashboardEditor';
+import DashboardTabs from './DashboardTabs';
+import DashboardCreationModal from './DashboardCreationModal';
 
 interface DynamicDashboardProps {
   projectId?: string;
@@ -13,13 +14,15 @@ interface DynamicDashboardProps {
   defaultTemplate?: DashboardTemplate;
   tasks?: any[];
   projects?: any[];
+  resources?: any[];
   onTaskClick?: (task: any) => void;
   onProjectClick?: (project: any) => void;
   showToolbar?: boolean;
+  showTabs?: boolean;
 }
 
 /**
- * DynamicDashboard - Complete dynamic dashboard with editing capabilities
+ * DynamicDashboard - Complete dynamic dashboard with tabs and editing capabilities
  */
 export default function DynamicDashboard({
   projectId,
@@ -27,66 +30,53 @@ export default function DynamicDashboard({
   defaultTemplate = 'waterfall',
   tasks = [],
   projects = [],
+  resources = [],
   onTaskClick,
   onProjectClick,
   showToolbar = true,
+  showTabs = true,
 }: DynamicDashboardProps) {
   const theme = useTheme();
   const { 
-    currentLayout, 
+    dashboards,
+    currentDashboard, 
     editMode, 
     loading,
     setEditMode, 
-    loadLayout, 
-    createLayout,
-    saveLayout,
-    resetToTemplate,
+    loadDashboards, 
+    createDashboard,
+    saveDashboard,
+    addRow,
   } = useDashboardStore();
 
-  const [editorVisible, setEditorVisible] = useState(false);
+  const [creationModalVisible, setCreationModalVisible] = useState(false);
 
-  // Load or create layout on mount
+  // Load dashboards on mount
   useEffect(() => {
-    const initLayout = async () => {
-      await loadLayout(projectId, userId);
-      
-      // If no layout was loaded, create a default one
-      if (!useDashboardStore.getState().currentLayout) {
-        createLayout(
-          projectId ? 'Project Dashboard' : 'My Dashboard',
-          defaultTemplate,
-          projectId,
-          userId
-        );
-      }
-    };
-    
     if (userId) {
-      initLayout();
+      loadDashboards(userId);
     }
-  }, [projectId, userId, defaultTemplate]);
+  }, [userId]);
 
-  const handleEditToggle = () => {
-    if (editMode) {
-      // Save and exit edit mode
-      saveLayout();
-      setEditMode(false);
-    } else {
-      setEditMode(true);
-      setEditorVisible(true);
-    }
+  const handleSave = async () => {
+    await saveDashboard();
+    setEditMode(false);
   };
 
-  const handleReset = () => {
-    resetToTemplate();
-    saveLayout();
+  const handleStartEditing = () => {
+    setEditMode(true);
+  };
+
+  const handleDashboardCreated = (dashboardId: string) => {
+    // Dashboard is already set as active by createDashboard
+    // Edit mode is already enabled by the modal
   };
 
   if (loading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.surface }]}>
         <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-          Loading dashboard...
+          Loading dashboards...
         </Text>
       </View>
     );
@@ -94,85 +84,122 @@ export default function DynamicDashboard({
 
   return (
     <View style={styles.container}>
+      {/* Dashboard Tabs */}
+      {showTabs && (
+        <DashboardTabs onAddDashboard={() => setCreationModalVisible(true)} />
+      )}
+
       {/* Dashboard Toolbar */}
-      {showToolbar && (
+      {showToolbar && currentDashboard && (
         <View style={[styles.toolbar, { backgroundColor: theme.surfaceSecondary, borderBottomColor: theme.border }]}>
           <View style={styles.toolbarLeft}>
-            <FontAwesome name="th-large" size={16} color={theme.textSecondary} />
-            <Text style={[styles.toolbarTitle, { color: theme.text }]}>
-              {currentLayout?.name || 'Dashboard'}
-            </Text>
-            {currentLayout?.template && currentLayout.template !== 'custom' && (
-              <View style={[styles.templateBadge, { backgroundColor: theme.primary + '20' }]}>
-                <Text style={[styles.templateBadgeText, { color: theme.primary }]}>
-                  {currentLayout.template.charAt(0).toUpperCase() + currentLayout.template.slice(1)}
+            {/* Dashboard Info */}
+            {currentDashboard.emoji && (
+              <Text style={styles.dashboardEmoji}>{currentDashboard.emoji}</Text>
+            )}
+            <View>
+              <Text style={[styles.toolbarTitle, { color: theme.text }]}>
+                {currentDashboard.name}
+              </Text>
+              <View style={styles.toolbarMeta}>
+                {currentDashboard.scope === 'global' ? (
+                  <View style={styles.scopeBadge}>
+                    <FontAwesome name="globe" size={10} color={theme.textTertiary} />
+                    <Text style={[styles.scopeText, { color: theme.textTertiary }]}>Global</Text>
+                  </View>
+                ) : (
+                  <View style={styles.scopeBadge}>
+                    <FontAwesome name="folder" size={10} color={theme.textTertiary} />
+                    <Text style={[styles.scopeText, { color: theme.textTertiary }]}>Project</Text>
+                  </View>
+                )}
+                <Text style={[styles.laneCount, { color: theme.textTertiary }]}>
+                  {currentDashboard.rows.length} lanes
                 </Text>
               </View>
-            )}
+            </View>
           </View>
           
           <View style={styles.toolbarRight}>
-            {editMode && (
+            {editMode ? (
+              <>
+                <TouchableOpacity
+                  style={[styles.toolbarButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                  onPress={() => addRow()}
+                >
+                  <FontAwesome name="plus" size={12} color={theme.text} />
+                  <Text style={[styles.toolbarButtonText, { color: theme.text }]}>Add Lane</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.toolbarButton, { backgroundColor: theme.success, borderColor: theme.success }]}
+                  onPress={handleSave}
+                >
+                  <FontAwesome name="check" size={12} color="#fff" />
+                  <Text style={[styles.toolbarButtonText, { color: '#fff' }]}>Save</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
               <TouchableOpacity
-                style={[styles.toolbarButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                onPress={handleReset}
+                style={[styles.toolbarButton, { backgroundColor: theme.primary, borderColor: theme.primary }]}
+                onPress={handleStartEditing}
               >
-                <FontAwesome name="refresh" size={14} color={theme.textSecondary} />
-                <Text style={[styles.toolbarButtonText, { color: theme.textSecondary }]}>Reset</Text>
+                <FontAwesome name="pencil" size={12} color="#fff" />
+                <Text style={[styles.toolbarButtonText, { color: '#fff' }]}>Edit</Text>
               </TouchableOpacity>
             )}
-            
-            <TouchableOpacity
-              style={[
-                styles.toolbarButton, 
-                { 
-                  backgroundColor: editMode ? theme.success : theme.primary,
-                  borderColor: editMode ? theme.success : theme.primary,
-                }
-              ]}
-              onPress={handleEditToggle}
-            >
-              <FontAwesome name={editMode ? 'check' : 'pencil'} size={14} color="#fff" />
-              <Text style={[styles.toolbarButtonText, { color: '#fff' }]}>
-                {editMode ? 'Save' : 'Edit Dashboard'}
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
       )}
 
-      {/* Dashboard Grid */}
-      <View style={styles.gridContainer}>
-        {currentLayout ? (
+      {/* Dashboard Content */}
+      <ScrollView style={styles.gridContainer} showsVerticalScrollIndicator>
+        {currentDashboard ? (
           <DashboardGrid
-            layout={currentLayout}
+            layout={currentDashboard}
             tasks={tasks}
             projects={projects}
+            resources={resources}
             onTaskClick={onTaskClick}
             onProjectClick={onProjectClick}
           />
-        ) : (
+        ) : dashboards.length === 0 ? (
           <View style={[styles.emptyState, { borderColor: theme.border }]}>
             <FontAwesome name="dashboard" size={48} color={theme.textTertiary} />
             <Text style={[styles.emptyTitle, { color: theme.textSecondary }]}>
-              No Dashboard Configured
+              No Dashboards Yet
             </Text>
             <Text style={[styles.emptySubtitle, { color: theme.textTertiary }]}>
-              Click "Edit Dashboard" to set up your layout
+              Create your first custom dashboard
+            </Text>
+            <TouchableOpacity
+              style={[styles.createFirstButton, { backgroundColor: theme.primary }]}
+              onPress={() => setCreationModalVisible(true)}
+            >
+              <FontAwesome name="plus" size={14} color="#fff" />
+              <Text style={styles.createFirstButtonText}>Create Dashboard</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={[styles.emptyState, { borderColor: theme.border }]}>
+            <FontAwesome name="hand-pointer-o" size={48} color={theme.textTertiary} />
+            <Text style={[styles.emptyTitle, { color: theme.textSecondary }]}>
+              Select a Dashboard
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: theme.textTertiary }]}>
+              Choose from the tabs above
             </Text>
           </View>
         )}
-      </View>
+      </ScrollView>
 
-      {/* Dashboard Editor Modal */}
-      <DashboardEditor
-        visible={editorVisible}
-        onClose={() => {
-          setEditorVisible(false);
-          if (!editMode) {
-            setEditMode(false);
-          }
-        }}
+      {/* Dashboard Creation Modal */}
+      <DashboardCreationModal
+        visible={creationModalVisible}
+        onClose={() => setCreationModalVisible(false)}
+        onCreated={handleDashboardCreated}
+        projects={projects}
+        userId={userId}
       />
     </View>
   );
@@ -197,26 +224,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 12,
     borderBottomWidth: 1,
-    marginBottom: 16,
   },
   toolbarLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
+  },
+  dashboardEmoji: {
+    fontSize: 24,
   },
   toolbarTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
   },
-  templateBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
+  toolbarMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 2,
   },
-  templateBadgeText: {
+  scopeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  scopeText: {
     fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+  },
+  laneCount: {
+    fontSize: 11,
   },
   toolbarRight: {
     flexDirection: 'row',
@@ -249,6 +285,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderRadius: 16,
     gap: 16,
+    minHeight: 300,
   },
   emptyTitle: {
     fontSize: 18,
@@ -257,5 +294,19 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontSize: 14,
     textAlign: 'center',
+  },
+  createFirstButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  createFirstButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

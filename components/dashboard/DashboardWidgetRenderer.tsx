@@ -14,6 +14,8 @@ import {
   CalendarWidget,
   TeamWaitingWidget,
   TeamQuickWidget,
+  NotesWidget,
+  ResourcesWidget,
 } from '@/components/ui';
 import TaskCard from '@/components/TaskCard';
 
@@ -21,6 +23,7 @@ interface DashboardWidgetRendererProps {
   widget: DashboardWidget;
   tasks?: any[];
   projects?: any[];
+  resources?: any[];
   onTaskClick?: (task: any) => void;
   onProjectClick?: (project: any) => void;
 }
@@ -32,6 +35,7 @@ export default function DashboardWidgetRenderer({
   widget,
   tasks = [],
   projects = [],
+  resources = [],
   onTaskClick,
   onProjectClick,
 }: DashboardWidgetRendererProps) {
@@ -329,6 +333,31 @@ export default function DashboardWidgetRenderer({
               const task = tasks.find((t: any) => t.id === taskId);
               if (task) onTaskClick?.(task);
             }}
+            showHeader={false}
+          />
+        );
+
+      case 'notes':
+        return (
+          <NotesWidget
+            widgetId={widget.id}
+            showHeader={false}
+          />
+        );
+
+      case 'resources':
+        // Transform resources to the expected format
+        const resourceItems = resources.map((r: any) => ({
+          id: r.id || String(Math.random()),
+          name: r.name || r.title || 'Resource',
+          url: r.url || r.link,
+          type: r.type || 'link',
+          description: r.description,
+        }));
+        
+        return (
+          <ResourcesWidget
+            resources={resourceItems}
             showHeader={false}
           />
         );

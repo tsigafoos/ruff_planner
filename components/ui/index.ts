@@ -35,6 +35,8 @@ export { default as KanbanWidget } from './KanbanWidget';
 export { default as CalendarWidget } from './CalendarWidget';
 export { default as TeamWaitingWidget } from './TeamWaitingWidget';
 export { default as TeamQuickWidget } from './TeamQuickWidget';
+export { default as NotesWidget } from './NotesWidget';
+export { default as ResourcesWidget } from './ResourcesWidget';
 
 // Type exports
 export type { InfoCardProps } from './InfoCard';
@@ -54,3 +56,5 @@ export type { KanbanWidgetProps } from './KanbanWidget';
 export type { CalendarWidgetProps } from './CalendarWidget';
 export type { TeamWaitingWidgetProps, WaitingItem } from './TeamWaitingWidget';
 export type { TeamQuickWidgetProps, TeamMemberSummary } from './TeamQuickWidget';
+export type { NotesWidgetProps, Note } from './NotesWidget';
+export type { ResourcesWidgetProps, Resource } from './ResourcesWidget';
