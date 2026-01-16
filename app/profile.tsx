@@ -5,11 +5,12 @@ import { useAuthStore } from '@/store/authStore';
 import { useProfileStore } from '@/store/profileStore';
 import { useTheme } from '@/components/useTheme';
 import WebLayout from '@/components/layout/WebLayout';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Icon from '@/components/ui/Icon';
 import { format } from 'date-fns';
 import ProfileForm from '@/components/ProfileForm';
 import TeamSettings from '@/components/settings/TeamSettings';
 import AppearanceSettings from '@/components/settings/AppearanceSettings';
+import EmailTest from '@/components/settings/EmailTest';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -36,14 +37,14 @@ export default function ProfileScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <FontAwesome name="arrow-left" size={Platform.OS === 'web' ? 16 : 20} color={theme.text} />
+          <Icon name="arrow-left" size={Platform.OS === 'web' ? 16 : 20} color={theme.text} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: theme.text }]}>Profile</Text>
         <TouchableOpacity
           style={[styles.editButton, { backgroundColor: theme.primary }]}
           onPress={() => setEditMode(true)}
         >
-          <FontAwesome name="edit" size={Platform.OS === 'web' ? 14 : 18} color="#FFFFFF" />
+          <Icon name="edit" size={Platform.OS === 'web' ? 14 : 18} color="#FFFFFF" />
           <Text style={styles.editButtonText}>Edit</Text>
         </TouchableOpacity>
       </View>
@@ -67,7 +68,7 @@ export default function ProfileScreen() {
               <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
             ) : (
               <View style={[styles.avatarPlaceholder, { backgroundColor: theme.primary + '20' }]}>
-                <FontAwesome name="user" size={48} color={theme.primary} />
+                <Icon name="user" size={48} color={theme.primary} />
               </View>
             )}
             <Text style={[styles.name, { color: theme.text }]}>
@@ -177,6 +178,11 @@ export default function ProfileScreen() {
                 router.push('/team');
               }}
             />
+          </View>
+
+          {/* Email Test */}
+          <View style={Platform.OS === 'web' ? { width: '100%', maxWidth: 900, alignSelf: 'center' } : undefined}>
+            <EmailTest />
           </View>
         </ScrollView>
       )}
