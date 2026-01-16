@@ -1,7 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { Platform } from 'react-native';
 import { supabase } from '../lib/supabase/client';
-import { sync } from '../lib/supabase/sync';
 import { useSyncStore } from '../store/syncStore';
 import { useAuthStore } from '../store/authStore';
 
@@ -14,6 +13,8 @@ export function useSync() {
     if (Platform.OS === 'web' || !user?.id || syncing) return;
     
     try {
+      // Lazy load sync function only on native
+      const { sync } = await import('../lib/supabase/sync');
       setSyncing(true);
       await sync(user.id);
     } catch (error) {
