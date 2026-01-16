@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Platform } from 'react-native';
+import { FlatList, StyleSheet, Platform, View } from 'react-native';
 import { useTaskStore } from '@/store/taskStore';
 import { useAuthStore } from '@/store/authStore';
 import TaskCard from '@/components/TaskCard';
@@ -7,6 +7,9 @@ import TaskForm from '@/components/TaskForm';
 import { useProjectStore } from '@/store/projectStore';
 import { useLabelStore } from '@/store/labelStore';
 import { PageWrapper } from '@/components/ui';
+import { MobileTaskList, MobileTaskForm } from '@/components/mobile';
+
+const isMobile = Platform.OS !== 'web';
 
 export default function TasksScreen() {
   const { user } = useAuthStore();
@@ -114,6 +117,43 @@ export default function TasksScreen() {
   const completedTasks = tasks.filter((task: any) => !!(task.completed_at || task.completedAt));
   const displayedTasks = showCompleted ? completedTasks : incompleteTasks;
 
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <View style={styles.mobileContainer}>
+        <MobileTaskList
+          tasks={tasks}
+          projects={projects}
+          loading={loading}
+          onRefresh={() => user?.id && fetchTasks(user.id)}
+          onTaskPress={handleEditTask}
+          onTaskComplete={(taskId) => handleToggleComplete(taskId)}
+          onTaskDelete={handleDelete}
+          onTaskEdit={handleEditTask}
+          onAddTask={() => setNewTaskFormVisible(true)}
+          showProjectFilter
+        />
+
+        <MobileTaskForm
+          visible={newTaskFormVisible}
+          onClose={() => setNewTaskFormVisible(false)}
+          onSubmit={handleCreateTask}
+          projects={projects}
+        />
+
+        <MobileTaskForm
+          visible={formVisible}
+          onClose={handleCloseForm}
+          onSubmit={handleUpdateTask}
+          onDelete={selectedTask ? () => handleDelete(selectedTask.id) : undefined}
+          initialData={selectedTask}
+          projects={projects}
+        />
+      </View>
+    );
+  }
+
+  // Web Layout
   return (
     <PageWrapper
       section="Tasks"
@@ -179,5 +219,8 @@ export default function TasksScreen() {
 const styles = StyleSheet.create({
   list: {
     paddingBottom: Platform.OS === 'web' ? 40 : 100,
+  },
+  mobileContainer: {
+    flex: 1,
   },
 });

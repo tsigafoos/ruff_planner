@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Platform } from 'react-native';
+import { FlatList, StyleSheet, Platform, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useProjectStore } from '@/store/projectStore';
 import { useTaskStore } from '@/store/taskStore';
@@ -7,7 +7,10 @@ import { useAuthStore } from '@/store/authStore';
 import ProjectCard from '@/components/ProjectCard';
 import ProjectForm from '@/components/ProjectForm';
 import { PageWrapper } from '@/components/ui';
+import { MobileProjectList } from '@/components/mobile';
 import { TemplateTask } from '@/lib/projectTemplates';
+
+const isMobile = Platform.OS !== 'web';
 
 export default function ProjectsScreen() {
   const router = useRouter();
@@ -86,6 +89,37 @@ export default function ProjectsScreen() {
     }
   };
 
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <View style={styles.mobileContainer}>
+        <MobileProjectList
+          projects={projects}
+          tasks={[]} // Can be populated with tasks for progress calculation
+          loading={loading}
+          onRefresh={() => user?.id && fetchProjects(user.id)}
+          onProjectPress={(project) => router.push(`/project/${project.id}`)}
+          onAddProject={() => {
+            setSelectedProject(null);
+            setProjectFormVisible(true);
+          }}
+        />
+
+        <ProjectForm
+          visible={projectFormVisible}
+          onClose={() => {
+            setProjectFormVisible(false);
+            setSelectedProject(null);
+          }}
+          onSubmit={selectedProject ? handleUpdateProject : handleCreateProject}
+          onCreateWithTasks={handleCreateProjectWithTasks}
+          initialData={selectedProject}
+        />
+      </View>
+    );
+  }
+
+  // Web Layout
   return (
     <PageWrapper
       section="Projects"
@@ -140,5 +174,8 @@ export default function ProjectsScreen() {
 const styles = StyleSheet.create({
   list: {
     paddingBottom: Platform.OS === 'web' ? 40 : 100,
+  },
+  mobileContainer: {
+    flex: 1,
   },
 });
