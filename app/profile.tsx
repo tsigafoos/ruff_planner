@@ -9,6 +9,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { format } from 'date-fns';
 import ProfileForm from '@/components/ProfileForm';
 import TeamSettings from '@/components/settings/TeamSettings';
+import AppearanceSettings from '@/components/settings/AppearanceSettings';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -162,6 +163,11 @@ export default function ProfileScreen() {
               ))}
             </View>
           )}
+          </View>
+          
+          {/* Appearance Settings */}
+          <View style={Platform.OS === 'web' ? { width: '100%', maxWidth: 900, alignSelf: 'center' } : undefined}>
+            <AppearanceSettings />
           </View>
           
           {/* Team & Collaboration Settings - Outside profileBox for better modal rendering */}

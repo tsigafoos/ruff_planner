@@ -63,8 +63,8 @@ export default function PageHeader({
   actions = [],
   subtitle,
 }: PageHeaderProps) {
-  const { resolvedTheme } = useThemeStore();
-  const theme = themes[resolvedTheme];
+  const { themeMode } = useThemeStore();
+  const theme = themes[themeMode];
 
   // Only render on web (mobile has different headers)
   if (Platform.OS !== 'web') {

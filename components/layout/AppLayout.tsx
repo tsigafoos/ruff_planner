@@ -16,13 +16,13 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const { 
-    resolvedTheme, 
+    themeMode, 
     sidebarCollapsed, 
     sidebarPinned,
     toggleSidebarCollapsed,
     toggleSidebarPinned,
   } = useThemeStore();
-  const theme = themes[resolvedTheme];
+  const theme = themes[themeMode];
 
   // Only render full layout on web
   if (Platform.OS !== 'web') {
@@ -33,9 +33,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.classList.remove('light', 'dark', 'light-theme', 'dark-theme');
-      document.documentElement.classList.add(resolvedTheme);
+      document.documentElement.classList.add(themeMode);
     }
-  }, [resolvedTheme]);
+  }, [themeMode]);
 
   const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_EXPANDED_WIDTH;
 

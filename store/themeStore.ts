@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { Platform } from 'react-native';
 
-export type ThemeMode = 'light' | 'dark' | 'system';
+// Simplified theme: only dark or light. No system option. Keep it simple.
+export type ThemeMode = 'light' | 'dark';
 
 interface ThemeStore {
   themeMode: ThemeMode;
-  resolvedTheme: 'light' | 'dark';
   sidebarCollapsed: boolean;
   sidebarPinned: boolean;
   setThemeMode: (mode: ThemeMode) => void;
@@ -16,11 +16,30 @@ interface ThemeStore {
   toggleSidebarPinned: () => void;
 }
 
-const getSystemTheme = (): 'light' | 'dark' => {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+// Load saved theme from localStorage
+const loadSavedTheme = (): ThemeMode => {
+  if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'light' || saved === 'dark') {
+        return saved;
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
   }
-  return 'light';
+  return 'dark'; // Default to dark
+};
+
+// Save theme to localStorage
+const saveTheme = (theme: ThemeMode) => {
+  if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem('theme', theme);
+    } catch {
+      // Ignore localStorage errors
+    }
+  }
 };
 
 // Load sidebar state from localStorage if available
@@ -52,35 +71,37 @@ const saveSidebarState = (collapsed: boolean, pinned: boolean) => {
   }
 };
 
+// Apply theme to document
+const applyThemeToDocument = (theme: ThemeMode) => {
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    document.documentElement.classList.remove('light', 'dark', 'light-theme', 'dark-theme');
+    document.documentElement.classList.add(theme);
+  }
+};
+
 export const useThemeStore = create<ThemeStore>((set, get) => {
-  // Initialize with system preference
-  const systemTheme = getSystemTheme();
+  // Initialize with saved preference (defaults to dark)
+  const savedTheme = loadSavedTheme();
   const sidebarState = loadSidebarState();
   
+  // Apply theme on initial load
+  applyThemeToDocument(savedTheme);
+  
   return {
-    themeMode: 'system',
-    resolvedTheme: systemTheme,
+    themeMode: savedTheme,
     sidebarCollapsed: sidebarState.collapsed,
     sidebarPinned: sidebarState.pinned,
     setThemeMode: (mode: ThemeMode) => {
-      const resolved = mode === 'system' ? getSystemTheme() : mode;
-      set({ themeMode: mode, resolvedTheme: resolved });
-      
-      // Update document class for web
-      if (Platform.OS === 'web' && typeof document !== 'undefined') {
-        document.documentElement.classList.remove('light', 'dark', 'light-theme', 'dark-theme');
-        document.documentElement.classList.add(resolved);
-      }
+      set({ themeMode: mode });
+      saveTheme(mode);
+      applyThemeToDocument(mode);
     },
     toggleTheme: () => {
-      const current = get().resolvedTheme;
+      const current = get().themeMode;
       const newTheme = current === 'light' ? 'dark' : 'light';
-      set({ themeMode: newTheme, resolvedTheme: newTheme });
-      
-      if (Platform.OS === 'web' && typeof document !== 'undefined') {
-        document.documentElement.classList.remove('light', 'dark', 'light-theme', 'dark-theme');
-        document.documentElement.classList.add(newTheme);
-      }
+      set({ themeMode: newTheme });
+      saveTheme(newTheme);
+      applyThemeToDocument(newTheme);
     },
     setSidebarCollapsed: (collapsed: boolean) => {
       set({ sidebarCollapsed: collapsed });

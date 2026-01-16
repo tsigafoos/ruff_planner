@@ -81,8 +81,8 @@ const DropdownMenu = ({ items, isOpen, onClose, theme }: DropdownMenuProps) => {
 export default function TopNavbar() {
   const router = useRouter();
   const { user, signOut } = useAuthStore();
-  const { resolvedTheme } = useThemeStore();
-  const theme = themes[resolvedTheme];
+  const { themeMode } = useThemeStore();
+  const theme = themes[themeMode];
   
   const [teamMenuOpen, setTeamMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);

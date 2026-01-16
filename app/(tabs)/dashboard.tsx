@@ -34,9 +34,9 @@ export default function DashboardScreen() {
   const { projects, loading: projectsLoading, fetchProjects, createProject } = useProjectStore();
   const { labels, fetchLabels } = useLabelStore();
   const theme = useTheme();
-  const { resolvedTheme } = useThemeStore();
+  const { themeMode } = useThemeStore();
   // Detect dark mode by checking if background is dark (lightness < 50%)
-  const isDark = theme.background === '#0f0f11' || resolvedTheme === 'dark';
+  const isDark = theme.background === '#0f0f11' || themeMode === 'dark';
   
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [taskFormVisible, setTaskFormVisible] = useState(false);
