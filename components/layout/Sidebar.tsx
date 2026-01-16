@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Icon from '@/components/ui/Icon';
 import { useThemeStore, themes } from '@/store/themeStore';
 import { useProfileStore } from '@/store/profileStore';
 import { useTeamStore } from '@/store/teamStore';
@@ -93,8 +93,8 @@ export default function Sidebar({
           accessibilityLabel={collapsed ? item.name : undefined}
         >
           <View style={[styles.iconContainer, collapsed && styles.iconContainerCollapsed]}>
-            <FontAwesome
-              name={item.icon as any}
+            <Icon
+              name={item.icon}
               size={18}
               color={active ? theme.primary : theme.sidebarText}
             />
@@ -136,8 +136,8 @@ export default function Sidebar({
             onPress={onTogglePin}
             accessibilityLabel={pinned ? 'Unpin sidebar' : 'Pin sidebar open'}
           >
-            <FontAwesome
-              name={pinned ? 'thumb-tack' : 'thumb-tack'}
+            <Icon
+              name="thumb-tack"
               size={12}
               color={pinned ? theme.primary : theme.textTertiary}
               style={pinned ? {} : { transform: [{ rotate: '45deg' }] }}
@@ -149,7 +149,7 @@ export default function Sidebar({
           onPress={onToggleCollapse}
           accessibilityLabel={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          <FontAwesome
+          <Icon
             name={collapsed ? 'angle-right' : 'angle-left'}
             size={16}
             color={theme.sidebarText}
@@ -168,7 +168,7 @@ export default function Sidebar({
           style={[styles.teamIndicator, { backgroundColor: theme.surfaceTertiary, borderColor: theme.border }]}
           onPress={() => router.push('/team')}
         >
-          <FontAwesome name="building" size={14} color={theme.primary} />
+          <Icon name="building" size={14} color={theme.primary} />
           <View style={styles.teamIndicatorText}>
             <Text style={[styles.teamLabel, { color: theme.textTertiary }]}>Team</Text>
             <Text style={[styles.teamName, { color: theme.text }]} numberOfLines={1}>
@@ -190,7 +190,7 @@ export default function Sidebar({
           accessibilityLabel="Settings"
         >
           <View style={[styles.iconContainer, collapsed && styles.iconContainerCollapsed]}>
-            <FontAwesome
+            <Icon
               name="cog"
               size={16}
               color={theme.sidebarText}
@@ -213,7 +213,7 @@ export default function Sidebar({
           accessibilityLabel={themeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           <View style={[styles.iconContainer, collapsed && styles.iconContainerCollapsed]}>
-            <FontAwesome
+            <Icon
               name={themeMode === 'dark' ? 'sun-o' : 'moon-o'}
               size={16}
               color={theme.sidebarText}

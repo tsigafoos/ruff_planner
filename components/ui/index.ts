@@ -2,6 +2,8 @@
 // All reusable UI primitives
 
 export { default as Button } from './Button';
+export { default as Icon, IconProvider, useIconPackage, FontAwesome } from './Icon';
+export type { IconPackage } from './Icon';
 export { default as Card } from './Card';
 export { default as DatePicker } from './DatePicker';
 export { default as Drawer } from './Drawer';

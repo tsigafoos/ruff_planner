@@ -1,22 +1,15 @@
-import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '../useTheme';
 import { useThemeStore, ThemeMode } from '@/store/themeStore';
+import { useIconPackage, IconPackage } from '../ui/Icon';
 
-// Icon package types for future implementation
-export type IconPackage = 'simple' | 'colorful' | 'none';
+export type { IconPackage } from '../ui/Icon';
 
-interface AppearanceSettingsProps {
-  onIconPackageChange?: (pkg: IconPackage) => void;
-}
-
-export default function AppearanceSettings({ onIconPackageChange }: AppearanceSettingsProps) {
+export default function AppearanceSettings() {
   const theme = useTheme();
   const { themeMode, setThemeMode } = useThemeStore();
-  
-  // Icon package state (will be persisted in profile later)
-  const [iconPackage, setIconPackage] = useState<IconPackage>('simple');
+  const { iconPackage, setIconPackage } = useIconPackage();
 
   const handleThemeChange = (mode: ThemeMode) => {
     setThemeMode(mode);
@@ -24,7 +17,6 @@ export default function AppearanceSettings({ onIconPackageChange }: AppearanceSe
 
   const handleIconPackageChange = (pkg: IconPackage) => {
     setIconPackage(pkg);
-    onIconPackageChange?.(pkg);
   };
 
   return (
