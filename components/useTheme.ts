@@ -1,8 +1,8 @@
 import { useThemeStore, themes } from '@/store/themeStore';
 
 export function useTheme() {
-  const { resolvedTheme } = useThemeStore();
-  return themes[resolvedTheme];
+  const { themeMode } = useThemeStore();
+  return themes[themeMode];
 }
 
 export function useThemeMode() {
@@ -10,5 +10,5 @@ export function useThemeMode() {
 }
 
 export function useResolvedTheme() {
-  return useThemeStore((state) => state.resolvedTheme);
+  return useThemeStore((state) => state.themeMode);
 }

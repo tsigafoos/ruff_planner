@@ -26,7 +26,7 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
-  const { resolvedTheme } = useThemeStore();
+  const { themeMode } = useThemeStore();
   const { initialized, initialize } = useAuthStore();
 
   // Initialize auth on mount
@@ -51,7 +51,7 @@ export default function RootLayout() {
 
   // Always show splash screen until app AND auth are ready
   if (!appIsReady || !initialized) {
-    const isDark = resolvedTheme === 'dark';
+    const isDark = themeMode === 'dark';
     return (
       <View style={[styles.splashContainer, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
         <Text style={[styles.splashText, { color: isDark ? '#F1F5F9' : '#1F2937' }]}>BarkItDone!!</Text>

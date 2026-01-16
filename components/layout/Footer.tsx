@@ -10,8 +10,8 @@ interface FooterProps {
 }
 
 export default function Footer({ message }: FooterProps) {
-  const { resolvedTheme } = useThemeStore();
-  const theme = themes[resolvedTheme];
+  const { themeMode } = useThemeStore();
+  const theme = themes[themeMode];
   const { syncing: isSyncing, lastSyncedAt: lastSyncTime } = useSyncStore();
 
   // Only render on web
