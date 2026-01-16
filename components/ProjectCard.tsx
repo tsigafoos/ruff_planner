@@ -8,9 +8,10 @@ interface ProjectCardProps {
   taskCount?: number;
   completedCount?: number;
   onPress?: () => void;
+  onDelete?: () => void;
 }
 
-export default function ProjectCard({ project, taskCount, completedCount, onPress }: ProjectCardProps) {
+export default function ProjectCard({ project, taskCount, completedCount, onPress, onDelete }: ProjectCardProps) {
   const theme = useTheme();
   
   // Calculate progress
@@ -32,84 +33,96 @@ export default function ProjectCard({ project, taskCount, completedCount, onPres
   
   return (
     <Card style={styles.card}>
-      <TouchableOpacity 
-        onPress={onPress} 
-        style={styles.content}
-        activeOpacity={0.7}
-      >
-        {/* Color accent line */}
-        <View style={[styles.accentLine, { backgroundColor: project.color || theme.primary }]} />
-        
-        <View style={styles.mainContent}>
-          <View style={styles.topRow}>
-            <View
-              style={[
-                styles.iconContainer,
-                { backgroundColor: (project.color || theme.primary) + '15' },
-              ]}
-            >
-              <FontAwesome
-                name={(project.icon || 'folder') as any}
-                size={20}
-                color={project.color || theme.primary}
-              />
-            </View>
-            <View style={styles.info}>
-              <Text style={[styles.name, { color: theme.text }]} numberOfLines={1}>
-                {project.name}
-              </Text>
-              <View style={styles.badges}>
-                <View style={[
-                  styles.methodologyBadge, 
-                  { 
-                    backgroundColor: isMaintenance ? '#FEF3C7' : theme.surfaceSecondary 
-                  }
-                ]}>
-                  <FontAwesome 
-                    name={badgeConfig.icon} 
-                    size={10} 
-                    color={badgeConfig.color || theme.textTertiary} 
-                  />
-                  <Text style={[
-                    styles.methodologyText, 
-                    { color: badgeConfig.color || theme.textTertiary }
-                  ]}>
-                    {badgeConfig.label}
-                  </Text>
-                </View>
-              </View>
-            </View>
-            <FontAwesome name="chevron-right" size={12} color={theme.textTertiary} />
-          </View>
+      <View style={styles.content}>
+        <TouchableOpacity 
+          onPress={onPress} 
+          style={styles.projectContent}
+          activeOpacity={0.7}
+        >
+          {/* Color accent line */}
+          <View style={[styles.accentLine, { backgroundColor: project.color || theme.primary }]} />
           
-          {/* Progress bar (if tasks exist) */}
-          {taskCount !== undefined && taskCount > 0 && (
-            <View style={styles.progressSection}>
-              <View style={[styles.progressBar, { backgroundColor: theme.surfaceTertiary }]}>
-                <View 
-                  style={[
-                    styles.progressFill, 
-                    { 
-                      width: `${progress}%`,
-                      backgroundColor: progress === 100 ? theme.success : project.color || theme.primary,
-                    }
-                  ]} 
+          <View style={styles.mainContent}>
+            <View style={styles.topRow}>
+              <View
+                style={[
+                  styles.iconContainer,
+                  { backgroundColor: (project.color || theme.primary) + '15' },
+                ]}
+              >
+                <FontAwesome
+                  name={(project.icon || 'folder') as any}
+                  size={20}
+                  color={project.color || theme.primary}
                 />
               </View>
-              <Text style={[styles.progressText, { color: theme.textTertiary }]}>
-                {completedCount || 0}/{taskCount} tasks ({progress}%)
-              </Text>
+              <View style={styles.info}>
+                <Text style={[styles.name, { color: theme.text }]} numberOfLines={1}>
+                  {project.name}
+                </Text>
+                <View style={styles.badges}>
+                  <View style={[
+                    styles.methodologyBadge, 
+                    { 
+                      backgroundColor: isMaintenance ? '#FEF3C7' : theme.surfaceSecondary 
+                    }
+                  ]}>
+                    <FontAwesome 
+                      name={badgeConfig.icon} 
+                      size={10} 
+                      color={badgeConfig.color || theme.textTertiary} 
+                    />
+                    <Text style={[
+                      styles.methodologyText, 
+                      { color: badgeConfig.color || theme.textTertiary }
+                    ]}>
+                      {badgeConfig.label}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              <FontAwesome name="chevron-right" size={12} color={theme.textTertiary} />
             </View>
-          )}
-          
-          {/* Empty state */}
-          {(taskCount === undefined || taskCount === 0) && (
-            <Text style={[styles.emptyText, { color: theme.textTertiary }]}>
-              No tasks yet
-            </Text>
-          )}
-        </View>
-      </TouchableOpacity>
+            
+            {/* Progress bar (if tasks exist) */}
+            {taskCount !== undefined && taskCount > 0 && (
+              <View style={styles.progressSection}>
+                <View style={[styles.progressBar, { backgroundColor: theme.surfaceTertiary }]}>
+                  <View 
+                    style={[
+                      styles.progressFill, 
+                      { 
+                        width: `${progress}%`,
+                        backgroundColor: progress === 100 ? theme.success : project.color || theme.primary,
+                      }
+                    ]} 
+                  />
+                </View>
+                <Text style={[styles.progressText, { color: theme.textTertiary }]}>
+                  {completedCount || 0}/{taskCount} tasks ({progress}%)
+                </Text>
+              </View>
+            )}
+            
+            {/* Empty state */}
+            {(taskCount === undefined || taskCount === 0) && (
+              <Text style={[styles.emptyText, { color: theme.textTertiary }]}>
+                No tasks yet
+              </Text>
+            )}
+          </View>
+        </TouchableOpacity>
+        {onDelete && (
+          <TouchableOpacity 
+            onPress={onDelete} 
+            style={styles.deleteButton}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <FontAwesome name="trash-o" size={16} color={theme.error} />
+          </TouchableOpacity>
+        )}
+      </View>
     </Card>
   );
 }
@@ -122,6 +135,15 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     minHeight: Platform.OS === 'web' ? 72 : 80,
+  },
+  projectContent: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  deleteButton: {
+    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   accentLine: {
     width: 4,

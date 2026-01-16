@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Platform, View } from 'react-native';
+import { FlatList, StyleSheet, Platform, View, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useProjectStore } from '@/store/projectStore';
 import { useTaskStore } from '@/store/taskStore';
@@ -15,7 +15,7 @@ const isMobile = Platform.OS !== 'web';
 export default function ProjectsScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const { projects, loading, fetchProjects, createProject, updateProject } = useProjectStore();
+  const { projects, loading, fetchProjects, createProject, updateProject, deleteProject } = useProjectStore();
   const { createTask, fetchTasks } = useTaskStore();
   const [projectFormVisible, setProjectFormVisible] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
@@ -89,6 +89,32 @@ export default function ProjectsScreen() {
     }
   };
 
+  const handleDeleteProject = async (projectId: string, projectName: string) => {
+    Alert.alert(
+      'Delete Project',
+      `Are you sure you want to delete "${projectName}"? This action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!user?.id) return;
+            try {
+              await deleteProject(projectId);
+              fetchProjects(user.id);
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to delete project');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Mobile Layout
   if (isMobile) {
     return (
@@ -152,6 +178,7 @@ export default function ProjectsScreen() {
             project={item}
             taskCount={0}
             onPress={() => router.push(`/project/${item.id}`)}
+            onDelete={() => handleDeleteProject(item.id, item.name)}
           />
         )}
         contentContainerStyle={styles.list}
