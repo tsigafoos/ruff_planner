@@ -49,8 +49,8 @@ const NODE_MARGIN = 20;
 const CANVAS_PADDING = 40;
 
 export default function DependencyCanvas({ tasks, projectId, onTaskClick }: DependencyCanvasProps) {
-  const { resolvedTheme } = useThemeStore();
-  const theme = themes[resolvedTheme];
+  const { themeMode } = useThemeStore();
+  const theme = themes[themeMode];
   const { addBlocker, removeBlocker, hasCircularDependency } = useTaskStore();
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);

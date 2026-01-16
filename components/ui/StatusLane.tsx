@@ -58,8 +58,8 @@ export default function StatusLane({
   dataLaneKey,
 }: StatusLaneProps) {
   const theme = useTheme();
-  const { resolvedTheme } = useThemeStore();
-  const isDark = theme.background === '#0f0f11' || resolvedTheme === 'dark';
+  const { themeMode } = useThemeStore();
+  const isDark = theme.background === '#0f0f11' || themeMode === 'dark';
   
   const laneColors = isDark 
     ? DARK_LANE_COLORS[colorIndex % DARK_LANE_COLORS.length] 

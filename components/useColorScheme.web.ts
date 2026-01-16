@@ -6,6 +6,6 @@
 import { useThemeStore } from '@/store/themeStore';
 
 export function useColorScheme() {
-  const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
-  return resolvedTheme;
+  const themeMode = useThemeStore((state) => state.themeMode);
+  return themeMode;
 }

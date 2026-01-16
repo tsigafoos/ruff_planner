@@ -44,8 +44,8 @@ export default function Sidebar({
 }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { toggleTheme, resolvedTheme } = useThemeStore();
-  const theme = themes[resolvedTheme];
+  const { toggleTheme, themeMode } = useThemeStore();
+  const theme = themes[themeMode];
   const { profile } = useProfileStore();
   const { currentTeam } = useTeamStore();
 
@@ -187,18 +187,18 @@ export default function Sidebar({
             { justifyContent: collapsed ? 'center' : 'flex-start' },
           ]}
           onPress={toggleTheme}
-          accessibilityLabel={resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          accessibilityLabel={themeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           <View style={[styles.iconContainer, collapsed && styles.iconContainerCollapsed]}>
             <FontAwesome
-              name={resolvedTheme === 'dark' ? 'sun-o' : 'moon-o'}
+              name={themeMode === 'dark' ? 'sun-o' : 'moon-o'}
               size={16}
               color={theme.sidebarText}
             />
           </View>
           {!collapsed && (
             <Text style={[styles.footerText, { color: theme.sidebarText }]}>
-              {resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+              {themeMode === 'dark' ? 'Light Mode' : 'Dark Mode'}
             </Text>
           )}
         </TouchableOpacity>
