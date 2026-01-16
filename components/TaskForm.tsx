@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Button from './ui/Button';
 import DatePicker from './ui/DatePicker';
@@ -42,6 +42,7 @@ interface TaskFormProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (taskData: any) => Promise<void>;
+  onDelete?: (taskId: string) => Promise<void>;
   initialData?: any;
   projects?: any[];
   labels?: any[];
@@ -51,6 +52,7 @@ export default function TaskForm({
   visible,
   onClose,
   onSubmit,
+  onDelete,
   initialData,
   projects = [],
   labels = [],
@@ -410,154 +412,156 @@ export default function TaskForm({
               onChange={setDueDate}
             />
 
-            {/* Recurrence Section */}
-            <View style={styles.section}>
-              <TouchableOpacity
-                style={[styles.recurrenceToggle, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}
-                onPress={() => {
-                  setRecurrenceEnabled(!recurrenceEnabled);
-                  setShowRecurrenceDetails(!recurrenceEnabled);
-                }}
-              >
-                <FontAwesome 
-                  name="refresh" 
-                  size={16} 
-                  color={recurrenceEnabled ? theme.primary : theme.textSecondary} 
-                />
-                <Text style={[styles.recurrenceToggleText, { color: recurrenceEnabled ? theme.primary : theme.text }]}>
-                  {recurrenceEnabled ? 'Recurring Task' : 'Make Recurring'}
-                </Text>
-                {recurrenceEnabled && (
-                  <Text style={[styles.recurrenceDesc, { color: theme.textSecondary }]}>
-                    {getRecurrenceDescription({
-                      enabled: true,
-                      interval: recurrenceInterval,
-                      customDays: recurrenceCustomDays,
-                      daysOfWeek: recurrenceDaysOfWeek,
-                      dayOfMonth: recurrenceDayOfMonth,
-                      endDate: recurrenceEndDate,
-                      endAfterOccurrences: recurrenceEndAfter,
-                      regenerateOnComplete: true,
-                      preserveTime: true,
-                    })}
+            {/* Recurrence Section - Hidden on mobile for simplicity */}
+            {Platform.OS === 'web' && (
+              <View style={styles.section}>
+                <TouchableOpacity
+                  style={[styles.recurrenceToggle, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}
+                  onPress={() => {
+                    setRecurrenceEnabled(!recurrenceEnabled);
+                    setShowRecurrenceDetails(!recurrenceEnabled);
+                  }}
+                >
+                  <FontAwesome 
+                    name="refresh" 
+                    size={16} 
+                    color={recurrenceEnabled ? theme.primary : theme.textSecondary} 
+                  />
+                  <Text style={[styles.recurrenceToggleText, { color: recurrenceEnabled ? theme.primary : theme.text }]}>
+                    {recurrenceEnabled ? 'Recurring Task' : 'Make Recurring'}
                   </Text>
-                )}
-                <FontAwesome 
-                  name={showRecurrenceDetails ? 'chevron-up' : 'chevron-down'} 
-                  size={12} 
-                  color={theme.textTertiary} 
-                />
-              </TouchableOpacity>
+                  {recurrenceEnabled && (
+                    <Text style={[styles.recurrenceDesc, { color: theme.textSecondary }]}>
+                      {getRecurrenceDescription({
+                        enabled: true,
+                        interval: recurrenceInterval,
+                        customDays: recurrenceCustomDays,
+                        daysOfWeek: recurrenceDaysOfWeek,
+                        dayOfMonth: recurrenceDayOfMonth,
+                        endDate: recurrenceEndDate,
+                        endAfterOccurrences: recurrenceEndAfter,
+                        regenerateOnComplete: true,
+                        preserveTime: true,
+                      })}
+                    </Text>
+                  )}
+                  <FontAwesome 
+                    name={showRecurrenceDetails ? 'chevron-up' : 'chevron-down'} 
+                    size={12} 
+                    color={theme.textTertiary} 
+                  />
+                </TouchableOpacity>
 
-              {showRecurrenceDetails && recurrenceEnabled && (
-                <View style={[styles.recurrenceDetails, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}>
-                  {/* Quick Presets */}
-                  <Text style={[styles.recurrenceLabel, { color: theme.textSecondary }]}>Repeat</Text>
-                  <View style={styles.recurrencePresets}>
-                    {RECURRENCE_PRESETS.map((preset) => {
-                      const isSelected = recurrenceInterval === preset.config.interval && 
-                        (preset.config.interval !== 'weekly' || 
-                          JSON.stringify(recurrenceDaysOfWeek.sort()) === JSON.stringify((preset.config.daysOfWeek || []).sort()));
-                      return (
+                {showRecurrenceDetails && recurrenceEnabled && (
+                  <View style={[styles.recurrenceDetails, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}>
+                    {/* Quick Presets */}
+                    <Text style={[styles.recurrenceLabel, { color: theme.textSecondary }]}>Repeat</Text>
+                    <View style={styles.recurrencePresets}>
+                      {RECURRENCE_PRESETS.map((preset) => {
+                        const isSelected = recurrenceInterval === preset.config.interval && 
+                          (preset.config.interval !== 'weekly' || 
+                            JSON.stringify(recurrenceDaysOfWeek.sort()) === JSON.stringify((preset.config.daysOfWeek || []).sort()));
+                        return (
+                          <TouchableOpacity
+                            key={preset.label}
+                            style={[
+                              styles.recurrencePresetBtn,
+                              { 
+                                backgroundColor: isSelected ? theme.primary : theme.surface,
+                                borderColor: isSelected ? theme.primary : theme.border,
+                              }
+                            ]}
+                            onPress={() => {
+                              setRecurrenceInterval(preset.config.interval || 'weekly');
+                              setRecurrenceDaysOfWeek(preset.config.daysOfWeek || []);
+                            }}
+                          >
+                            <Text style={[
+                              styles.recurrencePresetText,
+                              { color: isSelected ? '#fff' : theme.text }
+                            ]}>
+                              {preset.label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+
+                    {/* Custom Days Input */}
+                    {recurrenceInterval === 'custom' && (
+                      <View style={styles.recurrenceCustomRow}>
+                        <Text style={[styles.recurrenceLabel, { color: theme.textSecondary }]}>Every</Text>
+                        <View style={styles.recurrenceCustomInput}>
+                          <TouchableOpacity
+                            style={[styles.recurrenceStepBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                            onPress={() => setRecurrenceCustomDays(Math.max(1, recurrenceCustomDays - 1))}
+                          >
+                            <Text style={{ color: theme.text }}>-</Text>
+                          </TouchableOpacity>
+                          <Text style={[styles.recurrenceCustomValue, { color: theme.text }]}>
+                            {recurrenceCustomDays}
+                          </Text>
+                          <TouchableOpacity
+                            style={[styles.recurrenceStepBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                            onPress={() => setRecurrenceCustomDays(recurrenceCustomDays + 1)}
+                          >
+                            <Text style={{ color: theme.text }}>+</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <Text style={[styles.recurrenceLabel, { color: theme.textSecondary }]}>days</Text>
+                      </View>
+                    )}
+
+                    {/* End Condition */}
+                    <View style={styles.recurrenceEndSection}>
+                      <Text style={[styles.recurrenceLabel, { color: theme.textSecondary }]}>End</Text>
+                      <View style={styles.recurrenceEndOptions}>
                         <TouchableOpacity
-                          key={preset.label}
                           style={[
-                            styles.recurrencePresetBtn,
+                            styles.recurrenceEndBtn,
                             { 
-                              backgroundColor: isSelected ? theme.primary : theme.surface,
-                              borderColor: isSelected ? theme.primary : theme.border,
+                              backgroundColor: !recurrenceEndDate && !recurrenceEndAfter ? theme.primary : theme.surface,
+                              borderColor: !recurrenceEndDate && !recurrenceEndAfter ? theme.primary : theme.border,
                             }
                           ]}
                           onPress={() => {
-                            setRecurrenceInterval(preset.config.interval || 'weekly');
-                            setRecurrenceDaysOfWeek(preset.config.daysOfWeek || []);
+                            setRecurrenceEndDate(undefined);
+                            setRecurrenceEndAfter(undefined);
                           }}
                         >
                           <Text style={[
-                            styles.recurrencePresetText,
-                            { color: isSelected ? '#fff' : theme.text }
+                            styles.recurrenceEndBtnText,
+                            { color: !recurrenceEndDate && !recurrenceEndAfter ? '#fff' : theme.text }
                           ]}>
-                            {preset.label}
+                            Never
                           </Text>
                         </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-
-                  {/* Custom Days Input */}
-                  {recurrenceInterval === 'custom' && (
-                    <View style={styles.recurrenceCustomRow}>
-                      <Text style={[styles.recurrenceLabel, { color: theme.textSecondary }]}>Every</Text>
-                      <View style={styles.recurrenceCustomInput}>
                         <TouchableOpacity
-                          style={[styles.recurrenceStepBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                          onPress={() => setRecurrenceCustomDays(Math.max(1, recurrenceCustomDays - 1))}
+                          style={[
+                            styles.recurrenceEndBtn,
+                            { 
+                              backgroundColor: recurrenceEndAfter ? theme.primary : theme.surface,
+                              borderColor: recurrenceEndAfter ? theme.primary : theme.border,
+                            }
+                          ]}
+                          onPress={() => {
+                            setRecurrenceEndAfter(recurrenceEndAfter ? undefined : 10);
+                            setRecurrenceEndDate(undefined);
+                          }}
                         >
-                          <Text style={{ color: theme.text }}>-</Text>
-                        </TouchableOpacity>
-                        <Text style={[styles.recurrenceCustomValue, { color: theme.text }]}>
-                          {recurrenceCustomDays}
-                        </Text>
-                        <TouchableOpacity
-                          style={[styles.recurrenceStepBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                          onPress={() => setRecurrenceCustomDays(recurrenceCustomDays + 1)}
-                        >
-                          <Text style={{ color: theme.text }}>+</Text>
+                          <Text style={[
+                            styles.recurrenceEndBtnText,
+                            { color: recurrenceEndAfter ? '#fff' : theme.text }
+                          ]}>
+                            After {recurrenceEndAfter || 10}x
+                          </Text>
                         </TouchableOpacity>
                       </View>
-                      <Text style={[styles.recurrenceLabel, { color: theme.textSecondary }]}>days</Text>
-                    </View>
-                  )}
-
-                  {/* End Condition */}
-                  <View style={styles.recurrenceEndSection}>
-                    <Text style={[styles.recurrenceLabel, { color: theme.textSecondary }]}>End</Text>
-                    <View style={styles.recurrenceEndOptions}>
-                      <TouchableOpacity
-                        style={[
-                          styles.recurrenceEndBtn,
-                          { 
-                            backgroundColor: !recurrenceEndDate && !recurrenceEndAfter ? theme.primary : theme.surface,
-                            borderColor: !recurrenceEndDate && !recurrenceEndAfter ? theme.primary : theme.border,
-                          }
-                        ]}
-                        onPress={() => {
-                          setRecurrenceEndDate(undefined);
-                          setRecurrenceEndAfter(undefined);
-                        }}
-                      >
-                        <Text style={[
-                          styles.recurrenceEndBtnText,
-                          { color: !recurrenceEndDate && !recurrenceEndAfter ? '#fff' : theme.text }
-                        ]}>
-                          Never
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[
-                          styles.recurrenceEndBtn,
-                          { 
-                            backgroundColor: recurrenceEndAfter ? theme.primary : theme.surface,
-                            borderColor: recurrenceEndAfter ? theme.primary : theme.border,
-                          }
-                        ]}
-                        onPress={() => {
-                          setRecurrenceEndAfter(recurrenceEndAfter ? undefined : 10);
-                          setRecurrenceEndDate(undefined);
-                        }}
-                      >
-                        <Text style={[
-                          styles.recurrenceEndBtnText,
-                          { color: recurrenceEndAfter ? '#fff' : theme.text }
-                        ]}>
-                          After {recurrenceEndAfter || 10}x
-                        </Text>
-                      </TouchableOpacity>
                     </View>
                   </View>
-                </View>
-              )}
-            </View>
+                )}
+              </View>
+            )}
 
             <PriorityPicker
               label="Priority"
@@ -689,6 +693,40 @@ export default function TaskForm({
           </ScrollView>
 
           <View style={[styles.footer, { borderTopColor: theme.border }]}>
+            {initialData && onDelete && (
+              <TouchableOpacity
+                style={[styles.deleteButton, { backgroundColor: '#EF4444' }]}
+                onPress={() => {
+                  Alert.alert(
+                    'Delete Task',
+                    `Are you sure you want to delete "${title}"? This action cannot be undone.`,
+                    [
+                      {
+                        text: 'Cancel',
+                        style: 'cancel',
+                      },
+                      {
+                        text: 'Delete',
+                        style: 'destructive',
+                        onPress: async () => {
+                          if (initialData?.id && onDelete) {
+                            try {
+                              await onDelete(initialData.id);
+                              onClose();
+                            } catch (error: any) {
+                              Alert.alert('Error', error.message || 'Failed to delete task');
+                            }
+                          }
+                        },
+                      },
+                    ]
+                  );
+                }}
+              >
+                <FontAwesome name="trash" size={14} color="#ffffff" />
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            )}
             <Button
               title="Cancel"
               onPress={onClose}
@@ -854,6 +892,20 @@ const styles = StyleSheet.create({
   },
   footerButton: {
     minWidth: 100,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginRight: 'auto',
+  },
+  deleteButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   // Recurrence styles
   recurrenceToggle: {

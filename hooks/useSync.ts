@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
 import { supabase } from '../lib/supabase/client';
 import { useSyncStore } from '../store/syncStore';
@@ -7,10 +7,27 @@ import { useAuthStore } from '../store/authStore';
 export function useSync() {
   const { user } = useAuthStore();
   const { syncing, setSyncing } = useSyncStore();
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSyncRef = useRef<number>(0);
 
   const performSync = useCallback(async () => {
     // Only sync on native (web uses Supabase directly)
     if (Platform.OS === 'web' || !user?.id || syncing) return;
+    
+    // Debounce: don't sync more than once every 2 seconds
+    const now = Date.now();
+    if (now - lastSyncRef.current < 2000) {
+      // Clear existing timeout and set a new one
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+      syncTimeoutRef.current = setTimeout(() => {
+        performSync();
+      }, 2000);
+      return;
+    }
+    
+    lastSyncRef.current = now;
     
     try {
       // Lazy load sync function only on native
@@ -66,6 +83,9 @@ export function useSync() {
       tasksChannel.unsubscribe();
       projectsChannel.unsubscribe();
       labelsChannel.unsubscribe();
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
     };
   }, [user?.id, performSync]);
 

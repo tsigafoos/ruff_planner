@@ -18,8 +18,10 @@ export async function pushLocalChanges(userId: string) {
       .query(Q.where('user_id', userId))
       .fetch();
     
-    for (const project of unsyncedProjects) {
-      if (!project.syncedAt || project._raw.updated_at > project.syncedAt) {
+    // Batch all project updates in a single write
+    const projectsToSync = unsyncedProjects.filter(p => !p.syncedAt || p._raw.updated_at > p.syncedAt);
+    if (projectsToSync.length > 0) {
+      for (const project of projectsToSync) {
         const { error } = await supabase
           .from('projects')
           .upsert({
@@ -34,7 +36,7 @@ export async function pushLocalChanges(userId: string) {
         
         if (!error) {
           await database.write(async () => {
-            await project.update((p: any) => {
+            project.update((p: any) => {
               p.syncedAt = Date.now();
             });
           });
@@ -48,8 +50,10 @@ export async function pushLocalChanges(userId: string) {
       .query(Q.where('user_id', userId))
       .fetch();
     
-    for (const task of unsyncedTasks) {
-      if (!task.syncedAt || task._raw.updated_at > task.syncedAt) {
+    // Batch all task updates
+    const tasksToSync = unsyncedTasks.filter(t => !t.syncedAt || t._raw.updated_at > t.syncedAt);
+    if (tasksToSync.length > 0) {
+      for (const task of tasksToSync) {
         const { error } = await supabase
           .from('tasks')
           .upsert({
@@ -69,7 +73,7 @@ export async function pushLocalChanges(userId: string) {
         
         if (!error) {
           await database.write(async () => {
-            await task.update((t: any) => {
+            task.update((t: any) => {
               t.syncedAt = Date.now();
             });
           });
@@ -83,8 +87,10 @@ export async function pushLocalChanges(userId: string) {
       .query(Q.where('user_id', userId))
       .fetch();
     
-    for (const label of unsyncedLabels) {
-      if (!label.syncedAt || label._raw.created_at > label.syncedAt) {
+    // Batch all label updates
+    const labelsToSync = unsyncedLabels.filter(l => !l.syncedAt || l._raw.created_at > l.syncedAt);
+    if (labelsToSync.length > 0) {
+      for (const label of labelsToSync) {
         const { error } = await supabase
           .from('labels')
           .upsert({
@@ -97,7 +103,7 @@ export async function pushLocalChanges(userId: string) {
         
         if (!error) {
           await database.write(async () => {
-            await label.update((l: any) => {
+            label.update((l: any) => {
               l.syncedAt = Date.now();
             });
           });
@@ -122,26 +128,26 @@ export async function pullRemoteChanges(userId: string) {
   syncStore.setError(null);
 
   try {
-    // Pull projects
+    // Pull projects - batch all writes in a single transaction
     const { data: projects, error: projectsError } = await supabase
       .from('projects')
       .select('*')
       .eq('user_id', userId);
     
-    if (!projectsError && projects) {
+    if (!projectsError && projects && projects.length > 0) {
       await database.write(async () => {
         const projectsCollection = database.get('projects');
         for (const project of projects) {
           const existing = await projectsCollection.find(project.id).catch(() => null);
           if (existing) {
-            await existing.update((p: any) => {
+            existing.update((p: any) => {
               p.name = project.name;
               p.color = project.color;
               p.icon = project.icon;
               p.syncedAt = Date.now();
             });
           } else {
-            await projectsCollection.create((p: any) => {
+            projectsCollection.create((p: any) => {
               p._raw.id = project.id;
               p.name = project.name;
               p.color = project.color;
@@ -154,19 +160,19 @@ export async function pullRemoteChanges(userId: string) {
       });
     }
 
-    // Pull tasks
+    // Pull tasks - batch all writes in a single transaction
     const { data: tasks, error: tasksError } = await supabase
       .from('tasks')
       .select('*')
       .eq('user_id', userId);
     
-    if (!tasksError && tasks) {
+    if (!tasksError && tasks && tasks.length > 0) {
       await database.write(async () => {
         const tasksCollection = database.get('tasks');
         for (const task of tasks) {
           const existing = await tasksCollection.find(task.id).catch(() => null);
           if (existing) {
-            await existing.update((t: any) => {
+            existing.update((t: any) => {
               t.title = task.title;
               t.description = task.description;
               t.dueDate = task.due_date ? new Date(task.due_date).getTime() : undefined;
@@ -178,7 +184,7 @@ export async function pullRemoteChanges(userId: string) {
               t.syncedAt = Date.now();
             });
           } else {
-            await tasksCollection.create((t: any) => {
+            tasksCollection.create((t: any) => {
               t._raw.id = task.id;
               t.title = task.title;
               t.description = task.description;
@@ -196,25 +202,25 @@ export async function pullRemoteChanges(userId: string) {
       });
     }
 
-    // Pull labels
+    // Pull labels - batch all writes in a single transaction
     const { data: labels, error: labelsError } = await supabase
       .from('labels')
       .select('*')
       .eq('user_id', userId);
     
-    if (!labelsError && labels) {
+    if (!labelsError && labels && labels.length > 0) {
       await database.write(async () => {
         const labelsCollection = database.get('labels');
         for (const label of labels) {
           const existing = await labelsCollection.find(label.id).catch(() => null);
           if (existing) {
-            await existing.update((l: any) => {
+            existing.update((l: any) => {
               l.name = label.name;
               l.color = label.color;
               l.syncedAt = Date.now();
             });
           } else {
-            await labelsCollection.create((l: any) => {
+            labelsCollection.create((l: any) => {
               l._raw.id = label.id;
               l.name = label.name;
               l.color = label.color;

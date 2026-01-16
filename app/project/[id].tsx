@@ -210,6 +210,16 @@ export default function ProjectDetailScreen() {
     );
   };
 
+  const handleDeleteTask = async (taskId: string) => {
+    if (!user?.id) return;
+    try {
+      await deleteTask(taskId);
+      refreshTasks();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to delete task');
+    }
+  };
+
   // Drag and drop handlers using touch/mouse events
   const handleDragStart = (taskId: string, e: any) => {
     const x = Platform.OS === 'web' ? e.clientX : e.nativeEvent.pageX;
@@ -439,6 +449,158 @@ export default function ProjectDetailScreen() {
     </View>
   );
 
+  // Mobile-specific layout
+  const renderMobileLayout = () => (
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Project Info Sheet */}
+      <View style={[styles.mobileProjectSheet, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+        <View style={styles.mobileProjectHeader}>
+          <TouchableOpacity 
+            onPress={() => {
+              console.log('Back button pressed');
+              router.back();
+            }} 
+            style={[styles.mobileBackButton, { backgroundColor: theme.surfaceSecondary, borderWidth: 1, borderColor: theme.border }]}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <FontAwesome name="angle-left" size={18} color={theme.text} />
+          </TouchableOpacity>
+          <View style={styles.mobileProjectHeaderContent}>
+            <View style={[styles.projectIcon, { backgroundColor: (project.color || theme.primary) + '12' }]}>
+              <FontAwesome
+                name={(project.icon || 'folder-o') as any}
+                size={20}
+                color={project.color || theme.primary}
+              />
+            </View>
+            <View style={styles.mobileProjectInfo}>
+              <Text style={[styles.mobileProjectTitle, { color: theme.text }]}>{project.name}</Text>
+              <View style={styles.mobileProjectMeta}>
+                <View style={[
+                  styles.projectTypeBadge, 
+                  { 
+                    backgroundColor: isMaintenance ? '#FEF3C7' : theme.primary + '15' 
+                  }
+                ]}>
+                  <Text style={[
+                    styles.projectTypeText, 
+                    { color: isMaintenance ? '#F59E0B' : theme.primary }
+                  ]}>
+                    {isMaintenance ? 'Maintenance' : isAgile ? 'Agile' : 'Waterfall'}
+                  </Text>
+                </View>
+                <Text style={[styles.mobileProjectSubtitle, { color: theme.textSecondary }]}>
+                  {tasks.length} task{tasks.length !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={[styles.mobileEditButton, { backgroundColor: theme.primary }]}
+            onPress={() => {
+              console.log('Edit button pressed');
+              setProjectFormVisible(true);
+            }}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <FontAwesome name="pencil" size={14} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Tasks Section */}
+      <View style={styles.mobileTasksSection}>
+        <View style={styles.mobileTasksHeader}>
+          <Text style={[styles.mobileTasksTitle, { color: theme.text }]}>Tasks</Text>
+          <TouchableOpacity
+            style={[styles.mobileAddTaskButton, { backgroundColor: theme.primary }]}
+            onPress={() => setNewTaskFormVisible(true)}
+          >
+            <FontAwesome name="plus" size={14} color="#ffffff" />
+            <Text style={styles.mobileAddTaskButtonText}>Add Task</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView 
+          showsVerticalScrollIndicator={true}
+          style={styles.mobileTasksScroll}
+          contentContainerStyle={styles.mobileTasksContent}
+        >
+          {tasks.map((task: any) => {
+            const status = getTaskStatus(task);
+            const statusColors: Record<TaskStatus, { bg: string; border: string; text: string }> = {
+              'to_do': { bg: '#F3F4F6', border: '#D1D5DB', text: '#374151' },
+              'in_progress': { bg: '#DBEAFE', border: '#93C5FD', text: '#1E40AF' },
+              'blocked': { bg: '#FEE2E2', border: '#FCA5A5', text: '#991B1B' },
+              'on_hold': { bg: '#FEF3C7', border: '#FCD34D', text: '#92400E' },
+              'completed': { bg: '#D1FAE5', border: '#6EE7B7', text: '#065F46' },
+              'cancelled': { bg: '#F3F4F6', border: '#9CA3AF', text: '#6B7280' },
+            };
+            const colors = statusColors[status] || statusColors['to_do'];
+            
+            return (
+              <TouchableOpacity
+                key={task.id}
+                style={[styles.mobileTaskCard, { backgroundColor: colors.bg, borderColor: colors.border }]}
+                onPress={() => handleEditTask(task)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.mobileTaskCardContent}>
+                  <Text style={[styles.mobileTaskTitle, { color: colors.text }]} numberOfLines={1}>
+                    {task.title}
+                  </Text>
+                  {task.description && (
+                    <Text style={[styles.mobileTaskDescription, { color: colors.text + 'CC' }]} numberOfLines={1}>
+                      {task.description}
+                    </Text>
+                  )}
+                  <View style={styles.mobileTaskFooter}>
+                    <Text style={[styles.mobileTaskStatusText, { color: colors.text }]}>
+                      {status.replace('_', ' ').toUpperCase()}
+                    </Text>
+                    {task.priority && (
+                      <Text style={[styles.mobileTaskPriority, { color: colors.text }]}>
+                        {'!'.repeat(task.priority)}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Modals */}
+      <TaskForm
+        visible={newTaskFormVisible}
+        onClose={() => setNewTaskFormVisible(false)}
+        onSubmit={handleAddTask}
+        projects={projects}
+        labels={labels}
+      />
+
+      <TaskForm
+        visible={taskFormVisible}
+        onClose={handleCloseTaskForm}
+        onSubmit={handleUpdateTask}
+        onDelete={handleDeleteTask}
+        initialData={selectedTask}
+        projects={projects}
+        labels={labels}
+      />
+
+      <ProjectForm
+        visible={projectFormVisible}
+        onClose={() => setProjectFormVisible(false)}
+        onSubmit={handleProjectUpdate}
+        onDelete={project?.id ? () => handleDeleteProject(project.id) : undefined}
+        initialData={project}
+      />
+    </View>
+  );
+
   const screenContent = (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
@@ -632,6 +794,7 @@ export default function ProjectDetailScreen() {
         visible={taskFormVisible}
         onClose={handleCloseTaskForm}
         onSubmit={handleUpdateTask}
+        onDelete={handleDeleteTask}
         initialData={selectedTask}
         projects={projects}
         labels={labels}
@@ -670,7 +833,8 @@ export default function ProjectDetailScreen() {
     return <WebLayout>{screenContent}</WebLayout>;
   }
 
-  return screenContent;
+  // Return mobile layout for native platforms
+  return renderMobileLayout();
 }
 
 const styles = StyleSheet.create({
@@ -872,5 +1036,129 @@ const styles = StyleSheet.create({
   },
   cancelledTaskWrapper: {
     width: Platform.OS === 'web' ? 240 : 220,
+  },
+  // Mobile-specific styles
+  mobileProjectSheet: {
+    marginTop: 60,
+    padding: 16,
+    paddingTop: 12,
+    borderBottomWidth: 1,
+  },
+  mobileProjectHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  mobileProjectHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  mobileProjectInfo: {
+    flex: 1,
+  },
+  mobileProjectTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  mobileProjectMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  mobileProjectSubtitle: {
+    fontSize: 13,
+  },
+  mobileBackButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 36,
+    minHeight: 36,
+  },
+  mobileEditButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 36,
+    minHeight: 36,
+  },
+  mobileTasksSection: {
+    flex: 1,
+    paddingTop: 16,
+  },
+  mobileTasksHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  mobileTasksTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  mobileAddTaskButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  mobileAddTaskButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  mobileTasksScroll: {
+    flex: 1,
+  },
+  mobileTasksContent: {
+    paddingHorizontal: 16,
+    gap: 12,
+    paddingBottom: 16,
+  },
+  mobileTaskCard: {
+    width: '100%',
+    height: 80,
+    borderRadius: 12,
+    borderWidth: 2,
+    overflow: 'hidden',
+  },
+  mobileTaskCardContent: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  mobileTaskTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  mobileTaskDescription: {
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  mobileTaskFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 'auto',
+  },
+  mobileTaskStatusText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  mobileTaskPriority: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

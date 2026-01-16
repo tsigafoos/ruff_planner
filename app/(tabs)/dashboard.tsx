@@ -349,6 +349,35 @@ export default function DashboardScreen() {
         },
       ]}
     >
+      {/* Stats Cards Section */}
+      <View style={styles.statsSection}>
+        {/* Projects Count Card - Full Width */}
+        <View style={[styles.projectsCountCard, { backgroundColor: theme.primary, borderColor: theme.primary }]}>
+          <Text style={[styles.projectsCountLabel, { color: '#ffffff' }]}>Projects</Text>
+          <Text style={[styles.projectsCountValue, { color: '#ffffff' }]}>{projects.length}</Text>
+        </View>
+
+        {/* Task Status Cards - 2x2 Grid */}
+        <View style={styles.taskStatusGrid}>
+          <View style={[styles.taskStatusCard, { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' }]}>
+            <Text style={[styles.taskStatusLabel, { color: '#374151' }]}>To Do</Text>
+            <Text style={[styles.taskStatusValue, { color: '#374151' }]}>{tasksByStatus['to_do']?.length || 0}</Text>
+          </View>
+          <View style={[styles.taskStatusCard, { backgroundColor: '#DBEAFE', borderColor: '#93C5FD' }]}>
+            <Text style={[styles.taskStatusLabel, { color: '#1E40AF' }]}>In Progress</Text>
+            <Text style={[styles.taskStatusValue, { color: '#1E40AF' }]}>{tasksByStatus['in_progress']?.length || 0}</Text>
+          </View>
+          <View style={[styles.taskStatusCard, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }]}>
+            <Text style={[styles.taskStatusLabel, { color: '#991B1B' }]}>Blocked</Text>
+            <Text style={[styles.taskStatusValue, { color: '#991B1B' }]}>{tasksByStatus['blocked']?.length || 0}</Text>
+          </View>
+          <View style={[styles.taskStatusCard, { backgroundColor: '#FEF3C7', borderColor: '#FCD34D' }]}>
+            <Text style={[styles.taskStatusLabel, { color: '#92400E' }]}>On Hold</Text>
+            <Text style={[styles.taskStatusValue, { color: '#92400E' }]}>{tasksByStatus['on_hold']?.length || 0}</Text>
+          </View>
+        </View>
+      </View>
+
       {/* Dynamic Dashboard View */}
       {viewMode === 'dynamic' && user?.id && (
         <DynamicDashboard
@@ -618,6 +647,59 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flex: 1,
+  },
+  statsSection: {
+    paddingHorizontal: Platform.OS === 'web' ? 40 : 16,
+    paddingTop: 24,
+    paddingBottom: 24,
+    maxWidth: Platform.OS === 'web' ? 1350 : '100%',
+  },
+  projectsCountCard: {
+    width: '100%',
+    padding: 24,
+    borderRadius: 16,
+    borderWidth: 2,
+    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  projectsCountLabel: {
+    fontSize: Platform.OS === 'web' ? 18 : 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  projectsCountValue: {
+    fontSize: Platform.OS === 'web' ? 72 : 56,
+    fontWeight: '700',
+    lineHeight: Platform.OS === 'web' ? 80 : 64,
+  },
+  taskStatusGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  taskStatusCard: {
+    width: Platform.OS === 'web' ? '48%' : '48%',
+    minWidth: Platform.OS === 'web' ? 200 : 150,
+    padding: 20,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  taskStatusLabel: {
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    fontWeight: '600',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  taskStatusValue: {
+    fontSize: Platform.OS === 'web' ? 36 : 32,
+    fontWeight: '700',
+    lineHeight: Platform.OS === 'web' ? 40 : 36,
   },
   topSection: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
