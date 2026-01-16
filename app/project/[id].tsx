@@ -18,7 +18,7 @@ import { useTaskStore } from '@/store/taskStore';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 
 type ProjectView = 'dashboard' | 'dependencies' | 'resources';
 
@@ -37,7 +37,7 @@ export default function ProjectDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuthStore();
   const { tasks, loading, fetchTasks, fetchTasksByProject, createTask, updateTask, updateTaskPhase, completeTask, deleteTask } = useTaskStore();
-  const { projects, fetchProjects, updateProject } = useProjectStore();
+  const { projects, fetchProjects, updateProject, deleteProject } = useProjectStore();
   const { labels, fetchLabels } = useLabelStore();
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [taskFormVisible, setTaskFormVisible] = useState(false);
@@ -179,6 +179,35 @@ export default function ProjectDetailScreen() {
     } catch (error) {
       console.error('Error updating project:', error);
     }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    if (!project) return;
+    
+    Alert.alert(
+      'Delete Project',
+      `Are you sure you want to delete "${project.name}"? This action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!user?.id) return;
+            try {
+              await deleteProject(projectId);
+              setProjectFormVisible(false);
+              router.replace('/(tabs)/projects');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to delete project');
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Drag and drop handlers using touch/mouse events
@@ -612,6 +641,7 @@ export default function ProjectDetailScreen() {
         visible={projectFormVisible}
         onClose={() => setProjectFormVisible(false)}
         onSubmit={handleProjectUpdate}
+        onDelete={project?.id ? () => handleDeleteProject(project.id) : undefined}
         initialData={project}
       />
 
