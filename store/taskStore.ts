@@ -310,26 +310,33 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
       if (Platform.OS === 'web') {
         // Use Supabase directly on web
+        // Build insert data object - only include recurrence if it has a value
+        const insertData: any = {
+          title: taskData.title,
+          description: taskData.description || null,
+          start_date: taskData.startDate ? new Date(taskData.startDate).toISOString() : new Date().toISOString(),
+          due_date: taskData.dueDate ? new Date(taskData.dueDate).toISOString() : null,
+          priority: taskData.priority || 1,
+          project_id: projectId,
+          label_ids: taskData.labelIds || [],
+          user_id: taskData.userId,
+          recurring_pattern: taskData.recurringPattern || null,
+          status: taskData.status || 'to_do',
+          project_phase: taskData.projectPhase || null, // Agile phase (null for Waterfall)
+          assignee_id: taskData.assigneeId || null,
+          blocked_by: taskData.blockedBy || [],
+          category: taskData.category || null, // Maintenance category (null for non-maintenance)
+          completed_at: (taskData.completed || taskData.status === 'completed') ? new Date().toISOString() : null,
+        };
+        
+        // Only include recurrence if it exists and is enabled (column may not exist in DB yet)
+        if (taskData.recurrence && taskData.recurrence.enabled) {
+          insertData.recurrence = taskData.recurrence;
+        }
+        
         const { data, error } = await supabase
           .from('tasks')
-          .insert({
-            title: taskData.title,
-            description: taskData.description || null,
-            start_date: taskData.startDate ? new Date(taskData.startDate).toISOString() : new Date().toISOString(),
-            due_date: taskData.dueDate ? new Date(taskData.dueDate).toISOString() : null,
-            priority: taskData.priority || 1,
-            project_id: projectId,
-            label_ids: taskData.labelIds || [],
-            user_id: taskData.userId,
-            recurring_pattern: taskData.recurringPattern || null,
-            recurrence: taskData.recurrence || null, // New structured recurrence config
-            status: taskData.status || 'to_do',
-            project_phase: taskData.projectPhase || null, // Agile phase (null for Waterfall)
-            assignee_id: taskData.assigneeId || null,
-            blocked_by: taskData.blockedBy || [],
-            category: taskData.category || null, // Maintenance category (null for non-maintenance)
-            completed_at: (taskData.completed || taskData.status === 'completed') ? new Date().toISOString() : null,
-          })
+          .insert(insertData)
           .select()
           .single();
         
@@ -386,7 +393,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         if (updates.projectId !== undefined) updateData.project_id = updates.projectId;
         if (updates.labelIds !== undefined) updateData.label_ids = updates.labelIds;
         if (updates.recurringPattern !== undefined) updateData.recurring_pattern = updates.recurringPattern;
-        if (updates.recurrence !== undefined) updateData.recurrence = updates.recurrence;
+        // Only include recurrence if it's enabled (column may not exist in DB yet)
+        if (updates.recurrence !== undefined && updates.recurrence?.enabled) {
+          updateData.recurrence = updates.recurrence;
+        }
         if (updates.status !== undefined) updateData.status = updates.status;
         if (updates.projectPhase !== undefined) updateData.project_phase = updates.projectPhase;
         if (updates.assigneeId !== undefined) updateData.assignee_id = updates.assigneeId;
