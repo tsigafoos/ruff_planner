@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Icon from './ui/Icon';
 import Card from './ui/Card';
 import { useTheme } from '@/components/useTheme';
 
@@ -48,8 +48,8 @@ export default function ProjectCard({ project, taskCount, completedCount, onPres
                 { backgroundColor: (project.color || theme.primary) + '15' },
               ]}
             >
-              <FontAwesome
-                name={(project.icon || 'folder') as any}
+              <Icon
+                name={project.icon || 'folder'}
                 size={20}
                 color={project.color || theme.primary}
               />
@@ -65,7 +65,7 @@ export default function ProjectCard({ project, taskCount, completedCount, onPres
                     backgroundColor: isMaintenance ? '#FEF3C7' : theme.surfaceSecondary 
                   }
                 ]}>
-                  <FontAwesome 
+                  <Icon 
                     name={badgeConfig.icon} 
                     size={10} 
                     color={badgeConfig.color || theme.textTertiary} 
@@ -79,7 +79,7 @@ export default function ProjectCard({ project, taskCount, completedCount, onPres
                 </View>
               </View>
             </View>
-            <FontAwesome name="chevron-right" size={12} color={theme.textTertiary} />
+            <Icon name="chevron-right" size={12} color={theme.textTertiary} />
           </View>
           
           {/* Progress bar (if tasks exist) */}

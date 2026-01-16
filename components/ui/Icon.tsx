@@ -183,6 +183,8 @@ const iconMappings: Record<string, { simple: string; colorful: string }> = {
   'map': { simple: 'map-o', colorful: 'map' },
   'map-o': { simple: 'map-o', colorful: 'map' },
   'globe': { simple: 'globe', colorful: 'globe' },
+  'id-card-o': { simple: 'id-card-o', colorful: 'id-card' },
+  'id-card': { simple: 'id-card-o', colorful: 'id-card' },
   'share': { simple: 'share', colorful: 'share-alt' },
   'share-alt': { simple: 'share', colorful: 'share-alt' },
   'retweet': { simple: 'retweet', colorful: 'retweet' },

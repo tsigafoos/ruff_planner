@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Icon from '@/components/ui/Icon';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore, themes } from '@/store/themeStore';
@@ -61,8 +61,8 @@ const DropdownMenu = ({ items, isOpen, onClose, theme }: DropdownMenuProps) => {
             onClose();
           }}
         >
-          <FontAwesome 
-            name={item.icon as any} 
+          <Icon 
+            name={item.icon} 
             size={13} 
             color={item.danger ? theme.error : theme.textSecondary} 
           />
@@ -205,9 +205,9 @@ export default function TopNavbar() {
             style={[styles.navItem, teamMenuOpen && { backgroundColor: theme.surfaceTertiary }]}
             onPress={toggleTeamMenu}
           >
-            <FontAwesome name="users" size={15} color={theme.textSecondary} />
+            <Icon name="users" size={15} color={theme.textSecondary} />
             <Text style={[styles.navText, { color: theme.textSecondary }]}>Team</Text>
-            <FontAwesome 
+            <Icon 
               name={teamMenuOpen ? 'chevron-up' : 'chevron-down'} 
               size={10} 
               color={theme.textTertiary} 
@@ -228,9 +228,9 @@ export default function TopNavbar() {
             style={[styles.navItem, profileMenuOpen && { backgroundColor: theme.surfaceTertiary }]}
             onPress={toggleProfileMenu}
           >
-            <FontAwesome name="id-card-o" size={15} color={theme.textSecondary} />
+            <Icon name="id-card-o" size={15} color={theme.textSecondary} />
             <Text style={[styles.navText, { color: theme.textSecondary }]}>Profile</Text>
-            <FontAwesome 
+            <Icon 
               name={profileMenuOpen ? 'chevron-up' : 'chevron-down'} 
               size={10} 
               color={theme.textTertiary} 
@@ -251,9 +251,9 @@ export default function TopNavbar() {
             style={[styles.navItem, accountMenuOpen && { backgroundColor: theme.surfaceTertiary }]}
             onPress={toggleAccountMenu}
           >
-            <FontAwesome name="user-o" size={15} color={theme.textSecondary} />
+            <Icon name="user-o" size={15} color={theme.textSecondary} />
             <Text style={[styles.navText, { color: theme.textSecondary }]}>Account</Text>
-            <FontAwesome 
+            <Icon 
               name={accountMenuOpen ? 'chevron-up' : 'chevron-down'} 
               size={10} 
               color={theme.textTertiary} 

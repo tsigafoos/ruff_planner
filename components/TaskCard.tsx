@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Icon from './ui/Icon';
 import Card from './ui/Card';
 import { useTheme } from '@/components/useTheme';
 
@@ -71,7 +71,7 @@ export default function TaskCard({ task, onPress, onComplete, onDelete }: TaskCa
               activeOpacity={0.8}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              {isCompleted && <FontAwesome name="check" size={12} color="#FFFFFF" />}
+              {isCompleted && <Icon name="check" size={12} color="#FFFFFF" />}
             </TouchableOpacity>
             <View style={styles.taskInfo}>
               <Text
@@ -103,7 +103,7 @@ export default function TaskCard({ task, onPress, onComplete, onDelete }: TaskCa
                     isOverdue && styles.metaItemOverdue,
                     isOverdue && { backgroundColor: theme.error + '15' },
                   ]}>
-                    <FontAwesome 
+                    <Icon 
                       name="calendar" 
                       size={11} 
                       color={isOverdue ? theme.error : theme.textTertiary} 
@@ -125,13 +125,13 @@ export default function TaskCard({ task, onPress, onComplete, onDelete }: TaskCa
                 </View>
                 {status === 'blocked' && (
                   <View style={[styles.statusBadge, { backgroundColor: theme.error + '15' }]}>
-                    <FontAwesome name="ban" size={10} color={theme.error} />
+                    <Icon name="ban" size={10} color={theme.error} />
                     <Text style={[styles.statusText, { color: theme.error }]}>Blocked</Text>
                   </View>
                 )}
                 {hasBlockers && !isCompleted && (
                   <View style={[styles.blockedByBadge, { backgroundColor: theme.warning + '15' }]}>
-                    <FontAwesome name="lock" size={10} color={theme.warning} />
+                    <Icon name="lock" size={10} color={theme.warning} />
                     <Text style={[styles.blockedByText, { color: theme.warning }]}>
                       Blocked by {blockedBy.length}
                     </Text>
@@ -148,7 +148,7 @@ export default function TaskCard({ task, onPress, onComplete, onDelete }: TaskCa
             activeOpacity={0.7}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <FontAwesome name="trash-o" size={16} color={theme.error} />
+            <Icon name="trash-o" size={16} color={theme.error} />
           </TouchableOpacity>
         )}
       </View>
