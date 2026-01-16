@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from 'react';
+import { Platform } from 'react-native';
 import { supabase } from '../lib/supabase/client';
 import { sync } from '../lib/supabase/sync';
 import { useSyncStore } from '../store/syncStore';
@@ -9,7 +10,8 @@ export function useSync() {
   const { syncing, setSyncing } = useSyncStore();
 
   const performSync = useCallback(async () => {
-    if (!user?.id || syncing) return;
+    // Only sync on native (web uses Supabase directly)
+    if (Platform.OS === 'web' || !user?.id || syncing) return;
     
     try {
       setSyncing(true);
@@ -22,7 +24,8 @@ export function useSync() {
   }, [user?.id, syncing, setSyncing]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    // Only sync on native (web uses Supabase directly)
+    if (Platform.OS === 'web' || !user?.id) return;
 
     // Initial sync
     performSync();

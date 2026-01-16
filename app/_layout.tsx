@@ -10,6 +10,7 @@ import '../global.css';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
+import { useSync } from '@/hooks/useSync';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -79,6 +80,9 @@ function RootLayoutNav() {
   const { user, loading, initialized } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
+  
+  // Auto-sync data from Supabase when user is logged in
+  useSync();
 
   // Handle auth routing - auth is already initialized by RootLayout
   useEffect(() => {

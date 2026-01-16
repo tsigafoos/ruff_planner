@@ -12,10 +12,10 @@ export async function pushLocalChanges(userId: string) {
 
   try {
     // Sync projects
+    const { Q } = require('@nozbe/watermelondb');
     const projectsCollection = database.get('projects');
     const unsyncedProjects = await projectsCollection
-      .query()
-      .filter('user_id', userId)
+      .query(Q.where('user_id', userId))
       .fetch();
     
     for (const project of unsyncedProjects) {
@@ -43,8 +43,7 @@ export async function pushLocalChanges(userId: string) {
     // Sync tasks
     const tasksCollection = database.get('tasks');
     const unsyncedTasks = await tasksCollection
-      .query()
-      .filter('user_id', userId)
+      .query(Q.where('user_id', userId))
       .fetch();
     
     for (const task of unsyncedTasks) {
@@ -77,8 +76,7 @@ export async function pushLocalChanges(userId: string) {
     // Sync labels
     const labelsCollection = database.get('labels');
     const unsyncedLabels = await labelsCollection
-      .query()
-      .filter('user_id', userId)
+      .query(Q.where('user_id', userId))
       .fetch();
     
     for (const label of unsyncedLabels) {
