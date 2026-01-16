@@ -180,6 +180,29 @@ export default function Sidebar({
 
       {/* Sidebar Footer */}
       <View style={[styles.sidebarFooter, { borderTopColor: theme.border }]}>
+        {/* Settings Link */}
+        <TouchableOpacity
+          style={[
+            styles.footerItem,
+            { justifyContent: collapsed ? 'center' : 'flex-start' },
+          ]}
+          onPress={() => router.push('/profile')}
+          accessibilityLabel="Settings"
+        >
+          <View style={[styles.iconContainer, collapsed && styles.iconContainerCollapsed]}>
+            <FontAwesome
+              name="cog"
+              size={16}
+              color={theme.sidebarText}
+            />
+          </View>
+          {!collapsed && (
+            <Text style={[styles.footerText, { color: theme.sidebarText }]}>
+              Settings
+            </Text>
+          )}
+        </TouchableOpacity>
+
         {/* Theme Toggle */}
         <TouchableOpacity
           style={[
