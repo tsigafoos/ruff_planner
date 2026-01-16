@@ -35,10 +35,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         }));
         set({ projects: normalizedProjects, loading: false });
       } else {
+        const { Q } = require('@nozbe/watermelondb');
         const projectsCollection = database.get('projects');
         const projects = await projectsCollection
-          .query()
-          .filter('user_id', userId)
+          .query(Q.where('user_id', userId))
           .fetch();
         set({ projects, loading: false });
       }
@@ -89,12 +89,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
         return newProject.id;
       } else {
-        // Native: Use WatermelonDB
+        // Native: Use WatermelonDB with Q query
+        const { Q } = require('@nozbe/watermelondb');
         const projectsCollection = database.get('projects');
         const existing = await projectsCollection
-          .query()
-          .filter('user_id', userId)
-          .filter('isDefault', true)
+          .query(
+            Q.where('user_id', userId),
+            Q.where('is_default', true)
+          )
           .fetch();
 
         if (existing.length > 0) {

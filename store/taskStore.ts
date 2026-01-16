@@ -88,12 +88,14 @@ async function getDefaultProjectId(userId: string): Promise<string> {
     if (createError) throw createError;
     return newProject.id;
   } else {
-    // Native: Use WatermelonDB
+    // Native: Use WatermelonDB with Q query
+    const { Q } = require('@nozbe/watermelondb');
     const projectsCollection = database.get('projects');
     const existing = await projectsCollection
-      .query()
-      .filter('user_id', userId)
-      .filter('isDefault', true)
+      .query(
+        Q.where('user_id', userId),
+        Q.where('is_default', true)
+      )
       .fetch();
 
     if (existing.length > 0) {
@@ -131,10 +133,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         set({ tasks: data || [], loading: false });
       } else {
         // Use WatermelonDB on native
+        const { Q } = require('@nozbe/watermelondb');
         const tasksCollection = database.get('tasks');
         const tasks = await tasksCollection
-          .query()
-          .filter('user_id', userId)
+          .query(Q.where('user_id', userId))
           .fetch();
         set({ tasks, loading: false });
       }
@@ -158,11 +160,13 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         if (error) throw error;
         set({ tasks: data || [], loading: false });
       } else {
+        const { Q } = require('@nozbe/watermelondb');
         const tasksCollection = database.get('tasks');
         const tasks = await tasksCollection
-          .query()
-          .filter('project_id', projectId)
-          .filter('user_id', userId)
+          .query(
+            Q.where('project_id', projectId),
+            Q.where('user_id', userId)
+          )
           .fetch();
         set({ tasks, loading: false });
       }
@@ -194,10 +198,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         
         set({ tasks: filteredTasks, loading: false });
       } else {
+        const { Q } = require('@nozbe/watermelondb');
         const tasksCollection = database.get('tasks');
         const tasks = await tasksCollection
-          .query()
-          .filter('user_id', userId)
+          .query(Q.where('user_id', userId))
           .fetch();
         
         const filteredTasks = tasks.filter((task: any) => {
@@ -235,10 +239,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         if (error) throw error;
         set({ tasks: data || [], loading: false });
       } else {
+        const { Q } = require('@nozbe/watermelondb');
         const tasksCollection = database.get('tasks');
         const tasks = await tasksCollection
-          .query()
-          .filter('user_id', userId)
+          .query(Q.where('user_id', userId))
           .fetch();
         
         const filteredTasks = tasks.filter((task: any) => {
@@ -275,10 +279,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         if (error) throw error;
         set({ tasks: data || [], loading: false });
       } else {
+        const { Q } = require('@nozbe/watermelondb');
         const tasksCollection = database.get('tasks');
         const tasks = await tasksCollection
-          .query()
-          .filter('user_id', userId)
+          .query(Q.where('user_id', userId))
           .fetch();
         
         const filteredTasks = tasks.filter((task: any) => {

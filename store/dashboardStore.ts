@@ -671,9 +671,14 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     if (!currentDashboard) return;
     
     try {
-      // Save all dashboards to localStorage
+      // Save all dashboards to storage (AsyncStorage on native, localStorage on web)
       const key = `dashboards-user-${currentDashboard.userId}`;
-      localStorage.setItem(key, JSON.stringify(dashboards));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(key, JSON.stringify(dashboards));
+      } else {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        await AsyncStorage.setItem(key, JSON.stringify(dashboards));
+      }
     } catch (error) {
       console.error('Error saving dashboards:', error);
     }
@@ -684,7 +689,14 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     
     try {
       const key = `dashboards-user-${userId}`;
-      const stored = localStorage.getItem(key);
+      let stored: string | null = null;
+      
+      if (typeof window !== 'undefined' && window.localStorage) {
+        stored = localStorage.getItem(key);
+      } else {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        stored = await AsyncStorage.getItem(key);
+      }
       
       if (stored) {
         const dashboards = JSON.parse(stored) as DashboardLayout[];

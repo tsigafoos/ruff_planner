@@ -29,10 +29,10 @@ export const useLabelStore = create<LabelStore>((set, get) => ({
         if (error) throw error;
         set({ labels: data || [], loading: false });
       } else {
+        const { Q } = require('@nozbe/watermelondb');
         const labelsCollection = database.get('labels');
         const labels = await labelsCollection
-          .query()
-          .filter('user_id', userId)
+          .query(Q.where('user_id', userId))
           .fetch();
         set({ labels, loading: false });
       }
