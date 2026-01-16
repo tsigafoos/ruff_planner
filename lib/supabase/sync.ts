@@ -33,8 +33,10 @@ export async function pushLocalChanges(userId: string) {
           });
         
         if (!error) {
-          await project.update((p: any) => {
-            p.syncedAt = Date.now();
+          await database.write(async () => {
+            await project.update((p: any) => {
+              p.syncedAt = Date.now();
+            });
           });
         }
       }
@@ -66,8 +68,10 @@ export async function pushLocalChanges(userId: string) {
           });
         
         if (!error) {
-          await task.update((t: any) => {
-            t.syncedAt = Date.now();
+          await database.write(async () => {
+            await task.update((t: any) => {
+              t.syncedAt = Date.now();
+            });
           });
         }
       }
@@ -92,8 +96,10 @@ export async function pushLocalChanges(userId: string) {
           });
         
         if (!error) {
-          await label.update((l: any) => {
-            l.syncedAt = Date.now();
+          await database.write(async () => {
+            await label.update((l: any) => {
+              l.syncedAt = Date.now();
+            });
           });
         }
       }
@@ -123,27 +129,29 @@ export async function pullRemoteChanges(userId: string) {
       .eq('user_id', userId);
     
     if (!projectsError && projects) {
-      const projectsCollection = database.get('projects');
-      for (const project of projects) {
-        const existing = await projectsCollection.find(project.id).catch(() => null);
-        if (existing) {
-          await existing.update((p: any) => {
-            p.name = project.name;
-            p.color = project.color;
-            p.icon = project.icon;
-            p.syncedAt = Date.now();
-          });
-        } else {
-          await projectsCollection.create((p: any) => {
-            p._raw.id = project.id;
-            p.name = project.name;
-            p.color = project.color;
-            p.icon = project.icon;
-            p.userId = userId;
-            p.syncedAt = Date.now();
-          });
+      await database.write(async () => {
+        const projectsCollection = database.get('projects');
+        for (const project of projects) {
+          const existing = await projectsCollection.find(project.id).catch(() => null);
+          if (existing) {
+            await existing.update((p: any) => {
+              p.name = project.name;
+              p.color = project.color;
+              p.icon = project.icon;
+              p.syncedAt = Date.now();
+            });
+          } else {
+            await projectsCollection.create((p: any) => {
+              p._raw.id = project.id;
+              p.name = project.name;
+              p.color = project.color;
+              p.icon = project.icon;
+              p.userId = userId;
+              p.syncedAt = Date.now();
+            });
+          }
         }
-      }
+      });
     }
 
     // Pull tasks
@@ -153,37 +161,39 @@ export async function pullRemoteChanges(userId: string) {
       .eq('user_id', userId);
     
     if (!tasksError && tasks) {
-      const tasksCollection = database.get('tasks');
-      for (const task of tasks) {
-        const existing = await tasksCollection.find(task.id).catch(() => null);
-        if (existing) {
-          await existing.update((t: any) => {
-            t.title = task.title;
-            t.description = task.description;
-            t.dueDate = task.due_date ? new Date(task.due_date).getTime() : undefined;
-            t.priority = task.priority;
-            t.projectId = task.project_id;
-            t.labelIds = JSON.stringify(task.label_ids || []);
-            t.completedAt = task.completed_at ? new Date(task.completed_at).getTime() : undefined;
-            t.recurringPattern = task.recurring_pattern;
-            t.syncedAt = Date.now();
-          });
-        } else {
-          await tasksCollection.create((t: any) => {
-            t._raw.id = task.id;
-            t.title = task.title;
-            t.description = task.description;
-            t.dueDate = task.due_date ? new Date(task.due_date).getTime() : undefined;
-            t.priority = task.priority;
-            t.projectId = task.project_id;
-            t.labelIds = JSON.stringify(task.label_ids || []);
-            t.completedAt = task.completed_at ? new Date(task.completed_at).getTime() : undefined;
-            t.recurringPattern = task.recurring_pattern;
-            t.userId = userId;
-            t.syncedAt = Date.now();
-          });
+      await database.write(async () => {
+        const tasksCollection = database.get('tasks');
+        for (const task of tasks) {
+          const existing = await tasksCollection.find(task.id).catch(() => null);
+          if (existing) {
+            await existing.update((t: any) => {
+              t.title = task.title;
+              t.description = task.description;
+              t.dueDate = task.due_date ? new Date(task.due_date).getTime() : undefined;
+              t.priority = task.priority;
+              t.projectId = task.project_id;
+              t.labelIds = JSON.stringify(task.label_ids || []);
+              t.completedAt = task.completed_at ? new Date(task.completed_at).getTime() : undefined;
+              t.recurringPattern = task.recurring_pattern;
+              t.syncedAt = Date.now();
+            });
+          } else {
+            await tasksCollection.create((t: any) => {
+              t._raw.id = task.id;
+              t.title = task.title;
+              t.description = task.description;
+              t.dueDate = task.due_date ? new Date(task.due_date).getTime() : undefined;
+              t.priority = task.priority;
+              t.projectId = task.project_id;
+              t.labelIds = JSON.stringify(task.label_ids || []);
+              t.completedAt = task.completed_at ? new Date(task.completed_at).getTime() : undefined;
+              t.recurringPattern = task.recurring_pattern;
+              t.userId = userId;
+              t.syncedAt = Date.now();
+            });
+          }
         }
-      }
+      });
     }
 
     // Pull labels
@@ -193,25 +203,27 @@ export async function pullRemoteChanges(userId: string) {
       .eq('user_id', userId);
     
     if (!labelsError && labels) {
-      const labelsCollection = database.get('labels');
-      for (const label of labels) {
-        const existing = await labelsCollection.find(label.id).catch(() => null);
-        if (existing) {
-          await existing.update((l: any) => {
-            l.name = label.name;
-            l.color = label.color;
-            l.syncedAt = Date.now();
-          });
-        } else {
-          await labelsCollection.create((l: any) => {
-            l._raw.id = label.id;
-            l.name = label.name;
-            l.color = label.color;
-            l.userId = userId;
-            l.syncedAt = Date.now();
-          });
+      await database.write(async () => {
+        const labelsCollection = database.get('labels');
+        for (const label of labels) {
+          const existing = await labelsCollection.find(label.id).catch(() => null);
+          if (existing) {
+            await existing.update((l: any) => {
+              l.name = label.name;
+              l.color = label.color;
+              l.syncedAt = Date.now();
+            });
+          } else {
+            await labelsCollection.create((l: any) => {
+              l._raw.id = label.id;
+              l.name = label.name;
+              l.color = label.color;
+              l.userId = userId;
+              l.syncedAt = Date.now();
+            });
+          }
         }
-      }
+      });
     }
 
     syncStore.setLastSyncedAt(Date.now());
