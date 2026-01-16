@@ -1,4 +1,4 @@
-import { database } from '../lib/db';
+import { database } from '../db';
 import { supabase } from './client';
 import { useSyncStore } from '../../store/syncStore';
 
