@@ -139,6 +139,7 @@ export default function ProjectsScreen() {
           }}
           onSubmit={selectedProject ? handleUpdateProject : handleCreateProject}
           onCreateWithTasks={handleCreateProjectWithTasks}
+          onDelete={selectedProject ? () => handleDeleteProject(selectedProject.id, selectedProject.name) : undefined}
           initialData={selectedProject}
         />
       </View>
@@ -178,7 +179,6 @@ export default function ProjectsScreen() {
             project={item}
             taskCount={0}
             onPress={() => router.push(`/project/${item.id}`)}
-            onDelete={() => handleDeleteProject(item.id, item.name)}
           />
         )}
         contentContainerStyle={styles.list}
@@ -192,6 +192,7 @@ export default function ProjectsScreen() {
         }}
         onSubmit={selectedProject ? handleUpdateProject : handleCreateProject}
         onCreateWithTasks={handleCreateProjectWithTasks}
+        onDelete={selectedProject ? () => handleDeleteProject(selectedProject.id, selectedProject.name) : undefined}
         initialData={selectedProject}
       />
     </PageWrapper>

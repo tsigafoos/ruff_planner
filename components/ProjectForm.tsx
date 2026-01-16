@@ -15,6 +15,7 @@ interface ProjectFormProps {
   onClose: () => void;
   onSubmit: (projectData: any) => Promise<void>;
   onCreateWithTasks?: (projectData: any, tasks: Array<TemplateTask & { dueDate: Date; startDate?: Date }>) => Promise<void>;
+  onDelete?: (projectId: string) => Promise<void>;
   initialData?: any;
 }
 
@@ -23,6 +24,7 @@ export default function ProjectForm({
   onClose,
   onSubmit,
   onCreateWithTasks,
+  onDelete,
   initialData,
 }: ProjectFormProps) {
   const theme = useTheme();
@@ -553,18 +555,40 @@ export default function ProjectForm({
           </ScrollView>
 
           <View style={[styles.footer, { borderTopColor: theme.border }]}>
-            <Button
-              title="Cancel"
-              onPress={onClose}
-              variant="secondary"
-              style={styles.footerButton}
-            />
-            <Button
-              title={initialData ? 'Update' : 'Create'}
-              onPress={handleSubmit}
-              loading={loading}
-              style={styles.footerButton}
-            />
+            <View style={styles.footerLeft}>
+              {initialData && onDelete && (
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (initialData?.id) {
+                      try {
+                        await onDelete(initialData.id);
+                        onClose();
+                      } catch (error) {
+                        console.error('Error deleting project:', error);
+                      }
+                    }
+                  }}
+                  style={[styles.deleteButton, { borderColor: theme.error }]}
+                >
+                  <FontAwesome name="trash-o" size={14} color={theme.error} />
+                  <Text style={[styles.deleteButtonText, { color: theme.error }]}>Delete</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={styles.footerRight}>
+              <Button
+                title="Cancel"
+                onPress={onClose}
+                variant="secondary"
+                style={styles.footerButton}
+              />
+              <Button
+                title={initialData ? 'Update' : 'Create'}
+                onPress={handleSubmit}
+                loading={loading}
+                style={styles.footerButton}
+              />
+            </View>
           </View>
         </View>
       </View>
@@ -727,13 +751,34 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     gap: 12,
     padding: Platform.OS === 'web' ? 20 : 16,
     borderTopWidth: 1,
   },
+  footerLeft: {
+    flexDirection: 'row',
+  },
+  footerRight: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   footerButton: {
     minWidth: 100,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  deleteButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   // Creation mode selector styles
   creationModeSection: {
