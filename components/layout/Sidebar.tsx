@@ -1,11 +1,17 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { useRouter, usePathname } from 'expo-router';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useThemeStore, themes } from '@/store/themeStore';
-import { useProfileStore } from '@/store/profileStore';
-import { useTeamStore } from '@/store/teamStore';
-import { useDashboardStore } from '@/store/dashboardStore';
+import { useDashboardStore } from "@/store/dashboardStore";
+import { useProfileStore } from "@/store/profileStore";
+import { useTeamStore } from "@/store/teamStore";
+import { themes, useThemeStore } from "@/store/themeStore";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { usePathname, useRouter } from "expo-router";
+import { useState } from "react";
+import {
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 // Layout constants
 export const SIDEBAR_COLLAPSED_WIDTH = 52;
@@ -20,17 +26,22 @@ interface NavItem {
 
 /** Core project workflow — always visible first */
 const primaryNav: NavItem[] = [
-  { name: 'Projects', route: '/(tabs)/projects', icon: 'folder' },
-  { name: 'Tasks', route: '/(tabs)/tasks', icon: 'list' },
-  { name: 'Calendar', route: '/(tabs)/calendar', icon: 'calendar-o' },
+  { name: "Dashboard", route: "/(tabs)/dashboard", icon: "house" },
+  { name: "Projects", route: "/(tabs)/projects", icon: "folder" },
+  { name: "Tasks", route: "/(tabs)/tasks", icon: "list" },
+  { name: "Calendar", route: "/(tabs)/calendar", icon: "calendar-o" },
 ];
 
-/** Power-user / legacy views — tucked under “More tools” */
+const quickNav: NavItem[] = [
+  { name: "Due Today", route: "/(tabs)/today", icon: "calendar" },
+];
+
+/** Power-user / legacy views — tucked under “Extra tools” */
 const moreNav: NavItem[] = [
-  { name: 'Today', route: '/(tabs)/today', icon: 'calendar' },
-  { name: 'Upcoming', route: '/(tabs)/upcoming', icon: 'calendar-check-o' },
-  { name: 'Labels', route: '/(tabs)/labels', icon: 'tags' },
-  { name: 'Team', route: '/team', icon: 'users', teamOnly: true },
+  { name: "Today", route: "/(tabs)/today", icon: "calendar" },
+  { name: "Upcoming", route: "/(tabs)/upcoming", icon: "calendar-check-o" },
+  { name: "Labels", route: "/(tabs)/labels", icon: "tags" },
+  { name: "Team", route: "/team", icon: "users", teamOnly: true },
 ];
 
 interface SidebarProps {
@@ -56,19 +67,21 @@ export default function Sidebar({
   const theme = themes[resolvedTheme];
   const { profile } = useProfileStore();
   const { currentTeam } = useTeamStore();
-  const requestInsightsCreateDashboard = useDashboardStore((s) => s.requestInsightsCreateDashboard);
+  const requestInsightsCreateDashboard = useDashboardStore(
+    (s) => s.requestInsightsCreateDashboard,
+  );
   const [moreOpen, setMoreOpen] = useState(false);
 
   const teamModeEnabled = profile?.team_mode_enabled;
   const primary = filterTeam(primaryNav, teamModeEnabled);
   const more = filterTeam(moreNav, teamModeEnabled);
 
-  if (Platform.OS !== 'web') {
+  if (Platform.OS !== "web") {
     return null;
   }
 
   const isActive = (route: string) => {
-    const normalized = route.replace('/(tabs)', '');
+    const normalized = route.replace("/(tabs)", "");
     if (pathname === route) return true;
     if (pathname?.startsWith(normalized) && normalized.length > 1) return true;
     return false;
@@ -82,15 +95,20 @@ export default function Sidebar({
         style={[
           styles.navItem,
           {
-            backgroundColor: active ? theme.surfaceTertiary : 'transparent',
-            justifyContent: collapsed ? 'center' : 'flex-start',
+            backgroundColor: active ? theme.surfaceTertiary : "transparent",
+            justifyContent: collapsed ? "center" : "flex-start",
             paddingHorizontal: collapsed ? 0 : 16,
           },
         ]}
         onPress={() => router.push(item.route as any)}
         accessibilityLabel={collapsed ? item.name : undefined}
       >
-        <View style={[styles.iconContainer, collapsed && styles.iconContainerCollapsed]}>
+        <View
+          style={[
+            styles.iconContainer,
+            collapsed && styles.iconContainerCollapsed,
+          ]}
+        >
           <FontAwesome
             name={item.icon as any}
             size={18}
@@ -103,7 +121,7 @@ export default function Sidebar({
               styles.navText,
               {
                 color: active ? theme.text : theme.sidebarText,
-                fontWeight: active ? '600' : '500',
+                fontWeight: active ? "600" : "500",
               },
             ]}
           >
@@ -127,28 +145,36 @@ export default function Sidebar({
         },
       ]}
     >
-      <View style={[styles.sidebarHeader, collapsed && styles.sidebarHeaderCollapsed]}>
+      <View
+        style={[
+          styles.sidebarHeader,
+          collapsed && styles.sidebarHeaderCollapsed,
+        ]}
+      >
         {!collapsed && (
           <TouchableOpacity
-            style={[styles.pinButton, pinned && { backgroundColor: theme.surfaceTertiary }]}
+            style={[
+              styles.pinButton,
+              pinned && { backgroundColor: theme.surfaceTertiary },
+            ]}
             onPress={onTogglePin}
-            accessibilityLabel={pinned ? 'Unpin sidebar' : 'Pin sidebar open'}
+            accessibilityLabel={pinned ? "Unpin sidebar" : "Pin sidebar open"}
           >
             <FontAwesome
               name="thumb-tack"
               size={12}
               color={pinned ? theme.primary : theme.textTertiary}
-              style={pinned ? {} : { transform: [{ rotate: '45deg' }] }}
+              style={pinned ? {} : { transform: [{ rotate: "45deg" }] }}
             />
           </TouchableOpacity>
         )}
         <TouchableOpacity
           style={styles.collapseButton}
           onPress={onToggleCollapse}
-          accessibilityLabel={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          accessibilityLabel={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <FontAwesome
-            name={collapsed ? 'angle-right' : 'angle-left'}
+            name={collapsed ? "angle-right" : "angle-left"}
             size={16}
             color={theme.sidebarText}
           />
@@ -157,9 +183,18 @@ export default function Sidebar({
 
       <View style={styles.navSection}>
         {!collapsed && (
-          <Text style={[styles.sectionHeader, { color: theme.textTertiary }]}>Workspace</Text>
+          <Text style={[styles.sectionHeader, { color: theme.textTertiary }]}>
+            Workspace
+          </Text>
         )}
         {primary.map((item) => renderNavItem(item))}
+
+        {!collapsed && (
+          <Text style={[styles.sectionHeader, { color: theme.textTertiary }]}>
+            Quick Actions
+          </Text>
+        )}
+        {quickNav.map((item) => renderNavItem(item))}
 
         {collapsed && collapsedMore.map((item) => renderNavItem(item))}
 
@@ -172,12 +207,14 @@ export default function Sidebar({
               accessibilityState={{ expanded: moreOpen }}
             >
               <FontAwesome
-                name={moreOpen ? 'chevron-down' : 'chevron-right'}
+                name={moreOpen ? "chevron-down" : "chevron-right"}
                 size={12}
                 color={theme.textTertiary}
               />
-              <Text style={[styles.moreToggleText, { color: theme.textTertiary }]}>
-                {moreOpen ? 'Hide extra tools' : 'More tools'}
+              <Text
+                style={[styles.moreToggleText, { color: theme.textTertiary }]}
+              >
+                {moreOpen ? "Hide extra tools" : "More tools"}
               </Text>
             </TouchableOpacity>
 
@@ -188,21 +225,30 @@ export default function Sidebar({
                   style={[
                     styles.navItem,
                     {
-                      backgroundColor: 'transparent',
-                      justifyContent: 'flex-start',
+                      backgroundColor: "transparent",
+                      justifyContent: "flex-start",
                       paddingHorizontal: 16,
                     },
                   ]}
                   onPress={() => {
                     requestInsightsCreateDashboard();
-                    router.push('/(tabs)/dashboard' as any);
+                    router.push("/(tabs)/dashboard" as any);
                   }}
                   accessibilityLabel="Create dashboard"
                 >
                   <View style={styles.iconContainer}>
-                    <FontAwesome name="plus-square-o" size={18} color={theme.primary} />
+                    <FontAwesome
+                      name="plus-square-o"
+                      size={18}
+                      color={theme.primary}
+                    />
                   </View>
-                  <Text style={[styles.navText, { color: theme.primary, fontWeight: '600' }]}>
+                  <Text
+                    style={[
+                      styles.navText,
+                      { color: theme.primary, fontWeight: "600" },
+                    ]}
+                  >
                     Create Dash
                   </Text>
                 </TouchableOpacity>
@@ -216,14 +262,22 @@ export default function Sidebar({
         <TouchableOpacity
           style={[
             styles.teamIndicator,
-            { backgroundColor: theme.surfaceTertiary, borderColor: theme.border },
+            {
+              backgroundColor: theme.surfaceTertiary,
+              borderColor: theme.border,
+            },
           ]}
-          onPress={() => router.push('/team')}
+          onPress={() => router.push("/team")}
         >
           <FontAwesome name="building" size={14} color={theme.primary} />
           <View style={styles.teamIndicatorText}>
-            <Text style={[styles.teamLabel, { color: theme.textTertiary }]}>Team</Text>
-            <Text style={[styles.teamName, { color: theme.text }]} numberOfLines={1}>
+            <Text style={[styles.teamLabel, { color: theme.textTertiary }]}>
+              Team
+            </Text>
+            <Text
+              style={[styles.teamName, { color: theme.text }]}
+              numberOfLines={1}
+            >
               {currentTeam.name}
             </Text>
           </View>
@@ -234,21 +288,30 @@ export default function Sidebar({
         <TouchableOpacity
           style={[
             styles.footerItem,
-            { justifyContent: collapsed ? 'center' : 'flex-start' },
+            { justifyContent: collapsed ? "center" : "flex-start" },
           ]}
           onPress={toggleTheme}
-          accessibilityLabel={resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          accessibilityLabel={
+            resolvedTheme === "dark"
+              ? "Switch to light mode"
+              : "Switch to dark mode"
+          }
         >
-          <View style={[styles.iconContainer, collapsed && styles.iconContainerCollapsed]}>
+          <View
+            style={[
+              styles.iconContainer,
+              collapsed && styles.iconContainerCollapsed,
+            ]}
+          >
             <FontAwesome
-              name={resolvedTheme === 'dark' ? 'sun-o' : 'moon-o'}
+              name={resolvedTheme === "dark" ? "sun-o" : "moon-o"}
               size={16}
               color={theme.sidebarText}
             />
           </View>
           {!collapsed && (
             <Text style={[styles.footerText, { color: theme.sidebarText }]}>
-              {resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+              {resolvedTheme === "dark" ? "Light Mode" : "Dark Mode"}
             </Text>
           )}
         </TouchableOpacity>
@@ -259,20 +322,20 @@ export default function Sidebar({
 
 const styles = StyleSheet.create({
   sidebar: {
-    flexDirection: 'column',
-    justifyContent: 'space-between',
+    flexDirection: "column",
+    justifyContent: "space-between",
     borderRightWidth: 1,
   },
   sidebarHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 8,
     paddingVertical: 8,
     gap: 6,
   },
   sidebarHeaderCollapsed: {
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 0,
   },
   pinButton: {
@@ -282,23 +345,23 @@ const styles = StyleSheet.create({
   collapseButton: {
     padding: 8,
     borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     width: 32,
     height: 32,
   },
   sectionHeader: {
     fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    textTransform: "uppercase",
     letterSpacing: 0.5,
     marginTop: 2,
     marginBottom: 6,
     marginLeft: 14,
   },
   moreToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     marginTop: 10,
     marginBottom: 4,
@@ -307,8 +370,8 @@ const styles = StyleSheet.create({
   },
   moreToggleText: {
     fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   moreBlock: {
@@ -319,8 +382,8 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   navItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 7,
     paddingHorizontal: 12,
     marginHorizontal: 6,
@@ -330,11 +393,11 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     width: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   iconContainerCollapsed: {
-    width: 'auto',
+    width: "auto",
   },
   navText: {
     fontSize: 14,
@@ -344,8 +407,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   footerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingVertical: 8,
     paddingHorizontal: 6,
@@ -353,11 +416,11 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   teamIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     marginHorizontal: 8,
     marginBottom: 8,
@@ -370,12 +433,12 @@ const styles = StyleSheet.create({
   },
   teamLabel: {
     fontSize: 10,
-    fontWeight: '500',
-    textTransform: 'uppercase',
+    fontWeight: "500",
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   teamName: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
