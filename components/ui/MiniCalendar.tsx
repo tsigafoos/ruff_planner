@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '@/components/useTheme';
 import { 
@@ -24,6 +24,8 @@ export interface MiniCalendarProps {
   onViewFullCalendar?: () => void;
   /** Initial date to display */
   initialDate?: Date;
+  /** Merge into root container (e.g. flex, height on Overview) */
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 /**
@@ -35,6 +37,7 @@ export default function MiniCalendar({
   onDatePress,
   onViewFullCalendar,
   initialDate = new Date(),
+  containerStyle,
 }: MiniCalendarProps) {
   const theme = useTheme();
   const [calendarDate, setCalendarDate] = useState(initialDate);
@@ -58,7 +61,13 @@ export default function MiniCalendar({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.surface, borderColor: theme.border },
+        containerStyle,
+      ]}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <TouchableOpacity 
@@ -88,7 +97,7 @@ export default function MiniCalendar({
       </View>
       
       {/* Calendar grid */}
-      <View style={styles.grid}>
+      <View style={styles.gridGrow}>
         {days.map((day, index) => {
           const isCurrentMonth = isSameMonth(day, calendarDate);
           const isToday = isSameDay(day, new Date());
@@ -138,11 +147,13 @@ export default function MiniCalendar({
 
 const styles = StyleSheet.create({
   container: {
-    width: Platform.OS === 'web' ? 280 : '100%' as any,
+    width: '100%' as any,
+    flexDirection: 'column',
     borderWidth: 1,
     borderRadius: 12,
     overflow: 'hidden',
-    alignSelf: Platform.OS === 'web' ? 'flex-end' : undefined,
+    alignSelf: 'stretch',
+    ...(Platform.OS === 'web' ? { minHeight: 0, flex: 1 } : {}),
   },
   header: {
     flexDirection: 'row',
@@ -166,10 +177,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
-  grid: {
+  gridGrow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     padding: 8,
+    flexGrow: 1,
+    flexShrink: 1,
+    alignContent: 'flex-start',
   },
   day: {
     width: '14.28%' as any,

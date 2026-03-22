@@ -2,7 +2,6 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
-import { useProfileStore } from '@/store/profileStore';
 import { useThemeStore, themes } from '@/store/themeStore';
 import { useState, useRef, useEffect } from 'react';
 import Svg, { Path } from 'react-native-svg';
@@ -82,10 +81,8 @@ const DropdownMenu = ({ items, isOpen, onClose, theme }: DropdownMenuProps) => {
 export default function TopNavbar() {
   const router = useRouter();
   const { signOut } = useAuthStore();
-  const { profile } = useProfileStore();
   const { resolvedTheme } = useThemeStore();
   const theme = themes[resolvedTheme];
-  const teamModeEnabled = profile?.team_mode_enabled;
 
   const [teamMenuOpen, setTeamMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -175,36 +172,34 @@ export default function TopNavbar() {
       {/* Left Section - Logo + Title */}
       <TouchableOpacity
         style={styles.logoSection}
-        onPress={() => router.push('/(tabs)/projects')}
+        onPress={() => router.push('/(tabs)/dashboard')}
       >
         <HouseLogo size={24} color={theme.primary} />
         <Text style={[styles.appTitle, { color: theme.text }]}>BarkItDone</Text>
       </TouchableOpacity>
 
       <View style={styles.navSection}>
-        {teamModeEnabled ? (
-          <View ref={teamMenuRef} style={styles.dropdownContainer}>
-            <TouchableOpacity
-              style={[styles.navItem, teamMenuOpen && { backgroundColor: theme.surfaceTertiary }]}
-              onPress={toggleTeamMenu}
-            >
-              <FontAwesome name="users" size={15} color={theme.textSecondary} />
-              <Text style={[styles.navText, { color: theme.textSecondary }]}>Team</Text>
-              <FontAwesome
-                name={teamMenuOpen ? 'chevron-up' : 'chevron-down'}
-                size={10}
-                color={theme.textTertiary}
-                style={styles.chevron}
-              />
-            </TouchableOpacity>
-            <DropdownMenu
-              items={teamItems}
-              isOpen={teamMenuOpen}
-              onClose={() => setTeamMenuOpen(false)}
-              theme={theme}
+        <View ref={teamMenuRef} style={styles.dropdownContainer}>
+          <TouchableOpacity
+            style={[styles.navItem, teamMenuOpen && { backgroundColor: theme.surfaceTertiary }]}
+            onPress={toggleTeamMenu}
+          >
+            <FontAwesome name="users" size={15} color={theme.textSecondary} />
+            <Text style={[styles.navText, { color: theme.textSecondary }]}>Team</Text>
+            <FontAwesome
+              name={teamMenuOpen ? 'chevron-up' : 'chevron-down'}
+              size={10}
+              color={theme.textTertiary}
+              style={styles.chevron}
             />
-          </View>
-        ) : null}
+          </TouchableOpacity>
+          <DropdownMenu
+            items={teamItems}
+            isOpen={teamMenuOpen}
+            onClose={() => setTeamMenuOpen(false)}
+            theme={theme}
+          />
+        </View>
 
         <View ref={accountMenuRef} style={styles.dropdownContainer}>
           <TouchableOpacity

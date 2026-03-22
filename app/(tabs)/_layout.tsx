@@ -20,6 +20,7 @@ export default function TabLayout() {
 
   const tabs = (
     <Tabs
+      initialRouteName="dashboard"
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: useClientOnlyValue(false, true),

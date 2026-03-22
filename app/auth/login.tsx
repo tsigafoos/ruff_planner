@@ -44,7 +44,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signIn(email, password);
-      router.replace('/(tabs)/projects');
+      router.replace('/(tabs)/dashboard');
     } catch (error: any) {
       const msg = formatAuthError(error);
       setFormError(msg);

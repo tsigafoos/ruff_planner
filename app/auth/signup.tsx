@@ -46,7 +46,7 @@ export default function SignupScreen() {
         router.replace('/auth/login?notice=verify');
         return;
       }
-      router.replace('/(tabs)/projects');
+      router.replace('/(tabs)/dashboard');
     } catch (error: any) {
       const msg = error?.message || 'Failed to create account';
       setFormError(msg);

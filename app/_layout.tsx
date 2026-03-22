@@ -90,7 +90,7 @@ function RootLayoutNav() {
       // Redirect to login if not authenticated
       router.replace('/auth/login');
     } else if (user && inAuthGroup) {
-      router.replace('/(tabs)/projects');
+      router.replace('/(tabs)/dashboard');
     }
   }, [user, initialized, segments]);
 

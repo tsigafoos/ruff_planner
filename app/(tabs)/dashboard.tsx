@@ -528,9 +528,18 @@ export default function DashboardScreen() {
 
   const overviewBody = (
     <>
-      <View style={styles.topSection}>
-        {/* Projects List Section */}
-        <View style={styles.projectsSection}>
+      <View
+        style={[
+          styles.overviewTopRow,
+          Platform.OS !== 'web' && styles.overviewTopRowMobile,
+        ]}
+      >
+        <View
+          style={[
+            styles.projectsColumn,
+            Platform.OS === 'web' ? styles.projectsColumnWeb : styles.projectsColumnMobile,
+          ]}
+        >
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Projects</Text>
           </View>
@@ -539,7 +548,11 @@ export default function DashboardScreen() {
             <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Loading projects...</Text>
           ) : projects.length > 0 ? (
             <ScrollView 
-              style={[styles.projectsListContainer, { borderColor: theme.border }]} 
+              style={[
+                styles.projectsListContainer,
+                { borderColor: theme.border },
+                Platform.OS === 'web' && styles.projectsListScrollWeb,
+              ]} 
               showsVerticalScrollIndicator={true}
               nestedScrollEnabled={true}
             >
@@ -642,19 +655,20 @@ export default function DashboardScreen() {
           )}
         </View>
 
-        {/* Mini Calendar */}
         {Platform.OS === 'web' && (
-          <MiniCalendar 
-            tasks={tasks}
-            onViewFullCalendar={() => router.push('/(tabs)/calendar')}
-          />
+          <View style={styles.calendarColumnWeb}>
+            <MiniCalendar
+              tasks={tasks}
+              onViewFullCalendar={() => router.push('/(tabs)/calendar')}
+              containerStyle={styles.miniCalendarOverview}
+            />
+          </View>
         )}
       </View>
 
-      {/* Task Lanes Section */}
-      <View style={styles.section}>
+      <View style={styles.kanbanSection}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Tasks</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Kanban</Text>
         </View>
 
         {tasksLoading ? (
@@ -683,6 +697,7 @@ export default function DashboardScreen() {
                     laneRefs.current[lane.key] = ref;
                   }}
                   dataLaneKey={lane.key}
+                  fillHeight={Platform.OS === 'web' ? 400 : undefined}
                 >
                   {laneTasks.map((task: any) => (
                     <DraggableTaskCard
@@ -919,25 +934,56 @@ const styles = StyleSheet.create({
   scrollContent: {
     flex: 1,
   },
-  topSection: {
+  overviewTopRow: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    alignItems: 'flex-start',
+    gap: Platform.OS === 'web' ? 16 : 0,
     paddingLeft: Platform.OS === 'web' ? 28 : 14,
     paddingRight: Platform.OS === 'web' ? 28 : 14,
     paddingTop: Platform.OS === 'web' ? 16 : 20,
-    maxWidth: Platform.OS === 'web' ? 1300 : '100%',
-    gap: Platform.OS === 'web' ? 16 : 20,
-    alignItems: Platform.OS === 'web' ? 'flex-start' : undefined,
+    maxWidth: Platform.OS === 'web' ? 1300 : undefined,
+    width: '100%' as any,
+    alignSelf: 'center',
   },
-  projectsSection: {
+  overviewTopRowMobile: {
+    gap: 20,
+  },
+  projectsColumn: {
+    flexDirection: 'column',
+  },
+  /** ~20% narrower than an even split: 40% row, capped */
+  projectsColumnWeb: {
+    width: '40%' as any,
+    maxWidth: 400,
+    height: 400,
+    flexShrink: 0,
+  },
+  projectsColumnMobile: {
+    width: '100%' as any,
+    marginBottom: 20,
+  },
+  projectsListScrollWeb: {
     flex: 1,
-    marginRight: Platform.OS === 'web' ? 16 : 0,
-    marginBottom: Platform.OS === 'web' ? 0 : 20,
+    minHeight: 0,
   },
-  section: {
+  calendarColumnWeb: {
+    flex: 1,
+    minWidth: 340,
+    height: 400,
+    minHeight: 400,
+  },
+  miniCalendarOverview: {
+    flex: 1,
+    width: '100%' as any,
+    height: '100%' as any,
+  },
+  kanbanSection: {
+    width: '100%' as any,
     marginBottom: 24,
     paddingHorizontal: Platform.OS === 'web' ? 28 : 14,
-    maxWidth: Platform.OS === 'web' ? 1350 : '100%',
-    paddingTop: Platform.OS === 'web' ? 16 : 20,
+    maxWidth: Platform.OS === 'web' ? 1350 : undefined,
+    alignSelf: 'center',
+    paddingTop: Platform.OS === 'web' ? 20 : 16,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -969,7 +1015,6 @@ const styles = StyleSheet.create({
   },
   // Project styles
   projectsListContainer: {
-    flex: 1,
     borderWidth: 1,
     borderRadius: 12,
     overflow: 'hidden',
@@ -1060,9 +1105,12 @@ const styles = StyleSheet.create({
   // Lane styles (layout containers only - component styles are in StatusLane)
   lanesContainer: {
     flexGrow: 0,
+    minHeight: Platform.OS === 'web' ? 400 : undefined,
   },
   lanesContent: {
     paddingRight: Platform.OS === 'web' ? 28 : 14,
+    alignItems: 'stretch',
+    ...(Platform.OS === 'web' ? { minHeight: 400 } : {}),
   },
   emptyText: {
     fontSize: Platform.OS === 'web' ? 14 : 16,
@@ -1085,7 +1133,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   cancelledBarContainer: {
-    paddingHorizontal: Platform.OS === 'web' ? 28 : 14,
     paddingTop: 10,
     paddingBottom: 6,
   },

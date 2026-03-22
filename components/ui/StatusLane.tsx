@@ -21,6 +21,8 @@ export interface StatusLaneProps {
   onRefReady?: (ref: View | null) => void;
   /** Data attribute for web drag detection */
   dataLaneKey?: string;
+  /** Fixed lane height (web) — fixes collapsed Kanban inside horizontal ScrollView */
+  fillHeight?: number;
 }
 
 // Fixed lane colors - Light mode HSL(225, 2%, 95%→70%), Dark mode HSL(225, 2%, 5%→30%)
@@ -56,6 +58,7 @@ export default function StatusLane({
   colorIndex = 0,
   onRefReady,
   dataLaneKey,
+  fillHeight,
 }: StatusLaneProps) {
   const theme = useTheme();
   const { resolvedTheme } = useThemeStore();
@@ -73,13 +76,19 @@ export default function StatusLane({
         'data-lane-key': dataLaneKey || laneKey,
       } : {})}
       style={[
-        styles.lane, 
-        { 
+        styles.lane,
+        Platform.OS === 'web' &&
+          fillHeight != null && {
+            height: fillHeight,
+            minHeight: fillHeight,
+            maxHeight: fillHeight,
+          },
+        {
           backgroundColor: laneColors.background,
           borderColor: isDragOver ? theme.primary : laneColors.stroke,
           borderWidth: isDragOver ? 2 : 1,
           opacity: isDragActive && !isDragOver ? 0.5 : 1,
-        }
+        },
       ]}
     >
       <View style={[styles.laneHeader, { borderBottomColor: theme.border }]}>
