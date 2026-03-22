@@ -1,24 +1,34 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, TextInput, ActivityIndicator, Alert } from 'react-native';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useTheme } from '../useTheme';
-import ResourceCreator from './ResourceCreator';
-import Button from '../ui/Button';
-import { useAuthStore } from '@/store/authStore';
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from "@/lib/supabase/client";
+import { useAuthStore } from "@/store/authStore";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { useState } from "react";
+import {
+  Alert,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
+import Button from "../ui/Button";
+import { useTheme } from "../useTheme";
+import ResourceCreator from "./ResourceCreator";
 
 interface ResourceItem {
   id: string;
   name: string;
-  type: 'file' | 'folder' | 'resource';
+  type: "file" | "folder" | "resource";
   path?: string;
-  storage_path?: string;  // Path in Supabase Storage
-  storage_url?: string;   // Public URL to the file
-  size?: number;          // File size in bytes
-  mime_type?: string;     // File MIME type
-  content?: string;       // Deprecated: kept for backward compatibility, but files should use storage
-  tags?: string[];        // Tags for filtering and organization
-  created_at?: string;    // Creation timestamp
+  storage_path?: string; // Path in Supabase Storage
+  storage_url?: string; // Public URL to the file
+  size?: number; // File size in bytes
+  mime_type?: string; // File MIME type
+  content?: string; // Deprecated: kept for backward compatibility, but files should use storage
+  tags?: string[]; // Tags for filtering and organization
+  created_at?: string; // Creation timestamp
 }
 
 interface ResourcesViewProps {
@@ -27,97 +37,103 @@ interface ResourcesViewProps {
   onBack?: () => void;
 }
 
-export default function ResourcesView({ resources, onSave, onBack }: ResourcesViewProps) {
+export default function ResourcesView({
+  resources,
+  onSave,
+  onBack,
+}: ResourcesViewProps) {
   const theme = useTheme();
   const { user } = useAuthStore();
   const [showCreator, setShowCreator] = useState(false);
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
-  const [folderName, setFolderName] = useState('');
+  const [folderName, setFolderName] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
-  const [selectedFolder, setSelectedFolder] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFolder, setSelectedFolder] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [editingResource, setEditingResource] = useState<ResourceItem | null>(null);
-  const [newTags, setNewTags] = useState('');
-  const [uploadTags, setUploadTags] = useState('');
+  const [editingResource, setEditingResource] = useState<ResourceItem | null>(
+    null,
+  );
+  const [newTags, setNewTags] = useState("");
+  const [uploadTags, setUploadTags] = useState("");
 
   // Get all unique tags from resources
-  const allTags = Array.from(new Set(
-    resources.flatMap(r => r.tags || []).filter(Boolean)
-  )).sort();
+  const allTags = Array.from(
+    new Set(resources.flatMap((r) => r.tags || []).filter(Boolean)),
+  ).sort();
 
   // Filter resources based on search and selected tags
-  const filteredResources = resources.filter(resource => {
+  const filteredResources = resources.filter((resource) => {
     // Search filter
-    const matchesSearch = !searchQuery || 
+    const matchesSearch =
+      !searchQuery ||
       resource.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (resource.tags || []).some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    
+      (resource.tags || []).some((tag) =>
+        tag.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
+
     // Tag filter
-    const matchesTags = selectedTags.length === 0 ||
-      selectedTags.every(tag => (resource.tags || []).includes(tag));
-    
+    const matchesTags =
+      selectedTags.length === 0 ||
+      selectedTags.every((tag) => (resource.tags || []).includes(tag));
+
     return matchesSearch && matchesTags;
   });
 
   // Toggle tag selection
   const toggleTagFilter = (tag: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tag) 
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
   // Handle editing tags for a resource
   const handleEditTags = (resource: ResourceItem) => {
     setEditingResource(resource);
-    setNewTags((resource.tags || []).join(', '));
+    setNewTags((resource.tags || []).join(", "));
     setShowTagModal(true);
   };
 
   // Save updated tags
   const handleSaveTags = async () => {
     if (!editingResource) return;
-    
+
     const tagsArray = newTags
-      .split(',')
-      .map(tag => tag.trim().toLowerCase())
-      .filter(tag => tag.length > 0);
-    
-    const updatedResources = resources.map(r => 
-      r.id === editingResource.id 
-        ? { ...r, tags: tagsArray }
-        : r
+      .split(",")
+      .map((tag) => tag.trim().toLowerCase())
+      .filter((tag) => tag.length > 0);
+
+    const updatedResources = resources.map((r) =>
+      r.id === editingResource.id ? { ...r, tags: tagsArray } : r,
     );
-    
+
     await onSave(updatedResources);
     setShowTagModal(false);
     setEditingResource(null);
-    setNewTags('');
+    setNewTags("");
   };
 
   const getUsername = () => {
-    if (!user?.email) return 'user';
-    return user.email.split('@')[0];
+    if (!user?.email) return "user";
+    return user.email.split("@")[0];
   };
 
   const getUserId = () => {
-    return user?.id || '';
+    return user?.id || "";
   };
 
   const getRootPath = () => {
     const userId = getUserId();
-    return userId ? `${userId}/` : '';
+    return userId ? `${userId}/` : "";
   };
 
   const getFolderPath = (folderName: string) => {
     const userId = getUserId();
-    return userId ? `${userId}/${folderName}/` : '';
+    return userId ? `${userId}/${folderName}/` : "";
   };
 
   const getFilePath = (fileName: string, folderPath?: string) => {
@@ -126,54 +142,55 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
   };
 
   const getAvailableFolders = () => {
-    return resources.filter(r => r.type === 'folder');
+    return resources.filter((r) => r.type === "folder");
   };
 
   const handleAddFolder = () => {
-    setFolderName('');
+    setFolderName("");
     setShowFolderModal(true);
   };
 
   const handleSaveFolder = async () => {
     if (!folderName.trim()) return;
-    
+
     const userId = getUserId();
     if (!userId) {
-      alert('User not authenticated. Please log in and try again.');
+      alert("User not authenticated. Please log in and try again.");
       return;
     }
-    
+
     try {
       const folderPath = getFolderPath(folderName.trim());
       const newFolder: ResourceItem = {
         id: Date.now().toString(),
         name: folderName.trim(),
-        type: 'folder',
+        type: "folder",
         path: folderPath,
         storage_path: folderPath,
       };
       await onSave([...resources, newFolder]);
       setShowFolderModal(false);
-      setFolderName('');
+      setFolderName("");
     } catch (error) {
-      console.error('Error saving folder:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Full error details:', error);
+      console.error("Error saving folder:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error("Full error details:", error);
       alert(`Failed to create folder: ${errorMessage}`);
     }
   };
 
   const handleUploadFile = () => {
-    setSelectedFolder('');
+    setSelectedFolder("");
     setUploadFiles([]);
-    setUploadTags('');
+    setUploadTags("");
     setShowUploadModal(true);
   };
 
   const handleFileSelect = () => {
-    if (Platform.OS === 'web' && typeof document !== 'undefined') {
-      const input = document.createElement('input');
-      input.type = 'file';
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      const input = document.createElement("input");
+      input.type = "file";
       input.multiple = true;
       input.onchange = (e) => {
         const files = (e.target as HTMLInputElement).files;
@@ -187,54 +204,56 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
 
   const handleSaveUploadedFiles = async () => {
     if (uploadFiles.length === 0) return;
-    
+
     setUploading(true);
     setUploadProgress(0);
-    
+
     try {
       const newFiles: ResourceItem[] = [];
       const totalFiles = uploadFiles.length;
       const folderPath = selectedFolder || getRootPath();
       const userId = getUserId();
-      
+
       if (!userId) {
-        throw new Error('User not authenticated');
+        throw new Error("User not authenticated");
       }
-      
+
       for (let i = 0; i < uploadFiles.length; i++) {
         const file = uploadFiles[i];
         const fileName = file.name;
         const storagePath = getFilePath(fileName, folderPath);
-        
+
         // Upload file to Supabase Storage
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('user-files')
+          .from("user-files")
           .upload(storagePath, file, {
-            cacheControl: '3600',
+            cacheControl: "3600",
             upsert: false, // Don't overwrite existing files
           });
-        
+
         if (uploadError) {
-          console.error('Error uploading file:', uploadError);
-          throw new Error(`Failed to upload ${fileName}: ${uploadError.message}`);
+          console.error("Error uploading file:", uploadError);
+          throw new Error(
+            `Failed to upload ${fileName}: ${uploadError.message}`,
+          );
         }
-        
+
         // Get public URL for the file
         const { data: urlData } = supabase.storage
-          .from('user-files')
+          .from("user-files")
           .getPublicUrl(storagePath);
-        
+
         // Parse upload tags
         const tagsArray = uploadTags
-          .split(',')
-          .map(tag => tag.trim().toLowerCase())
-          .filter(tag => tag.length > 0);
-        
+          .split(",")
+          .map((tag) => tag.trim().toLowerCase())
+          .filter((tag) => tag.length > 0);
+
         // Create resource metadata (without file content)
         newFiles.push({
           id: `${Date.now()}-${i}`,
           name: fileName,
-          type: 'file',
+          type: "file",
           path: storagePath,
           storage_path: storagePath,
           storage_url: urlData.publicUrl,
@@ -243,20 +262,22 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
           tags: tagsArray.length > 0 ? tagsArray : undefined,
           created_at: new Date().toISOString(),
         });
-        
+
         setUploadProgress(((i + 1) / totalFiles) * 100);
       }
-      
+
       // Save only metadata to database
       await onSave([...resources, ...newFiles]);
       setShowUploadModal(false);
       setUploadFiles([]);
-      setSelectedFolder('');
-      setUploadTags('');
+      setSelectedFolder("");
+      setUploadTags("");
       setUploadProgress(0);
     } catch (error) {
-      console.error('Error uploading files:', error);
-      alert(`Failed to upload files: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Error uploading files:", error);
+      alert(
+        `Failed to upload files: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     } finally {
       setUploading(false);
     }
@@ -267,19 +288,19 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
   };
 
   const handleDownloadFile = async (resource: ResourceItem) => {
-    if (!resource.storage_path || resource.type !== 'file') return;
-    
+    if (!resource.storage_path || resource.type !== "file") return;
+
     try {
       const { data, error } = await supabase.storage
-        .from('user-files')
+        .from("user-files")
         .download(resource.storage_path);
-      
+
       if (error) throw error;
-      
+
       // For web: create download link
-      if (Platform.OS === 'web' && typeof window !== 'undefined' && data) {
+      if (Platform.OS === "web" && typeof window !== "undefined" && data) {
         const url = window.URL.createObjectURL(data);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
         a.download = resource.name;
         document.body.appendChild(a);
@@ -288,50 +309,57 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
         document.body.removeChild(a);
       }
     } catch (error) {
-      console.error('Error downloading file:', error);
-      alert('Failed to download file');
+      console.error("Error downloading file:", error);
+      alert("Failed to download file");
     }
   };
 
   const handleDeleteFile = async (resourceId: string) => {
-    const resource = resources.find(r => r.id === resourceId);
-    if (!resource || resource.type !== 'file' || !resource.storage_path) return;
-    
+    const resource = resources.find((r) => r.id === resourceId);
+    if (!resource || resource.type !== "file" || !resource.storage_path) return;
+
     Alert.alert(
-      'Delete File',
+      "Delete File",
       `Are you sure you want to delete "${resource.name}"?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Delete',
-          style: 'destructive',
+          text: "Delete",
+          style: "destructive",
           onPress: async () => {
             try {
               // Delete from Supabase Storage
               const { error: storageError } = await supabase.storage
-                .from('user-files')
+                .from("user-files")
                 .remove([resource.storage_path!]);
-              
+
               if (storageError) throw storageError;
-              
+
               // Remove from database metadata
-              const updatedResources = resources.filter(r => r.id !== resourceId);
+              const updatedResources = resources.filter(
+                (r) => r.id !== resourceId,
+              );
               await onSave(updatedResources);
             } catch (error) {
-              console.error('Error deleting file:', error);
-              Alert.alert('Error', 'Failed to delete file');
+              console.error("Error deleting file:", error);
+              Alert.alert("Error", "Failed to delete file");
             }
           },
         },
-      ]
+      ],
     );
   };
 
-  const handleSaveResource = async (title: string, type: string, content: string, tags?: string[]) => {
+  const handleSaveResource = async (
+    title: string,
+    type: string,
+    content: string,
+    tags?: string[],
+  ) => {
     const newResource: ResourceItem = {
       id: Date.now().toString(),
       name: title,
-      type: 'resource',
+      type: "resource",
       content,
       tags,
       created_at: new Date().toISOString(),
@@ -351,7 +379,12 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.surface, borderColor: theme.border },
+      ]}
+    >
       {/* Header with Actions */}
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <View style={styles.headerLeft}>
@@ -364,33 +397,64 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}
+            style={[
+              styles.actionButton,
+              {
+                backgroundColor: theme.surfaceSecondary,
+                borderColor: theme.border,
+              },
+            ]}
             onPress={handleAddFolder}
           >
             <FontAwesome name="folder-plus" size={14} color={theme.text} />
-            <Text style={[styles.actionButtonText, { color: theme.text }]}>Add Folder</Text>
+            <Text style={[styles.actionButtonText, { color: theme.text }]}>
+              Add Folder
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}
+            style={[
+              styles.actionButton,
+              {
+                backgroundColor: theme.surfaceSecondary,
+                borderColor: theme.border,
+              },
+            ]}
             onPress={handleUploadFile}
           >
             <FontAwesome name="upload" size={14} color={theme.text} />
-            <Text style={[styles.actionButtonText, { color: theme.text }]}>Upload File</Text>
+            <Text style={[styles.actionButtonText, { color: theme.text }]}>
+              Upload File
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: theme.primary }]}
             onPress={handleCreateResource}
           >
             <FontAwesome name="file-text-o" size={14} color="#FFFFFF" />
-            <Text style={[styles.actionButtonText, { color: '#FFFFFF' }]}>Create Resource</Text>
+            <Text style={[styles.actionButtonText, { color: "#FFFFFF" }]}>
+              Create Resource
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Search and Filter Bar */}
-      <View style={[styles.filterBar, { backgroundColor: theme.surfaceSecondary, borderBottomColor: theme.border }]}>
+      <View
+        style={[
+          styles.filterBar,
+          {
+            backgroundColor: theme.surfaceSecondary,
+            borderBottomColor: theme.border,
+          },
+        ]}
+      >
         {/* Search Input */}
-        <View style={[styles.searchContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View
+          style={[
+            styles.searchContainer,
+            { backgroundColor: theme.surface, borderColor: theme.border },
+          ]}
+        >
           <FontAwesome name="search" size={14} color={theme.textTertiary} />
           <TextInput
             style={[styles.searchInput, { color: theme.text }]}
@@ -400,43 +464,51 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
             placeholderTextColor={theme.textTertiary}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <FontAwesome name="times-circle" size={14} color={theme.textTertiary} />
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <FontAwesome
+                name="times-circle"
+                size={14}
+                color={theme.textTertiary}
+              />
             </TouchableOpacity>
           )}
         </View>
 
         {/* Tag Filters */}
         {allTags.length > 0 && (
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.tagFilterScroll}
             contentContainerStyle={styles.tagFilterContent}
           >
-            {allTags.map(tag => {
+            {allTags.map((tag) => {
               const isSelected = selectedTags.includes(tag);
               return (
                 <TouchableOpacity
                   key={tag}
                   style={[
                     styles.tagFilterChip,
-                    { 
-                      backgroundColor: isSelected ? theme.primary : theme.surface,
+                    {
+                      backgroundColor: isSelected
+                        ? theme.primary
+                        : theme.surface,
                       borderColor: isSelected ? theme.primary : theme.border,
-                    }
+                    },
                   ]}
                   onPress={() => toggleTagFilter(tag)}
                 >
-                  <FontAwesome 
-                    name="tag" 
-                    size={10} 
-                    color={isSelected ? '#FFFFFF' : theme.textSecondary} 
+                  <FontAwesome
+                    name="tag"
+                    size={10}
+                    color={isSelected ? "#FFFFFF" : theme.textSecondary}
                   />
-                  <Text style={[
-                    styles.tagFilterText,
-                    { color: isSelected ? '#FFFFFF' : theme.text }
-                  ]}>
+                  <Text
+                    style={[
+                      styles.tagFilterText,
+                      { color: isSelected ? "#FFFFFF" : theme.text },
+                    ]}
+                  >
                     {tag}
                   </Text>
                   {isSelected && (
@@ -450,7 +522,9 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
                 style={[styles.clearFiltersButton]}
                 onPress={() => setSelectedTags([])}
               >
-                <Text style={[styles.clearFiltersText, { color: theme.primary }]}>
+                <Text
+                  style={[styles.clearFiltersText, { color: theme.primary }]}
+                >
                   Clear all
                 </Text>
               </TouchableOpacity>
@@ -462,8 +536,14 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
       {/* File View */}
       {resources.length === 0 ? (
         <View style={styles.empty}>
-          <FontAwesome name="folder-open" size={48} color={theme.textTertiary} />
-          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No resources yet</Text>
+          <FontAwesome
+            name="folder-open"
+            size={48}
+            color={theme.textTertiary}
+          />
+          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+            No resources yet
+          </Text>
           <Text style={[styles.emptySubtext, { color: theme.textTertiary }]}>
             Create resources, upload files, or organize with folders
           </Text>
@@ -471,28 +551,48 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
       ) : filteredResources.length === 0 ? (
         <View style={styles.empty}>
           <FontAwesome name="search" size={48} color={theme.textTertiary} />
-          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No matching resources</Text>
+          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+            No matching resources
+          </Text>
           <Text style={[styles.emptySubtext, { color: theme.textTertiary }]}>
             Try adjusting your search or filters
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.clearSearchButton, { borderColor: theme.primary }]}
-            onPress={() => { setSearchQuery(''); setSelectedTags([]); }}
+            onPress={() => {
+              setSearchQuery("");
+              setSelectedTags([]);
+            }}
           >
-            <Text style={[styles.clearSearchButtonText, { color: theme.primary }]}>Clear filters</Text>
+            <Text
+              style={[styles.clearSearchButtonText, { color: theme.primary }]}
+            >
+              Clear filters
+            </Text>
           </TouchableOpacity>
         </View>
       ) : (
         <ScrollView style={styles.fileList}>
           {/* Results count */}
           {(searchQuery || selectedTags.length > 0) && (
-            <View style={[styles.resultsCount, { backgroundColor: theme.surfaceSecondary }]}>
-              <Text style={[styles.resultsCountText, { color: theme.textSecondary }]}>
-                Showing {filteredResources.length} of {resources.length} resources
+            <View
+              style={[
+                styles.resultsCount,
+                { backgroundColor: theme.surfaceSecondary },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.resultsCountText,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                Showing {filteredResources.length} of {resources.length}{" "}
+                resources
               </Text>
             </View>
           )}
-          
+
           {filteredResources.map((resource) => (
             <View
               key={resource.id}
@@ -501,27 +601,52 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
               <TouchableOpacity style={styles.fileItemMain}>
                 <View style={styles.fileItemLeft}>
                   <FontAwesome
-                    name={resource.type === 'folder' ? 'folder' : resource.type === 'resource' ? 'file-text' : 'file-o'}
+                    name={
+                      resource.type === "folder"
+                        ? "folder"
+                        : resource.type === "resource"
+                          ? "file-text"
+                          : "file-o"
+                    }
                     size={16}
-                    color={resource.type === 'folder' ? '#F59E0B' : theme.textSecondary}
+                    color={
+                      resource.type === "folder"
+                        ? "#F59E0B"
+                        : theme.textSecondary
+                    }
                   />
                   <View style={styles.fileItemInfo}>
-                    <Text style={[styles.fileItemName, { color: theme.text }]}>{resource.name}</Text>
+                    <Text style={[styles.fileItemName, { color: theme.text }]}>
+                      {resource.name}
+                    </Text>
                     {/* Tags */}
                     {resource.tags && resource.tags.length > 0 && (
                       <View style={styles.fileItemTags}>
-                        {resource.tags.slice(0, 3).map(tag => (
-                          <View 
-                            key={tag} 
-                            style={[styles.fileItemTag, { backgroundColor: theme.primary + '15' }]}
+                        {resource.tags.slice(0, 3).map((tag) => (
+                          <View
+                            key={tag}
+                            style={[
+                              styles.fileItemTag,
+                              { backgroundColor: theme.primary + "15" },
+                            ]}
                           >
-                            <Text style={[styles.fileItemTagText, { color: theme.primary }]}>
+                            <Text
+                              style={[
+                                styles.fileItemTagText,
+                                { color: theme.primary },
+                              ]}
+                            >
                               {tag}
                             </Text>
                           </View>
                         ))}
                         {resource.tags.length > 3 && (
-                          <Text style={[styles.fileItemTagMore, { color: theme.textSecondary }]}>
+                          <Text
+                            style={[
+                              styles.fileItemTagMore,
+                              { color: theme.textSecondary },
+                            ]}
+                          >
                             +{resource.tags.length - 3}
                           </Text>
                         )}
@@ -536,15 +661,23 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
                   style={styles.fileItemAction}
                   onPress={() => handleEditTags(resource)}
                 >
-                  <FontAwesome name="tag" size={14} color={theme.textSecondary} />
+                  <FontAwesome
+                    name="tag"
+                    size={14}
+                    color={theme.textSecondary}
+                  />
                 </TouchableOpacity>
-                {resource.type === 'file' && resource.storage_path && (
+                {resource.type === "file" && resource.storage_path && (
                   <>
                     <TouchableOpacity
                       style={styles.fileItemAction}
                       onPress={() => handleDownloadFile(resource)}
                     >
-                      <FontAwesome name="download" size={14} color={theme.primary} />
+                      <FontAwesome
+                        name="download"
+                        size={14}
+                        color={theme.primary}
+                      />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.fileItemAction}
@@ -567,18 +700,48 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
         animationType="fade"
         onRequestClose={() => setShowFolderModal(false)}
       >
-        <View style={[styles.modalOverlay, { backgroundColor: theme.background + 'B3' }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
-              <Text style={[styles.modalTitle, { color: theme.text }]}>New Folder</Text>
-              <TouchableOpacity onPress={() => setShowFolderModal(false)} style={styles.closeButton}>
-                <FontAwesome name="times" size={16} color={theme.textSecondary} />
+        <View
+          style={[
+            styles.modalOverlay,
+            { backgroundColor: theme.background + "B3" },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: theme.surface, borderColor: theme.border },
+            ]}
+          >
+            <View
+              style={[styles.modalHeader, { borderBottomColor: theme.border }]}
+            >
+              <Text style={[styles.modalTitle, { color: theme.text }]}>
+                New Folder
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowFolderModal(false)}
+                style={styles.closeButton}
+              >
+                <FontAwesome
+                  name="times"
+                  size={16}
+                  color={theme.textSecondary}
+                />
               </TouchableOpacity>
             </View>
             <View style={styles.modalBody}>
-              <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>Folder Name</Text>
+              <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>
+                Folder Name
+              </Text>
               <TextInput
-                style={[styles.modalInput, { backgroundColor: theme.surfaceSecondary, color: theme.text, borderColor: theme.border }]}
+                style={[
+                  styles.modalInput,
+                  {
+                    backgroundColor: theme.surfaceSecondary,
+                    color: theme.text,
+                    borderColor: theme.border,
+                  },
+                ]}
                 value={folderName}
                 onChangeText={setFolderName}
                 placeholder="Enter folder name"
@@ -587,7 +750,9 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
                 onSubmitEditing={handleSaveFolder}
               />
             </View>
-            <View style={[styles.modalFooter, { borderTopColor: theme.border }]}>
+            <View
+              style={[styles.modalFooter, { borderTopColor: theme.border }]}
+            >
               <Button
                 title="Cancel"
                 onPress={() => setShowFolderModal(false)}
@@ -613,44 +778,99 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
           if (!uploading) {
             setShowUploadModal(false);
             setUploadFiles([]);
-            setSelectedFolder('');
+            setSelectedFolder("");
           }
         }}
       >
-        <View style={[styles.modalOverlay, { backgroundColor: theme.background + 'B3' }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
-              <Text style={[styles.modalTitle, { color: theme.text }]}>Upload Files</Text>
+        <View
+          style={[
+            styles.modalOverlay,
+            { backgroundColor: theme.background + "B3" },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: theme.surface, borderColor: theme.border },
+            ]}
+          >
+            <View
+              style={[styles.modalHeader, { borderBottomColor: theme.border }]}
+            >
+              <Text style={[styles.modalTitle, { color: theme.text }]}>
+                Upload Files
+              </Text>
               {!uploading && (
-                <TouchableOpacity onPress={() => {
-                  setShowUploadModal(false);
-                  setUploadFiles([]);
-                  setSelectedFolder('');
-                  setUploadTags('');
-                }} style={styles.closeButton}>
-                  <FontAwesome name="times" size={16} color={theme.textSecondary} />
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowUploadModal(false);
+                    setUploadFiles([]);
+                    setSelectedFolder("");
+                    setUploadTags("");
+                  }}
+                  style={styles.closeButton}
+                >
+                  <FontAwesome
+                    name="times"
+                    size={16}
+                    color={theme.textSecondary}
+                  />
                 </TouchableOpacity>
               )}
             </View>
             <View style={styles.modalBody}>
               <View style={styles.folderSelectorContainer}>
-                <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>Select Folder</Text>
-                <View style={[styles.folderSelector, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}>
+                <Text
+                  style={[styles.modalLabel, { color: theme.textSecondary }]}
+                >
+                  Select Folder
+                </Text>
+                <View
+                  style={[
+                    styles.folderSelector,
+                    {
+                      backgroundColor: theme.surfaceSecondary,
+                      borderColor: theme.border,
+                    },
+                  ]}
+                >
                   <TouchableOpacity
                     style={[
                       styles.folderOption,
                       { borderBottomColor: theme.border },
-                      selectedFolder === '' && { backgroundColor: theme.primary + '20' }
+                      selectedFolder === "" && {
+                        backgroundColor: theme.primary + "20",
+                      },
                     ]}
-                    onPress={() => setSelectedFolder('')}
+                    onPress={() => setSelectedFolder("")}
                     disabled={uploading}
                   >
-                    <FontAwesome name="home" size={16} color={selectedFolder === '' ? theme.primary : theme.textSecondary} />
-                    <Text style={[styles.folderOptionText, { color: selectedFolder === '' ? theme.primary : theme.text }]}>
+                    <FontAwesome
+                      name="home"
+                      size={16}
+                      color={
+                        selectedFolder === ""
+                          ? theme.primary
+                          : theme.textSecondary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.folderOptionText,
+                        {
+                          color:
+                            selectedFolder === "" ? theme.primary : theme.text,
+                        },
+                      ]}
+                    >
                       Root ({getUsername()})
                     </Text>
-                    {selectedFolder === '' && (
-                      <FontAwesome name="check" size={14} color={theme.primary} />
+                    {selectedFolder === "" && (
+                      <FontAwesome
+                        name="check"
+                        size={14}
+                        color={theme.primary}
+                      />
                     )}
                   </TouchableOpacity>
                   {getAvailableFolders().map((folder) => (
@@ -658,17 +878,41 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
                       key={folder.id}
                       style={[
                         styles.folderOption,
-                        selectedFolder === folder.path && { backgroundColor: theme.primary + '20' }
+                        selectedFolder === folder.path && {
+                          backgroundColor: theme.primary + "20",
+                        },
                       ]}
-                      onPress={() => setSelectedFolder(folder.path || '')}
+                      onPress={() => setSelectedFolder(folder.path || "")}
                       disabled={uploading}
                     >
-                      <FontAwesome name="folder" size={16} color={selectedFolder === folder.path ? theme.primary : theme.textSecondary} />
-                      <Text style={[styles.folderOptionText, { color: selectedFolder === folder.path ? theme.primary : theme.text }]}>
+                      <FontAwesome
+                        name="folder"
+                        size={16}
+                        color={
+                          selectedFolder === folder.path
+                            ? theme.primary
+                            : theme.textSecondary
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.folderOptionText,
+                          {
+                            color:
+                              selectedFolder === folder.path
+                                ? theme.primary
+                                : theme.text,
+                          },
+                        ]}
+                      >
                         {folder.name}
                       </Text>
                       {selectedFolder === folder.path && (
-                        <FontAwesome name="check" size={14} color={theme.primary} />
+                        <FontAwesome
+                          name="check"
+                          size={14}
+                          color={theme.primary}
+                        />
                       )}
                     </TouchableOpacity>
                   ))}
@@ -677,9 +921,20 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
 
               {/* Tags input for uploads */}
               <View style={styles.uploadTagsContainer}>
-                <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>Tags (optional)</Text>
+                <Text
+                  style={[styles.modalLabel, { color: theme.textSecondary }]}
+                >
+                  Tags (optional)
+                </Text>
                 <TextInput
-                  style={[styles.modalInput, { backgroundColor: theme.surfaceSecondary, color: theme.text, borderColor: theme.border }]}
+                  style={[
+                    styles.modalInput,
+                    {
+                      backgroundColor: theme.surfaceSecondary,
+                      color: theme.text,
+                      borderColor: theme.border,
+                    },
+                  ]}
                   value={uploadTags}
                   onChangeText={setUploadTags}
                   placeholder="e.g., reference, guidelines, important"
@@ -688,46 +943,132 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
                 />
                 {allTags.length > 0 && (
                   <View style={styles.uploadTagSuggestions}>
-                    {allTags.filter(t => !uploadTags.toLowerCase().includes(t.toLowerCase())).slice(0, 5).map(tag => (
-                      <TouchableOpacity
-                        key={tag}
-                        style={[styles.suggestedTag, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}
-                        onPress={() => {
-                          const currentTags = uploadTags.trim();
-                          setUploadTags(currentTags ? `${currentTags}, ${tag}` : tag);
-                        }}
-                        disabled={uploading}
-                      >
-                        <FontAwesome name="plus" size={10} color={theme.textSecondary} />
-                        <Text style={[styles.suggestedTagText, { color: theme.text }]}>{tag}</Text>
-                      </TouchableOpacity>
-                    ))}
+                    {allTags
+                      .filter(
+                        (t) =>
+                          !uploadTags.toLowerCase().includes(t.toLowerCase()),
+                      )
+                      .slice(0, 5)
+                      .map((tag) => (
+                        <TouchableOpacity
+                          key={tag}
+                          style={[
+                            styles.suggestedTag,
+                            {
+                              backgroundColor: theme.surfaceSecondary,
+                              borderColor: theme.border,
+                            },
+                          ]}
+                          onPress={() => {
+                            const currentTags = uploadTags.trim();
+                            setUploadTags(
+                              currentTags ? `${currentTags}, ${tag}` : tag,
+                            );
+                          }}
+                          disabled={uploading}
+                        >
+                          <FontAwesome
+                            name="plus"
+                            size={10}
+                            color={theme.textSecondary}
+                          />
+                          <Text
+                            style={[
+                              styles.suggestedTagText,
+                              { color: theme.text },
+                            ]}
+                          >
+                            {tag}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
                   </View>
                 )}
               </View>
 
               {uploadFiles.length === 0 ? (
                 <>
-                  <Text style={[styles.modalLabel, { color: theme.textSecondary, marginTop: 16 }]}>Select Files</Text>
+                  <Text
+                    style={[
+                      styles.modalLabel,
+                      { color: theme.textSecondary, marginTop: 16 },
+                    ]}
+                  >
+                    Select Files
+                  </Text>
                   <TouchableOpacity
-                    style={[styles.fileSelectButton, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}
+                    style={[
+                      styles.fileSelectButton,
+                      {
+                        backgroundColor: theme.surfaceSecondary,
+                        borderColor: theme.border,
+                      },
+                    ]}
                     onPress={handleFileSelect}
                     disabled={uploading}
                   >
-                    <FontAwesome name="folder-open" size={24} color={theme.primary} />
-                    <Text style={[styles.fileSelectText, { color: theme.text }]}>Choose Files</Text>
-                    <Text style={[styles.fileSelectSubtext, { color: theme.textTertiary }]}>Click to browse and select files</Text>
+                    <FontAwesome
+                      name="folder-open"
+                      size={24}
+                      color={theme.primary}
+                    />
+                    <Text
+                      style={[styles.fileSelectText, { color: theme.text }]}
+                    >
+                      Choose Files
+                    </Text>
+                    <Text
+                      style={[
+                        styles.fileSelectSubtext,
+                        { color: theme.textTertiary },
+                      ]}
+                    >
+                      Click to browse and select files
+                    </Text>
                   </TouchableOpacity>
                 </>
               ) : (
                 <>
-                  <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>Selected Files ({uploadFiles.length})</Text>
-                  <ScrollView style={styles.fileListPreview} nestedScrollEnabled>
+                  <Text
+                    style={[styles.modalLabel, { color: theme.textSecondary }]}
+                  >
+                    Selected Files ({uploadFiles.length})
+                  </Text>
+                  <ScrollView
+                    style={styles.fileListPreview}
+                    nestedScrollEnabled
+                  >
                     {uploadFiles.map((file, index) => (
-                      <View key={index} style={[styles.filePreviewItem, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}>
-                        <FontAwesome name="file" size={16} color={theme.textSecondary} />
-                        <Text style={[styles.filePreviewName, { color: theme.text }]} numberOfLines={1}>{file.name}</Text>
-                        <Text style={[styles.filePreviewSize, { color: theme.textTertiary }]}>
+                      <View
+                        key={index}
+                        style={[
+                          styles.filePreviewItem,
+                          {
+                            backgroundColor: theme.surfaceSecondary,
+                            borderColor: theme.border,
+                          },
+                        ]}
+                      >
+                        <FontAwesome
+                          name="file"
+                          size={16}
+                          color={theme.textSecondary}
+                        />
+                        <Text
+                          style={[
+                            styles.filePreviewName,
+                            { color: theme.text },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {file.name}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.filePreviewSize,
+                            { color: theme.textTertiary },
+                          ]}
+                        >
                           {(file.size / 1024).toFixed(2)} KB
                         </Text>
                       </View>
@@ -735,7 +1076,12 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
                   </ScrollView>
                   {uploading && (
                     <View style={styles.progressContainer}>
-                      <View style={[styles.progressBarContainer, { backgroundColor: theme.surfaceSecondary }]}>
+                      <View
+                        style={[
+                          styles.progressBarContainer,
+                          { backgroundColor: theme.surfaceSecondary },
+                        ]}
+                      >
                         <View
                           style={[
                             styles.progressBar,
@@ -746,7 +1092,12 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
                           ]}
                         />
                       </View>
-                      <Text style={[styles.progressText, { color: theme.textSecondary }]}>
+                      <Text
+                        style={[
+                          styles.progressText,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
                         {Math.round(uploadProgress)}% uploaded
                       </Text>
                     </View>
@@ -754,15 +1105,17 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
                 </>
               )}
             </View>
-            <View style={[styles.modalFooter, { borderTopColor: theme.border }]}>
+            <View
+              style={[styles.modalFooter, { borderTopColor: theme.border }]}
+            >
               <Button
                 title="Cancel"
                 onPress={() => {
                   if (!uploading) {
                     setShowUploadModal(false);
                     setUploadFiles([]);
-                    setSelectedFolder('');
-                    setUploadTags('');
+                    setSelectedFolder("");
+                    setUploadTags("");
                   }
                 }}
                 variant="secondary"
@@ -770,8 +1123,18 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
                 disabled={uploading}
               />
               <Button
-                title={uploading ? 'Uploading...' : uploadFiles.length === 0 ? 'Select Files' : 'Upload'}
-                onPress={uploadFiles.length === 0 ? handleFileSelect : handleSaveUploadedFiles}
+                title={
+                  uploading
+                    ? "Uploading..."
+                    : uploadFiles.length === 0
+                      ? "Select Files"
+                      : "Upload"
+                }
+                onPress={
+                  uploadFiles.length === 0
+                    ? handleFileSelect
+                    : handleSaveUploadedFiles
+                }
                 style={styles.modalButton}
                 loading={uploading}
                 disabled={uploading}
@@ -788,12 +1151,33 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
         animationType="fade"
         onRequestClose={() => setShowTagModal(false)}
       >
-        <View style={[styles.modalOverlay, { backgroundColor: theme.background + 'B3' }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
-              <Text style={[styles.modalTitle, { color: theme.text }]}>Edit Tags</Text>
-              <TouchableOpacity onPress={() => setShowTagModal(false)} style={styles.closeButton}>
-                <FontAwesome name="times" size={16} color={theme.textSecondary} />
+        <View
+          style={[
+            styles.modalOverlay,
+            { backgroundColor: theme.background + "B3" },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: theme.surface, borderColor: theme.border },
+            ]}
+          >
+            <View
+              style={[styles.modalHeader, { borderBottomColor: theme.border }]}
+            >
+              <Text style={[styles.modalTitle, { color: theme.text }]}>
+                Edit Tags
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowTagModal(false)}
+                style={styles.closeButton}
+              >
+                <FontAwesome
+                  name="times"
+                  size={16}
+                  color={theme.textSecondary}
+                />
               </TouchableOpacity>
             </View>
             <View style={styles.modalBody}>
@@ -801,10 +1185,18 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
                 Resource: {editingResource?.name}
               </Text>
               <Text style={[styles.modalHint, { color: theme.textTertiary }]}>
-                Enter tags separated by commas (e.g., guidelines, reference, ada)
+                Enter tags separated by commas (e.g., guidelines, reference,
+                ada)
               </Text>
               <TextInput
-                style={[styles.modalInput, { backgroundColor: theme.surfaceSecondary, color: theme.text, borderColor: theme.border }]}
+                style={[
+                  styles.modalInput,
+                  {
+                    backgroundColor: theme.surfaceSecondary,
+                    color: theme.text,
+                    borderColor: theme.border,
+                  },
+                ]}
                 value={newTags}
                 onChangeText={setNewTags}
                 placeholder="tag1, tag2, tag3"
@@ -814,28 +1206,60 @@ export default function ResourcesView({ resources, onSave, onBack }: ResourcesVi
               {/* Suggested tags */}
               {allTags.length > 0 && (
                 <View style={styles.suggestedTags}>
-                  <Text style={[styles.suggestedTagsLabel, { color: theme.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.suggestedTagsLabel,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
                     Existing tags (tap to add):
                   </Text>
                   <View style={styles.suggestedTagsList}>
-                    {allTags.filter(tag => !newTags.toLowerCase().includes(tag.toLowerCase())).slice(0, 10).map(tag => (
-                      <TouchableOpacity
-                        key={tag}
-                        style={[styles.suggestedTag, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}
-                        onPress={() => {
-                          const currentTags = newTags.trim();
-                          setNewTags(currentTags ? `${currentTags}, ${tag}` : tag);
-                        }}
-                      >
-                        <FontAwesome name="plus" size={10} color={theme.textSecondary} />
-                        <Text style={[styles.suggestedTagText, { color: theme.text }]}>{tag}</Text>
-                      </TouchableOpacity>
-                    ))}
+                    {allTags
+                      .filter(
+                        (tag) =>
+                          !newTags.toLowerCase().includes(tag.toLowerCase()),
+                      )
+                      .slice(0, 10)
+                      .map((tag) => (
+                        <TouchableOpacity
+                          key={tag}
+                          style={[
+                            styles.suggestedTag,
+                            {
+                              backgroundColor: theme.surfaceSecondary,
+                              borderColor: theme.border,
+                            },
+                          ]}
+                          onPress={() => {
+                            const currentTags = newTags.trim();
+                            setNewTags(
+                              currentTags ? `${currentTags}, ${tag}` : tag,
+                            );
+                          }}
+                        >
+                          <FontAwesome
+                            name="plus"
+                            size={10}
+                            color={theme.textSecondary}
+                          />
+                          <Text
+                            style={[
+                              styles.suggestedTagText,
+                              { color: theme.text },
+                            ]}
+                          >
+                            {tag}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
                   </View>
                 </View>
               )}
             </View>
-            <View style={[styles.modalFooter, { borderTopColor: theme.border }]}>
+            <View
+              style={[styles.modalFooter, { borderTopColor: theme.border }]}
+            >
               <Button
                 title="Cancel"
                 onPress={() => setShowTagModal(false)}
@@ -860,18 +1284,18 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 8,
     borderWidth: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
   },
   headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     flex: 1,
   },
@@ -880,15 +1304,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   headerActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -897,7 +1321,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   // Search and Filter Bar
   filterBar: {
@@ -906,8 +1330,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -923,13 +1347,13 @@ const styles = StyleSheet.create({
     maxHeight: 40,
   },
   tagFilterContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   tagFilterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -938,7 +1362,7 @@ const styles = StyleSheet.create({
   },
   tagFilterText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   clearFiltersButton: {
     paddingHorizontal: 8,
@@ -946,23 +1370,23 @@ const styles = StyleSheet.create({
   },
   clearFiltersText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   // Empty states
   empty: {
     padding: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
   },
   clearSearchButton: {
     marginTop: 16,
@@ -973,7 +1397,7 @@ const styles = StyleSheet.create({
   },
   clearSearchButtonText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   // Results count
   resultsCount: {
@@ -988,9 +1412,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   fileItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 12,
     borderBottomWidth: 1,
   },
@@ -998,8 +1422,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   fileItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 12,
     flex: 1,
   },
@@ -1009,11 +1433,11 @@ const styles = StyleSheet.create({
   },
   fileItemName: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   fileItemTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 4,
     marginTop: 4,
   },
@@ -1024,16 +1448,16 @@ const styles = StyleSheet.create({
   },
   fileItemTagText: {
     fontSize: 10,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   fileItemTagMore: {
     fontSize: 10,
     marginLeft: 4,
   },
   fileItemActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   fileItemAction: {
     padding: 6,
@@ -1042,7 +1466,7 @@ const styles = StyleSheet.create({
   modalHint: {
     fontSize: 12,
     marginBottom: 8,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   suggestedTags: {
     marginTop: 16,
@@ -1052,13 +1476,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   suggestedTagsList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   suggestedTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -1074,34 +1498,34 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   uploadTagSuggestions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     marginTop: 8,
   },
   modalOverlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
-    width: Platform.OS === 'web' ? 400 : '90%',
-    maxWidth: Platform.OS === 'web' ? 400 : '90%',
+    width: Platform.OS === "web" ? 400 : "90%",
+    maxWidth: Platform.OS === "web" ? 400 : "90%",
     borderRadius: 12,
     borderWidth: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   closeButton: {
     padding: 4,
@@ -1111,7 +1535,7 @@ const styles = StyleSheet.create({
   },
   modalLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     marginBottom: 8,
   },
   modalInput: {
@@ -1121,8 +1545,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 12,
     padding: 16,
     borderTopWidth: 1,
@@ -1132,16 +1556,16 @@ const styles = StyleSheet.create({
   },
   fileSelectButton: {
     borderWidth: 2,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderRadius: 12,
     padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     minHeight: 200,
   },
   fileSelectText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginTop: 12,
     marginBottom: 4,
   },
@@ -1153,8 +1577,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   filePreviewItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     padding: 12,
     borderRadius: 8,
@@ -1164,7 +1588,7 @@ const styles = StyleSheet.create({
   filePreviewName: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   filePreviewSize: {
     fontSize: 12,
@@ -1175,17 +1599,17 @@ const styles = StyleSheet.create({
   progressBarContainer: {
     height: 8,
     borderRadius: 4,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 8,
   },
   progressBar: {
-    height: '100%',
+    height: "100%",
     borderRadius: 4,
-    transition: 'width 0.3s ease',
+    transition: "width 0.3s ease",
   },
   progressText: {
     fontSize: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   folderSelectorContainer: {
     marginBottom: 16,
@@ -1193,12 +1617,12 @@ const styles = StyleSheet.create({
   folderSelector: {
     borderRadius: 8,
     borderWidth: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
     maxHeight: 200,
   },
   folderOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     padding: 12,
     borderBottomWidth: 1,
@@ -1206,6 +1630,6 @@ const styles = StyleSheet.create({
   folderOptionText: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });

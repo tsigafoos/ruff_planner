@@ -26,7 +26,7 @@ interface NavItem {
 
 /** Core project workflow — always visible first */
 const primaryNav: NavItem[] = [
-  { name: "Dashboard", route: "/(tabs)/dashboard", icon: "house" },
+  { name: "Dashboard", route: "/(tabs)/dashboard", icon: "home" },
   { name: "Projects", route: "/(tabs)/projects", icon: "folder" },
   { name: "Tasks", route: "/(tabs)/tasks", icon: "list" },
   { name: "Calendar", route: "/(tabs)/calendar", icon: "calendar-o" },
