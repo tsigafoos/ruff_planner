@@ -1,5 +1,4 @@
-import { ReactNode } from 'react';
-import { View, Text, StyleSheet, Platform, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
+import { ReactNode } from 'react';import { View, Text, StyleSheet, Platform, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '@/components/useTheme';
 import { PageHeader } from '@/components/layout';
@@ -42,6 +41,8 @@ export interface PageWrapperProps {
   padded?: boolean;
   /** Max content width (web only) - default 1300 */
   maxWidth?: number;
+  /** Web only: rendered between PageHeader and main content */
+  belowHeader?: ReactNode;
 }
 
 /**
@@ -62,6 +63,7 @@ export default function PageWrapper({
   isEmpty = false,
   padded = true,
   maxWidth = 1300,
+  belowHeader,
 }: PageWrapperProps) {
   const theme = useTheme();
 
@@ -158,21 +160,26 @@ export default function PageWrapper({
   };
 
   const contentElement = scrollable ? (
-    <ScrollView 
-      style={styles.scrollContent} 
+    <ScrollView
+      style={Platform.OS === 'web' ? styles.scrollContentWeb : styles.scrollContent}
       contentContainerStyle={styles.scrollContentContainer}
       showsVerticalScrollIndicator={true}
     >
       {renderContent()}
     </ScrollView>
   ) : (
-    <View style={styles.content}>
+    <View style={Platform.OS === 'web' ? styles.contentWeb : styles.content}>
       {renderContent()}
     </View>
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View
+      style={[
+        Platform.OS === 'web' ? styles.containerWeb : styles.container,
+        { backgroundColor: theme.background },
+      ]}
+    >
       {/* Header - PageHeader on web, custom on mobile */}
       {Platform.OS === 'web' ? (
         <PageHeader
@@ -190,6 +197,8 @@ export default function PageWrapper({
         renderMobileHeader()
       )}
 
+      {Platform.OS === 'web' && belowHeader ? belowHeader : null}
+
       {/* Content */}
       {contentElement}
     </View>
@@ -199,6 +208,11 @@ export default function PageWrapper({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  /** Web: height follows children so AppLayout main column can scroll */
+  containerWeb: {
+    width: '100%' as any,
+    alignSelf: 'stretch',
   },
   // Mobile header
   mobileHeader: {
@@ -254,8 +268,15 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  contentWeb: {
+    alignSelf: 'stretch',
+  },
   scrollContent: {
     flex: 1,
+  },
+  scrollContentWeb: {
+    width: '100%' as any,
+    alignSelf: 'stretch',
   },
   scrollContentContainer: {
     flexGrow: 1,

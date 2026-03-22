@@ -412,7 +412,12 @@ export default function ProjectDetailScreen() {
   );
 
   const screenContent = (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View
+      style={[
+        Platform.OS === 'web' ? styles.containerWeb : styles.container,
+        { backgroundColor: theme.background },
+      ]}
+    >
       {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: theme.surfaceSecondary, borderWidth: 1, borderColor: theme.border }]}>
@@ -585,7 +590,13 @@ export default function ProjectDetailScreen() {
           />
         </View>
       ) : currentView === 'widgets' && user?.id && id ? (
-        <View style={[styles.widgetsShell, { backgroundColor: theme.background }]}>
+        <View
+          style={
+            Platform.OS === 'web'
+              ? [styles.widgetsShellWeb, { backgroundColor: theme.background }]
+              : [styles.widgetsShell, { backgroundColor: theme.background }]
+          }
+        >
           <DynamicDashboard
             projectId={id}
             userId={user.id}
@@ -596,11 +607,20 @@ export default function ProjectDetailScreen() {
           />
         </View>
       ) : currentView === 'board' ? (
-        <View style={[styles.boardOnly, { backgroundColor: theme.background }]}>
+        <View
+          style={
+            Platform.OS === 'web'
+              ? [styles.boardOnlyWeb, { backgroundColor: theme.background }]
+              : [styles.boardOnly, { backgroundColor: theme.background }]
+          }
+        >
           {renderTaskLanes(true)}
         </View>
       ) : (
-        <ScrollView style={styles.mainContent} showsVerticalScrollIndicator={true}>
+        <ScrollView
+          style={Platform.OS === 'web' ? styles.mainContentWeb : styles.mainContent}
+          showsVerticalScrollIndicator={true}
+        >
           {isMaintenance ? (
             <MaintenanceDashboard
               project={project}
@@ -716,16 +736,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  containerWeb: {
+    width: '100%' as any,
+    alignSelf: 'stretch',
+  },
   mainContent: {
     flex: 1,
+  },
+  mainContentWeb: {
+    width: '100%' as any,
+    alignSelf: 'stretch',
   },
   boardOnly: {
     flex: 1,
     minHeight: 0,
   },
+  boardOnlyWeb: {
+    width: '100%' as any,
+    alignSelf: 'stretch',
+  },
   widgetsShell: {
     flex: 1,
     minHeight: 0,
+  },
+  widgetsShellWeb: {
+    width: '100%' as any,
+    alignSelf: 'stretch',
   },
   viewModeRow: {
     flexDirection: 'row',

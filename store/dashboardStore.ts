@@ -346,6 +346,10 @@ interface DashboardStore {
 
   // Home dashboard
   getHomeDashboard: () => DashboardLayout | null;
+
+  /** Incremented from sidebar “Create custom” so Insights can open the creation modal. */
+  insightsCreateDashboardSignal: number;
+  requestInsightsCreateDashboard: () => void;
 }
 
 export const useDashboardStore = create<DashboardStore>((set, get) => ({
@@ -354,7 +358,11 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   activeDashboardId: null,
   editMode: false,
   loading: false,
-  
+  insightsCreateDashboardSignal: 0,
+
+  requestInsightsCreateDashboard: () =>
+    set((s) => ({ insightsCreateDashboardSignal: s.insightsCreateDashboardSignal + 1 })),
+
   setEditMode: (editing) => set({ editMode: editing }),
   
   setActiveDashboard: (dashboardId) => {

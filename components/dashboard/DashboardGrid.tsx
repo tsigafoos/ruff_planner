@@ -78,14 +78,14 @@ export default function DashboardGrid({
   const getWidgetMinHeight = (widgetType: WidgetType): number => {
     // Thin widgets get smaller min height
     if (['notes', 'resources', 'mini-calendar', 'team-quick'].includes(widgetType)) {
-      return 200;
+      return 188;
     }
     // Medium widgets
     if (['info-cards', 'task-list', 'project-list', 'team-waiting', 'burndown'].includes(widgetType)) {
-      return 250;
+      return 236;
     }
     // Large widgets (kanban, gantt, etc.)
-    return 300;
+    return 284;
   };
 
   const renderWidget = (widget: DashboardWidget, row: DashboardRow) => {
@@ -219,7 +219,7 @@ export default function DashboardGrid({
         )}
         
         {/* Row Content */}
-        <View style={[styles.row, editMode && { borderColor: theme.border, borderWidth: 1, borderStyle: 'dashed', borderRadius: 8, padding: 8 }]}>
+        <View style={[styles.row, editMode && { borderColor: theme.border, borderWidth: 1, borderStyle: 'dashed', borderRadius: 8, padding: 6 }]}>
           {row.widgets.length > 0 ? (
             row.widgets.map((widget) => renderWidget(widget, row))
           ) : (
@@ -350,21 +350,21 @@ const styles = StyleSheet.create({
     // No flex: 1 here since we're inside a ScrollView
   },
   rowWrapper: {
-    marginBottom: 20,
+    marginBottom: 14,
   },
   rowHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 10,
+    padding: 8,
     borderRadius: 8,
     borderWidth: 1,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   rowHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   rowName: {
     fontSize: 13,
@@ -405,12 +405,12 @@ const styles = StyleSheet.create({
   },
   widgetContainer: {
     position: 'relative',
-    padding: 4,
+    padding: 3,
   },
   editOverlay: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 6,
+    right: 6,
     zIndex: 10,
   },
   editOverlayButtons: {
@@ -449,14 +449,14 @@ const styles = StyleSheet.create({
   },
   emptyRow: {
     flex: 1,
-    minHeight: 100,
+    minHeight: 88,
     borderWidth: 2,
     borderStyle: 'dashed',
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
-    gap: 8,
+    padding: 14,
+    gap: 6,
   },
   emptyRowText: {
     fontSize: 13,
@@ -498,8 +498,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    padding: 14,
+    gap: 6,
+    padding: 10,
     borderWidth: 2,
     borderStyle: 'dashed',
     borderRadius: 10,
@@ -524,16 +524,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 12,
     borderBottomWidth: 1,
   },
   widgetPickerTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   categoryTabs: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   categoryTab: {
     paddingVertical: 6,
@@ -548,25 +548,25 @@ const styles = StyleSheet.create({
   },
   widgetGrid: {
     flex: 1,
-    padding: 16,
+    padding: 12,
   },
   widgetGridContent: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   widgetOption: {
     width: Platform.OS === 'web' ? '48%' : '100%',
-    padding: 14,
-    borderRadius: 10,
+    padding: 11,
+    borderRadius: 8,
     borderWidth: 1,
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   widgetOptionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },

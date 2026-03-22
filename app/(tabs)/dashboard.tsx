@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import ProjectForm from '@/components/ProjectForm';
 import TaskForm from '@/components/TaskForm';
 import { useTheme } from '@/components/useTheme';
 import { StatusLane, DraggableTaskCard, MiniCalendar, PageWrapper } from '@/components/ui';
 import { DynamicDashboard } from '@/components/dashboard';
+import DashboardCreationModal from '@/components/dashboard/DashboardCreationModal';
+import { useDashboardStore } from '@/store/dashboardStore';
 import { useAuthStore } from '@/store/authStore';
 import { useLabelStore } from '@/store/labelStore';
 import { useProjectStore } from '@/store/projectStore';
@@ -15,9 +17,9 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { format } from 'date-fns';
 import { TemplateTask } from '@/lib/projectTemplates';
 
-type DashboardViewMode = 'static' | 'dynamic';
-
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
+
+type InsightsTab = 'overview' | string;
 
 const STATUS_LANES: { key: TaskStatus; label: string }[] = [
   { key: 'to_do', label: 'To Do' },
@@ -29,6 +31,7 @@ const STATUS_LANES: { key: TaskStatus; label: string }[] = [
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ tab?: string }>();
   const { user } = useAuthStore();
   const { tasks, loading: tasksLoading, fetchTasks, createTask, updateTask } = useTaskStore();
   const { projects, loading: projectsLoading, fetchProjects, createProject } = useProjectStore();
@@ -44,7 +47,25 @@ export default function DashboardScreen() {
   const [projectFormVisible, setProjectFormVisible] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [projectTasks, setProjectTasks] = useState<{ [projectId: string]: any[] }>({});
-  const [viewMode, setViewMode] = useState<DashboardViewMode>('static');
+  const [insightsTab, setInsightsTab] = useState<InsightsTab>('overview');
+  const [creationModalVisible, setCreationModalVisible] = useState(false);
+
+  const dashboards = useDashboardStore((s) => s.dashboards);
+  const loadDashboards = useDashboardStore((s) => s.loadDashboards);
+  const setActiveDashboard = useDashboardStore((s) => s.setActiveDashboard);
+  const setEditMode = useDashboardStore((s) => s.setEditMode);
+  const saveDashboard = useDashboardStore((s) => s.saveDashboard);
+  const addRow = useDashboardStore((s) => s.addRow);
+  const editMode = useDashboardStore((s) => s.editMode);
+  const createSignal = useDashboardStore((s) => s.insightsCreateDashboardSignal);
+  const dashboardsLoading = useDashboardStore((s) => s.loading);
+
+  const globalDashboards = useMemo(
+    () => dashboards.filter((d) => d.scope === 'global').sort((a, b) => (a.order || 0) - (b.order || 0)),
+    [dashboards],
+  );
+
+  const handledCreateRef = useRef(0);
   
   // Drag and drop state
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -59,6 +80,50 @@ export default function DashboardScreen() {
       fetchLabels(user.id);
     }
   }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadDashboards(user.id);
+    }
+  }, [user?.id, loadDashboards]);
+
+  useEffect(() => {
+    const t = params.tab;
+    if (t === undefined || t === null) return;
+    const tabStr = Array.isArray(t) ? t[0] : t;
+    if (tabStr === 'overview') setInsightsTab('overview');
+    else if (tabStr) setInsightsTab(tabStr);
+  }, [params.tab]);
+
+  useEffect(() => {
+    if (createSignal > handledCreateRef.current) {
+      handledCreateRef.current = createSignal;
+      setCreationModalVisible(true);
+    }
+  }, [createSignal]);
+
+  useEffect(() => {
+    if (insightsTab === 'overview') {
+      setEditMode(false);
+      return;
+    }
+    setActiveDashboard(insightsTab);
+  }, [insightsTab, setActiveDashboard, setEditMode]);
+
+  useEffect(() => {
+    if (insightsTab === 'overview') return;
+    if (!globalDashboards.some((d) => d.id === insightsTab)) {
+      setInsightsTab('overview');
+    }
+  }, [globalDashboards, insightsTab]);
+
+  /** loadDashboards() resets active dashboard to home; restore the tab the user picked. */
+  useEffect(() => {
+    if (dashboardsLoading || insightsTab === 'overview') return;
+    if (globalDashboards.some((d) => d.id === insightsTab)) {
+      setActiveDashboard(insightsTab);
+    }
+  }, [dashboardsLoading, globalDashboards, insightsTab, setActiveDashboard]);
 
   // Derive task status
   const getTaskStatus = (task: any): TaskStatus => {
@@ -322,49 +387,131 @@ export default function DashboardScreen() {
     }
   }, [draggedTaskId, dragOverLane, tasks, user?.id]);
 
+  const handleSaveLayout = async () => {
+    await saveDashboard();
+    setEditMode(false);
+  };
+
+  const insightsChrome = (
+    <View style={[styles.insightsChrome, { borderBottomColor: theme.border, backgroundColor: theme.surface }]}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.insightsTabScroll}
+        contentContainerStyle={styles.insightsTabRow}
+      >
+        <TouchableOpacity
+          style={[
+            styles.insightsTab,
+            {
+              backgroundColor: insightsTab === 'overview' ? theme.primary + '18' : theme.surfaceSecondary,
+              borderColor: insightsTab === 'overview' ? theme.primary : theme.border,
+            },
+          ]}
+          onPress={() => setInsightsTab('overview')}
+        >
+          <FontAwesome
+            name="home"
+            size={12}
+            color={insightsTab === 'overview' ? theme.primary : theme.textSecondary}
+          />
+          <Text
+            style={[
+              styles.insightsTabText,
+              { color: insightsTab === 'overview' ? theme.primary : theme.text },
+            ]}
+            numberOfLines={1}
+          >
+            Overview
+          </Text>
+        </TouchableOpacity>
+        {globalDashboards.map((d) => {
+          const active = insightsTab === d.id;
+          return (
+            <TouchableOpacity
+              key={d.id}
+              style={[
+                styles.insightsTab,
+                {
+                  backgroundColor: active ? theme.primary + '18' : 'transparent',
+                  borderColor: active ? theme.primary : 'transparent',
+                },
+              ]}
+              onPress={() => setInsightsTab(d.id)}
+            >
+              {d.emoji ? (
+                <Text style={styles.insightsTabEmoji}>{d.emoji}</Text>
+              ) : (
+                <FontAwesome name="th-large" size={12} color={active ? theme.primary : theme.textSecondary} />
+              )}
+              <Text
+                style={[styles.insightsTabText, { color: active ? theme.primary : theme.text }]}
+                numberOfLines={1}
+              >
+                {d.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+      {insightsTab !== 'overview' && (
+        <View style={styles.insightsEditCluster}>
+          {editMode ? (
+            <>
+              <TouchableOpacity
+                style={[styles.insightsEditBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                onPress={() => addRow()}
+              >
+                <FontAwesome name="plus" size={11} color={theme.text} />
+                <Text style={[styles.insightsEditBtnText, { color: theme.text }]}>Add lane</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.insightsEditBtn, { backgroundColor: theme.success, borderColor: theme.success }]}
+                onPress={handleSaveLayout}
+              >
+                <FontAwesome name="check" size={11} color="#fff" />
+                <Text style={[styles.insightsEditBtnText, { color: '#fff' }]}>Save</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              style={[styles.insightsEditBtn, { backgroundColor: theme.primary, borderColor: theme.primary }]}
+              onPress={() => setEditMode(true)}
+            >
+              <FontAwesome name="pencil" size={11} color="#fff" />
+              <Text style={[styles.insightsEditBtnText, { color: '#fff' }]}>Edit</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <PageWrapper
       section="Overview"
       title="Insights"
       subtitle={`Widgets & overview · ${tasks.length} tasks, ${projects.length} projects`}
       padded={false}
+      belowHeader={Platform.OS === 'web' ? insightsChrome : undefined}
       actions={[
         {
-          label: viewMode === 'static' ? 'Customize' : 'Classic View',
-          icon: viewMode === 'static' ? 'th-large' : 'list',
-          onPress: () => setViewMode(viewMode === 'static' ? 'dynamic' : 'static'),
-          variant: 'secondary',
-        },
-        {
-          label: '+ Task',
+          label: 'Add Task',
           icon: 'plus',
           onPress: () => setNewTaskFormVisible(true),
           variant: 'primary',
         },
         {
-          label: '+ Project',
+          label: 'Add Project',
           icon: 'folder',
           onPress: () => setProjectFormVisible(true),
           variant: 'secondary',
         },
       ]}
     >
-      {/* Dynamic Dashboard View */}
-      {viewMode === 'dynamic' && user?.id && (
-        <DynamicDashboard
-          userId={user.id}
-          tasks={tasks}
-          projects={projects}
-          resources={[]} // Resources can be loaded per-project in project dashboards
-          onTaskClick={handleEditTask}
-          onProjectClick={(project) => router.push(`/project/${project.id}`)}
-          showTabs={true}
-          showToolbar={true}
-        />
-      )}
+      {Platform.OS !== 'web' && insightsChrome}
 
-      {/* Static Dashboard View */}
-      {viewMode === 'static' && (
+      {insightsTab === 'overview' ? (
       <ScrollView style={styles.scrollContent}>
       {/* Projects and Mini Calendar Row */}
       <View style={styles.topSection}>
@@ -372,15 +519,6 @@ export default function DashboardScreen() {
         <View style={styles.projectsSection}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Projects</Text>
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: theme.primary }]}
-                onPress={() => setProjectFormVisible(true)}
-              >
-                <FontAwesome name="plus" size={12} color="#ffffff" />
-                <Text style={styles.actionButtonText}>New Project</Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
           {projectsLoading ? (
@@ -503,15 +641,6 @@ export default function DashboardScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Tasks</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: theme.primary }]}
-              onPress={() => setNewTaskFormVisible(true)}
-            >
-              <FontAwesome name="plus" size={12} color="#ffffff" />
-              <Text style={styles.actionButtonText}>Add Task</Text>
-            </TouchableOpacity>
-          </View>
         </View>
 
         {tasksLoading ? (
@@ -580,7 +709,31 @@ export default function DashboardScreen() {
       </View>
 
       </ScrollView>
-      )}
+      ) : user?.id ? (
+        <DynamicDashboard
+          userId={user.id}
+          tasks={tasks}
+          projects={projects}
+          resources={[]}
+          onTaskClick={handleEditTask}
+          onProjectClick={(project) => router.push(`/project/${project.id}`)}
+          showTabs={false}
+          showToolbar={false}
+          showCreationModal={false}
+          embedded
+          onRequestCreateDashboard={() => useDashboardStore.getState().requestInsightsCreateDashboard()}
+        />
+      ) : null}
+
+      {user?.id ? (
+        <DashboardCreationModal
+          visible={creationModalVisible}
+          onClose={() => setCreationModalVisible(false)}
+          onCreated={(id) => setInsightsTab(id)}
+          projects={projects}
+          userId={user.id}
+        />
+      ) : null}
 
       {/* Edit Task Form */}
       <TaskForm
@@ -616,39 +769,95 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  insightsChrome: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    minHeight: 44,
+  },
+  insightsTabScroll: {
+    flex: 1,
+    flexGrow: 1,
+    minWidth: 0,
+  },
+  insightsTabRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingRight: 8,
+  },
+  insightsTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    maxWidth: 220,
+  },
+  insightsTabEmoji: {
+    fontSize: 13,
+  },
+  insightsTabText: {
+    fontSize: 12,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  insightsEditCluster: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingRight: 12,
+    paddingLeft: 4,
+  },
+  insightsEditBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  insightsEditBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   scrollContent: {
     flex: 1,
   },
   topSection: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
-    paddingLeft: Platform.OS === 'web' ? 40 : 16,
-    paddingRight: Platform.OS === 'web' ? 40 : 16,
-    paddingTop: 24,
+    paddingLeft: Platform.OS === 'web' ? 28 : 14,
+    paddingRight: Platform.OS === 'web' ? 28 : 14,
+    paddingTop: Platform.OS === 'web' ? 16 : 20,
     maxWidth: Platform.OS === 'web' ? 1300 : '100%',
-    gap: 24,
+    gap: Platform.OS === 'web' ? 16 : 20,
     alignItems: Platform.OS === 'web' ? 'flex-start' : undefined,
   },
   projectsSection: {
     flex: 1,
-    marginRight: Platform.OS === 'web' ? 24 : 0,
-    marginBottom: Platform.OS === 'web' ? 0 : 24,
-    maxHeight: Platform.OS === 'web' ? 420 : undefined,
+    marginRight: Platform.OS === 'web' ? 16 : 0,
+    marginBottom: Platform.OS === 'web' ? 0 : 20,
+    maxHeight: Platform.OS === 'web' ? 400 : undefined,
   },
   section: {
-    marginBottom: 32,
-    paddingHorizontal: Platform.OS === 'web' ? 40 : 16,
-    
+    marginBottom: 24,
+    paddingHorizontal: Platform.OS === 'web' ? 28 : 14,
     maxWidth: Platform.OS === 'web' ? 1350 : '100%',
-    paddingTop: 24,
+    paddingTop: Platform.OS === 'web' ? 16 : 20,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: Platform.OS === 'web' ? 20 : 24,
+    fontSize: Platform.OS === 'web' ? 18 : 22,
     fontWeight: '700',
     letterSpacing: -0.015,
   },
@@ -659,32 +868,33 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   actionButtonText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
   },
   // Project styles
   projectsListContainer: {
     flex: 1,
-    maxHeight: Platform.OS === 'web' ? 360 : undefined,
+    maxHeight: Platform.OS === 'web' ? 336 : undefined,
     borderWidth: 1,
     borderRadius: 12,
     overflow: 'hidden',
   },
   projectsList: {
-    gap: 12,
-    padding: 12,
+    gap: 8,
+    padding: 9,
   },
   projectItem: {
     borderWidth: 1,
     borderRadius: 10,
-    padding: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 13,
   },
   projectRow: {
     flexDirection: 'row',
@@ -693,12 +903,12 @@ const styles = StyleSheet.create({
   },
   projectInfo: {
     flex: 1,
-    marginRight: 16,
+    marginRight: 12,
   },
   projectName: {
-    fontSize: Platform.OS === 'web' ? 16 : 18,
+    fontSize: Platform.OS === 'web' ? 15 : 17,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   projectMeta: {
     flexDirection: 'row',
@@ -706,7 +916,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   projectMetaText: {
-    fontSize: Platform.OS === 'web' ? 13 : 14,
+    fontSize: Platform.OS === 'web' ? 12 : 13,
   },
   projectActions: {
     flexDirection: 'row',
@@ -714,24 +924,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   expandButton: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   openButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 8,
   },
   openButtonText: {
-    fontSize: Platform.OS === 'web' ? 13 : 14,
+    fontSize: Platform.OS === 'web' ? 12 : 13,
     fontWeight: '600',
   },
   projectTasksContainer: {
-    marginTop: 16,
-    paddingTop: 16,
+    marginTop: 12,
+    paddingTop: 12,
     borderTopWidth: 1,
   },
   projectTasksTable: {
@@ -752,19 +962,19 @@ const styles = StyleSheet.create({
   },
   projectTaskRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
+    paddingVertical: 9,
     borderBottomWidth: 1,
   },
   tableCellText: {
     flex: 1,
-    fontSize: Platform.OS === 'web' ? 14 : 14,
+    fontSize: Platform.OS === 'web' ? 13 : 14,
   },
   // Lane styles (layout containers only - component styles are in StatusLane)
   lanesContainer: {
     flexGrow: 0,
   },
   lanesContent: {
-    paddingRight: Platform.OS === 'web' ? 40 : 16,
+    paddingRight: Platform.OS === 'web' ? 28 : 14,
   },
   emptyText: {
     fontSize: Platform.OS === 'web' ? 14 : 16,
@@ -787,9 +997,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   cancelledBarContainer: {
-    paddingHorizontal: Platform.OS === 'web' ? 40 : 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingHorizontal: Platform.OS === 'web' ? 28 : 14,
+    paddingTop: 10,
+    paddingBottom: 6,
   },
   cancelledBar: {
     flexDirection: 'row',

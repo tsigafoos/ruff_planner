@@ -78,17 +78,33 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     flexDirection: 'row',
+    minHeight: 0,
     overflow: 'hidden',
   },
   mainContent: {
     flex: 1,
-    ...(Platform.OS === 'web' ? { overflow: 'auto' as any } : {}),
+    minHeight: 0,
+    ...(Platform.OS === 'web'
+      ? {
+          overflowY: 'auto' as any,
+          overflowX: 'hidden' as any,
+          WebkitOverflowScrolling: 'touch' as any,
+        }
+      : {}),
   },
+  // Do not use flex:1 here — height follows page content so mainContent can scroll (web).
   contentInner: {
-    flex: 1,
+    alignSelf: 'stretch',
     marginTop: CONTENT_MARGIN_TOP,
     marginLeft: CONTENT_MARGIN_LEFT,
     marginRight: CONTENT_MARGIN_LEFT,
-    marginBottom: 0,
+    marginBottom: CONTENT_MARGIN_TOP,
+    ...(Platform.OS === 'web'
+      ? {
+          width: '100%' as any,
+          minHeight: '100%' as any,
+          paddingBottom: 16,
+        }
+      : {}),
   },
 });

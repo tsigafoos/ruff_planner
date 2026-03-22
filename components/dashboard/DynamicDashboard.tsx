@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '@/components/useTheme';
 import { useDashboardStore } from '@/store/dashboardStore';
@@ -19,6 +19,12 @@ interface DynamicDashboardProps {
   onProjectClick?: (project: any) => void;
   showToolbar?: boolean;
   showTabs?: boolean;
+  /** When false, parent owns DashboardCreationModal (e.g. Insights screen). */
+  showCreationModal?: boolean;
+  /** Smaller loading UI for embedded Insights custom tab. */
+  embedded?: boolean;
+  /** When `showCreationModal` is false, empty-state CTA asks parent to open creation (sidebar / Insights). */
+  onRequestCreateDashboard?: () => void;
 }
 
 /**
@@ -35,6 +41,9 @@ export default function DynamicDashboard({
   onProjectClick,
   showToolbar = true,
   showTabs = true,
+  showCreationModal = true,
+  embedded = false,
+  onRequestCreateDashboard,
 }: DynamicDashboardProps) {
   const theme = useTheme();
   const { 
@@ -96,6 +105,16 @@ export default function DynamicDashboard({
   };
 
   if (loading) {
+    if (embedded) {
+      return (
+        <View style={[styles.embeddedLoading, { backgroundColor: theme.background }]}>
+          <ActivityIndicator size="small" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+            Loading dashboard…
+          </Text>
+        </View>
+      );
+    }
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.surface }]}>
         <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
@@ -106,7 +125,12 @@ export default function DynamicDashboard({
   }
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        Platform.OS === 'web' && projectId ? styles.containerWebProject : null,
+      ]}
+    >
       {/* Dashboard Tabs */}
       {showTabs && (
         <DashboardTabs
@@ -178,8 +202,11 @@ export default function DynamicDashboard({
       )}
 
       {/* Dashboard Content */}
-      <ScrollView 
-        style={styles.gridContainer} 
+      <ScrollView
+        style={[
+          styles.gridContainer,
+          Platform.OS === 'web' && projectId ? styles.gridContainerWebProject : null,
+        ]}
         contentContainerStyle={styles.gridContentContainer}
         showsVerticalScrollIndicator
       >
@@ -203,7 +230,11 @@ export default function DynamicDashboard({
             </Text>
             <TouchableOpacity
               style={[styles.createFirstButton, { backgroundColor: theme.primary }]}
-              onPress={() => setCreationModalVisible(true)}
+              onPress={() =>
+                showCreationModal
+                  ? setCreationModalVisible(true)
+                  : onRequestCreateDashboard?.()
+              }
             >
               <FontAwesome name="plus" size={14} color="#fff" />
               <Text style={styles.createFirstButtonText}>Create Dashboard</Text>
@@ -222,15 +253,16 @@ export default function DynamicDashboard({
         )}
       </ScrollView>
 
-      {/* Dashboard Creation Modal */}
-      <DashboardCreationModal
-        visible={creationModalVisible}
-        onClose={() => setCreationModalVisible(false)}
-        onCreated={handleDashboardCreated}
-        projects={projects}
-        userId={userId}
-        defaultProjectId={projectId}
-      />
+      {showCreationModal && (
+        <DashboardCreationModal
+          visible={creationModalVisible}
+          onClose={() => setCreationModalVisible(false)}
+          onCreated={handleDashboardCreated}
+          projects={projects}
+          userId={userId}
+          defaultProjectId={projectId}
+        />
+      )}
     </View>
   );
 }
@@ -239,11 +271,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  /** Project page: height follows grid so shell scroll can move the whole dashboard */
+  containerWebProject: {
+    flexGrow: 0,
+    flexShrink: 0,
+    width: '100%' as any,
+    alignSelf: 'stretch',
+  },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 48,
+  },
+  embeddedLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
   },
   loadingText: {
     fontSize: 14,
@@ -252,19 +299,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
   },
   toolbarLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   dashboardEmoji: {
-    fontSize: 24,
+    fontSize: 22,
   },
   toolbarTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   toolbarMeta: {
@@ -292,22 +340,27 @@ const styles = StyleSheet.create({
   toolbarButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
   },
   toolbarButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
   },
   gridContainer: {
     flex: 1,
   },
+  gridContainerWebProject: {
+    flexGrow: 0,
+    width: '100%' as any,
+    alignSelf: 'stretch',
+  },
   gridContentContainer: {
-    padding: Platform.OS === 'web' ? 16 : 12,
-    paddingBottom: 40,
+    padding: Platform.OS === 'web' ? 12 : 10,
+    paddingBottom: 28,
   },
   emptyState: {
     flex: 1,

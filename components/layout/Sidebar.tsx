@@ -5,6 +5,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useThemeStore, themes } from '@/store/themeStore';
 import { useProfileStore } from '@/store/profileStore';
 import { useTeamStore } from '@/store/teamStore';
+import { useDashboardStore } from '@/store/dashboardStore';
 
 // Layout constants
 export const SIDEBAR_COLLAPSED_WIDTH = 52;
@@ -56,6 +57,7 @@ export default function Sidebar({
   const theme = themes[resolvedTheme];
   const { profile } = useProfileStore();
   const { currentTeam } = useTeamStore();
+  const requestInsightsCreateDashboard = useDashboardStore((s) => s.requestInsightsCreateDashboard);
   const [moreOpen, setMoreOpen] = useState(false);
 
   const teamModeEnabled = profile?.team_mode_enabled;
@@ -183,6 +185,28 @@ export default function Sidebar({
             {moreOpen ? (
               <View style={styles.moreBlock}>
                 {more.map((item) => renderNavItem(item))}
+                <TouchableOpacity
+                  style={[
+                    styles.navItem,
+                    {
+                      backgroundColor: 'transparent',
+                      justifyContent: 'flex-start',
+                      paddingHorizontal: 16,
+                    },
+                  ]}
+                  onPress={() => {
+                    requestInsightsCreateDashboard();
+                    router.push('/(tabs)/dashboard' as any);
+                  }}
+                  accessibilityLabel="Create custom dashboard"
+                >
+                  <View style={styles.iconContainer}>
+                    <FontAwesome name="plus-square-o" size={18} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.navText, { color: theme.primary, fontWeight: '600' }]}>
+                    Create custom
+                  </Text>
+                </TouchableOpacity>
               </View>
             ) : null}
           </>
