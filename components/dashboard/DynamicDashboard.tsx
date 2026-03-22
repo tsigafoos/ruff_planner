@@ -130,6 +130,7 @@ export default function DynamicDashboard({
       style={[
         styles.container,
         Platform.OS === 'web' && projectId ? styles.containerWebProject : null,
+        embedded && Platform.OS === 'web' ? styles.containerEmbeddedWeb : null,
       ]}
     >
       {/* Dashboard Tabs */}
@@ -207,6 +208,7 @@ export default function DynamicDashboard({
         style={[
           styles.gridContainer,
           Platform.OS === 'web' && projectId ? styles.gridContainerWebProject : null,
+          embedded && Platform.OS === 'web' ? styles.gridContainerEmbeddedWeb : null,
         ]}
         contentContainerStyle={styles.gridContentContainer}
         showsVerticalScrollIndicator
@@ -274,6 +276,13 @@ const styles = StyleSheet.create({
   },
   /** Project page: height follows grid so shell scroll can move the whole dashboard */
   containerWebProject: {
+    flexGrow: 0,
+    flexShrink: 0,
+    width: '100%' as any,
+    alignSelf: 'stretch',
+  },
+  /** Insights custom tab on web: height follows grid so AppLayout main column scrolls */
+  containerEmbeddedWeb: {
     flexGrow: 0,
     flexShrink: 0,
     width: '100%' as any,
@@ -355,6 +364,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   gridContainerWebProject: {
+    flexGrow: 0,
+    width: '100%' as any,
+    alignSelf: 'stretch',
+  },
+  gridContainerEmbeddedWeb: {
     flexGrow: 0,
     width: '100%' as any,
     alignSelf: 'stretch',

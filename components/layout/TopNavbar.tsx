@@ -155,7 +155,7 @@ export default function TopNavbar() {
       onPress: () => router.push('/profile'),
     },
     {
-      label: 'Insights (widgets)',
+      label: 'Overview',
       icon: 'th-large',
       onPress: () => router.push('/(tabs)/dashboard'),
     },

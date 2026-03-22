@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useAuthStore } from '@/store/authStore';
+import { useTheme } from '@/components/useTheme';
 
 export default function SignupScreen() {
   const [email, setEmail] = useState('');
@@ -9,9 +11,12 @@ export default function SignupScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const router = useRouter();
   const { signUp } = useAuthStore();
+  const theme = useTheme();
 
   const handleSignup = async () => {
     if (!email || !password) {
@@ -67,28 +72,63 @@ export default function SignupScreen() {
         <TextInput
           style={styles.input}
           placeholder="Email"
+          placeholderTextColor={theme.textTertiary}
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
           autoComplete="email"
         />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Confirm Password"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-          autoCapitalize="none"
-        />
+        <View style={styles.passwordFieldWrap}>
+          <TextInput
+            style={[styles.input, styles.passwordInput]}
+            placeholder="Password"
+            placeholderTextColor={theme.textTertiary}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoComplete="new-password"
+          />
+          <TouchableOpacity
+            style={styles.passwordToggle}
+            onPress={() => setShowPassword((v) => !v)}
+            accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+            accessibilityRole="button"
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <FontAwesome
+              name={showPassword ? 'eye-slash' : 'eye'}
+              size={18}
+              color={theme.textSecondary}
+            />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.passwordFieldWrap}>
+          <TextInput
+            style={[styles.input, styles.passwordInput]}
+            placeholder="Confirm Password"
+            placeholderTextColor={theme.textTertiary}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry={!showConfirmPassword}
+            autoCapitalize="none"
+            autoComplete="new-password"
+          />
+          <TouchableOpacity
+            style={styles.passwordToggle}
+            onPress={() => setShowConfirmPassword((v) => !v)}
+            accessibilityLabel={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+            accessibilityRole="button"
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <FontAwesome
+              name={showConfirmPassword ? 'eye-slash' : 'eye'}
+              size={18}
+              color={theme.textSecondary}
+            />
+          </TouchableOpacity>
+        </View>
         <TouchableOpacity
           style={[styles.button, styles.primaryButton]}
           onPress={handleSignup}
@@ -141,6 +181,23 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: 16,
     backgroundColor: '#fff',
+  },
+  passwordFieldWrap: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  passwordInput: {
+    marginBottom: 0,
+    paddingRight: 48,
+  },
+  passwordToggle: {
+    position: 'absolute',
+    right: 4,
+    top: 0,
+    bottom: 0,
+    width: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   button: {
     padding: 14,

@@ -347,7 +347,7 @@ interface DashboardStore {
   // Home dashboard
   getHomeDashboard: () => DashboardLayout | null;
 
-  /** Incremented from sidebar “Create custom” so Insights can open the creation modal. */
+  /** Incremented from sidebar “Create Dash” so Overview can open the creation modal. */
   insightsCreateDashboardSignal: number;
   requestInsightsCreateDashboard: () => void;
 }
@@ -706,25 +706,11 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
           loading: false,
         });
       } else {
-        // Create default home dashboard
-        const homeDashboard: DashboardLayout = {
-          id: generateId(),
-          name: 'Home',
-          emoji: '🏠',
-          template: 'custom',
-          scope: 'global',
-          userId,
-          rows: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          isDefault: true,
-          order: 0,
-        };
-        
-        set({ 
-          dashboards: [homeDashboard],
-          currentDashboard: homeDashboard,
-          activeDashboardId: homeDashboard.id,
+        // No auto-seeded dashboard — user adds tabs via the + control or Create Dash
+        set({
+          dashboards: [],
+          currentDashboard: null,
+          activeDashboardId: null,
           loading: false,
         });
       }

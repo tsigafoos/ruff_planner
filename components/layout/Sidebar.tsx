@@ -27,7 +27,6 @@ const primaryNav: NavItem[] = [
 
 /** Power-user / legacy views — tucked under “More tools” */
 const moreNav: NavItem[] = [
-  { name: 'Insights', route: '/(tabs)/dashboard', icon: 'th-large' },
   { name: 'Today', route: '/(tabs)/today', icon: 'calendar' },
   { name: 'Upcoming', route: '/(tabs)/upcoming', icon: 'calendar-check-o' },
   { name: 'Labels', route: '/(tabs)/labels', icon: 'tags' },
@@ -198,13 +197,13 @@ export default function Sidebar({
                     requestInsightsCreateDashboard();
                     router.push('/(tabs)/dashboard' as any);
                   }}
-                  accessibilityLabel="Create custom dashboard"
+                  accessibilityLabel="Create dashboard"
                 >
                   <View style={styles.iconContainer}>
                     <FontAwesome name="plus-square-o" size={18} color={theme.primary} />
                   </View>
                   <Text style={[styles.navText, { color: theme.primary, fontWeight: '600' }]}>
-                    Create custom
+                    Create Dash
                   </Text>
                 </TouchableOpacity>
               </View>

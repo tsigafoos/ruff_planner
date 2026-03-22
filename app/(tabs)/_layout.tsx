@@ -55,7 +55,7 @@ export default function TabLayout() {
         name="dashboard"
         options={{
           href: null,
-          title: 'Insights',
+          title: 'Overview',
         }}
       />
       {/* Hidden tabs - kept for routing but not shown in tab bar */}

@@ -43,6 +43,8 @@ export interface PageWrapperProps {
   maxWidth?: number;
   /** Web only: rendered between PageHeader and main content */
   belowHeader?: ReactNode;
+  /** Web: skip PageHeader (e.g. Insights uses inline toolbar only) */
+  hideHeader?: boolean;
 }
 
 /**
@@ -64,6 +66,7 @@ export default function PageWrapper({
   padded = true,
   maxWidth = 1300,
   belowHeader,
+  hideHeader = false,
 }: PageWrapperProps) {
   const theme = useTheme();
 
@@ -182,17 +185,19 @@ export default function PageWrapper({
     >
       {/* Header - PageHeader on web, custom on mobile */}
       {Platform.OS === 'web' ? (
-        <PageHeader
-          section={section || title}
-          pageName={title}
-          subtitle={subtitle}
-          actions={actions.map(a => ({
-            label: a.label,
-            icon: a.icon,
-            onPress: a.onPress,
-            variant: a.variant,
-          }))}
-        />
+        hideHeader ? null : (
+          <PageHeader
+            section={section || title}
+            pageName={title}
+            subtitle={subtitle}
+            actions={actions.map((a) => ({
+              label: a.label,
+              icon: a.icon,
+              onPress: a.onPress,
+              variant: a.variant,
+            }))}
+          />
+        )
       ) : (
         renderMobileHeader()
       )}

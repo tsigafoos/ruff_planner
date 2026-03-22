@@ -16,7 +16,6 @@ import { useThemeStore } from '@/store/themeStore';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { format } from 'date-fns';
 import { TemplateTask } from '@/lib/projectTemplates';
-
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
 
 type InsightsTab = 'overview' | string;
@@ -58,10 +57,11 @@ export default function DashboardScreen() {
   const createSignal = useDashboardStore((s) => s.insightsCreateDashboardSignal);
   const dashboardsLoading = useDashboardStore((s) => s.loading);
 
-  const globalDashboards = useMemo(
-    () => dashboards.filter((d) => d.scope === 'global').sort((a, b) => (a.order || 0) - (b.order || 0)),
-    [dashboards],
-  );
+  /** Custom dashboards only (global scope), in tab order — after Overview */
+  const globalDashboards = useMemo(() => {
+    const list = dashboards.filter((d) => d.scope === 'global');
+    return list.sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [dashboards]);
 
   const handledCreateRef = useRef(0);
   
@@ -115,7 +115,10 @@ export default function DashboardScreen() {
     if (insightsTab === 'overview') return;
     if (dashboardsLoading) return;
     const globals = dashboards.filter((d) => d.scope === 'global');
-    if (globals.length === 0) return;
+    if (globals.length === 0) {
+      setInsightsTab('overview');
+      return;
+    }
     if (!globals.some((d) => d.id === insightsTab)) {
       setInsightsTab('overview');
     }
@@ -415,7 +418,7 @@ export default function DashboardScreen() {
           onPress={() => setInsightsTab('overview')}
         >
           <FontAwesome
-            name="home"
+            name="th-large"
             size={12}
             color={insightsTab === 'overview' ? theme.primary : theme.textSecondary}
           />
@@ -442,6 +445,7 @@ export default function DashboardScreen() {
                 },
               ]}
               onPress={() => setInsightsTab(d.id)}
+              accessibilityLabel={d.name}
             >
               {d.emoji ? (
                 <Text style={styles.insightsTabEmoji}>{d.emoji}</Text>
@@ -457,6 +461,17 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           );
         })}
+        <TouchableOpacity
+          style={[
+            styles.insightsTabTrailingPlus,
+            { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
+          ]}
+          onPress={() => setCreationModalVisible(true)}
+          accessibilityLabel="Create new dashboard"
+          accessibilityRole="button"
+        >
+          <FontAwesome name="plus" size={11} color={theme.primary} />
+        </TouchableOpacity>
       </ScrollView>
       {insightsTab !== 'overview' && (
         <View style={styles.insightsEditCluster}>
@@ -488,36 +503,31 @@ export default function DashboardScreen() {
           )}
         </View>
       )}
+      {Platform.OS === 'web' && (
+        <View style={styles.insightsActions}>
+          <TouchableOpacity
+            style={[styles.insightsPrimaryBtn, { backgroundColor: theme.primary, borderColor: theme.primary }]}
+            onPress={() => setNewTaskFormVisible(true)}
+            accessibilityLabel="Add task"
+          >
+            <FontAwesome name="plus" size={12} color="#fff" />
+            <Text style={styles.insightsPrimaryBtnText}>Add Task</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.insightsPrimaryBtn, { backgroundColor: theme.primary, borderColor: theme.primary }]}
+            onPress={() => setProjectFormVisible(true)}
+            accessibilityLabel="Add project"
+          >
+            <FontAwesome name="plus" size={12} color="#fff" />
+            <Text style={styles.insightsPrimaryBtnText}>Add Project</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 
-  return (
-    <PageWrapper
-      section="Overview"
-      title="Insights"
-      subtitle={`Widgets & overview · ${tasks.length} tasks, ${projects.length} projects`}
-      padded={false}
-      belowHeader={Platform.OS === 'web' ? insightsChrome : undefined}
-      actions={[
-        {
-          label: 'Add Task',
-          icon: 'plus',
-          onPress: () => setNewTaskFormVisible(true),
-          variant: 'primary',
-        },
-        {
-          label: 'Add Project',
-          icon: 'folder',
-          onPress: () => setProjectFormVisible(true),
-          variant: 'secondary',
-        },
-      ]}
-    >
-      {Platform.OS !== 'web' && insightsChrome}
-
-      {insightsTab === 'overview' ? (
-      <ScrollView style={styles.scrollContent}>
-      {/* Projects and Mini Calendar Row */}
+  const overviewBody = (
+    <>
       <View style={styles.topSection}>
         {/* Projects List Section */}
         <View style={styles.projectsSection}>
@@ -711,8 +721,44 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
       </View>
+    </>
+  );
 
-      </ScrollView>
+  return (
+    <PageWrapper
+      section="Overview"
+      title="Insights"
+      subtitle={`${tasks.length} tasks · ${projects.length} projects`}
+      hideHeader={Platform.OS === 'web'}
+      padded={false}
+      belowHeader={Platform.OS === 'web' ? insightsChrome : undefined}
+      actions={
+        Platform.OS === 'web'
+          ? []
+          : [
+              {
+                label: 'Add Task',
+                icon: 'plus',
+                onPress: () => setNewTaskFormVisible(true),
+                variant: 'primary',
+              },
+              {
+                label: 'Add Project',
+                icon: 'plus',
+                onPress: () => setProjectFormVisible(true),
+                variant: 'primary',
+              },
+            ]
+      }
+    >
+      {Platform.OS !== 'web' && insightsChrome}
+
+      {insightsTab === 'overview' ? (
+        Platform.OS === 'web' ? (
+          <View style={styles.overviewWebRoot}>{overviewBody}</View>
+        ) : (
+          <ScrollView style={styles.scrollContent}>{overviewBody}</ScrollView>
+        )
       ) : user?.id ? (
         <DynamicDashboard
           userId={user.id}
@@ -778,6 +824,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 1,
     minHeight: 44,
+    flexShrink: 0,
+  },
+  insightsActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingRight: 16,
+    paddingLeft: 4,
+    flexShrink: 0,
+  },
+  insightsPrimaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  insightsPrimaryBtnText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#ffffff',
+  },
+  overviewWebRoot: {
+    width: '100%' as any,
+    alignSelf: 'stretch',
+    paddingBottom: 32,
   },
   insightsTabScroll: {
     flex: 1,
@@ -802,6 +876,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     maxWidth: 220,
   },
+  /** After custom dashboard tabs — opens create-dashboard flow */
+  insightsTabTrailingPlus: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    minWidth: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginLeft: 2,
+  },
   insightsTabEmoji: {
     fontSize: 13,
   },
@@ -816,6 +901,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingRight: 12,
     paddingLeft: 4,
+    flexShrink: 0,
   },
   insightsEditBtn: {
     flexDirection: 'row',
@@ -846,7 +932,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: Platform.OS === 'web' ? 16 : 0,
     marginBottom: Platform.OS === 'web' ? 0 : 20,
-    maxHeight: Platform.OS === 'web' ? 400 : undefined,
   },
   section: {
     marginBottom: 24,
@@ -885,7 +970,6 @@ const styles = StyleSheet.create({
   // Project styles
   projectsListContainer: {
     flex: 1,
-    maxHeight: Platform.OS === 'web' ? 336 : undefined,
     borderWidth: 1,
     borderRadius: 12,
     overflow: 'hidden',
