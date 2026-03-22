@@ -36,7 +36,7 @@ export default function DashboardScreen() {
   const theme = useTheme();
   const { resolvedTheme } = useThemeStore();
   // Detect dark mode by checking if background is dark (lightness < 50%)
-  const isDark = theme.background === '#0f0f11' || resolvedTheme === 'dark';
+  const isDark = resolvedTheme === 'dark';
   
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [taskFormVisible, setTaskFormVisible] = useState(false);
@@ -325,8 +325,8 @@ export default function DashboardScreen() {
   return (
     <PageWrapper
       section="Overview"
-      title="Dashboard"
-      subtitle={`${tasks.length} tasks, ${projects.length} projects`}
+      title="Insights"
+      subtitle={`Widgets & overview · ${tasks.length} tasks, ${projects.length} projects`}
       padded={false}
       actions={[
         {

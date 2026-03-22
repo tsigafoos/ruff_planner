@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 // These should be set as environment variables in production
 // For now, using placeholder values - user will need to configure these
@@ -10,6 +10,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // Web: recover session from magic-link / OAuth redirects in the URL hash
+    detectSessionInUrl: Platform.OS === 'web',
   },
 });

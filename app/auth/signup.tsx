@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 
@@ -8,6 +8,7 @@ export default function SignupScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   
   const router = useRouter();
   const { signUp } = useAuthStore();
@@ -28,16 +29,24 @@ export default function SignupScreen() {
       return;
     }
     
+    setFormError(null);
     setLoading(true);
     try {
-      await signUp(email, password);
-      Alert.alert(
-        'Success',
-        'Account created! Please check your email to verify your account.'
-      );
-      router.replace('/(tabs)/dashboard');
+      const data = await signUp(email, password);
+      if (!data.session) {
+        const msg =
+          'Account created. Confirm your email, then sign in. (For local dev: disable email confirmation in Supabase → Authentication → Providers.)';
+        if (Platform.OS === 'web') window.alert(msg);
+        else Alert.alert('Check your email', msg);
+        router.replace('/auth/login?notice=verify');
+        return;
+      }
+      router.replace('/(tabs)/projects');
     } catch (error: any) {
-      Alert.alert('Signup Failed', error.message || 'Failed to create account');
+      const msg = error?.message || 'Failed to create account';
+      setFormError(msg);
+      if (Platform.OS === 'web') window.alert(`Signup failed\n\n${msg}`);
+      else Alert.alert('Signup Failed', msg);
     } finally {
       setLoading(false);
     }
@@ -47,6 +56,12 @@ export default function SignupScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Create Account</Text>
       <Text style={styles.subtitle}>Sign up for BarkItDone</Text>
+
+      {formError ? (
+        <Text style={styles.errorText} accessibilityLiveRegion="polite">
+          {formError}
+        </Text>
+      ) : null}
 
       <View style={styles.form}>
         <TextInput
@@ -148,5 +163,11 @@ const styles = StyleSheet.create({
   linkText: {
     color: '#3B82F6',
     fontSize: 14,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 14,
+    marginBottom: 12,
+    textAlign: 'center',
   },
 });

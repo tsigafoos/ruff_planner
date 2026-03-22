@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '@/components/useTheme';
@@ -47,16 +47,39 @@ export default function DynamicDashboard({
     createDashboard,
     saveDashboard,
     addRow,
+    selectFirstProjectDashboard,
   } = useDashboardStore();
 
   const [creationModalVisible, setCreationModalVisible] = useState(false);
 
-  // Load dashboards on mount
+  const visibleDashboards = useMemo(
+    () =>
+      projectId
+        ? dashboards.filter((d) => d.scope === 'project' && d.projectId === projectId)
+        : dashboards,
+    [dashboards, projectId],
+  );
+
+  const gridDashboard =
+    currentDashboard &&
+    (!projectId ||
+      (currentDashboard.scope === 'project' && currentDashboard.projectId === projectId))
+      ? currentDashboard
+      : null;
+
   useEffect(() => {
-    if (userId) {
-      loadDashboards(userId);
-    }
-  }, [userId]);
+    if (!userId) return;
+    let cancelled = false;
+    (async () => {
+      await loadDashboards(userId);
+      if (!cancelled && projectId) {
+        selectFirstProjectDashboard(projectId);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, projectId]);
 
   const handleSave = async () => {
     await saveDashboard();
@@ -86,23 +109,25 @@ export default function DynamicDashboard({
     <View style={styles.container}>
       {/* Dashboard Tabs */}
       {showTabs && (
-        <DashboardTabs onAddDashboard={() => setCreationModalVisible(true)} />
+        <DashboardTabs
+          onAddDashboard={() => setCreationModalVisible(true)}
+          projectIdFilter={projectId ?? null}
+        />
       )}
 
       {/* Dashboard Toolbar */}
-      {showToolbar && currentDashboard && (
+      {showToolbar && (gridDashboard || (!projectId && currentDashboard)) && (
         <View style={[styles.toolbar, { backgroundColor: theme.surfaceSecondary, borderBottomColor: theme.border }]}>
           <View style={styles.toolbarLeft}>
-            {/* Dashboard Info */}
-            {currentDashboard.emoji && (
-              <Text style={styles.dashboardEmoji}>{currentDashboard.emoji}</Text>
+            {(gridDashboard || currentDashboard)!.emoji && (
+              <Text style={styles.dashboardEmoji}>{(gridDashboard || currentDashboard)!.emoji}</Text>
             )}
             <View>
               <Text style={[styles.toolbarTitle, { color: theme.text }]}>
-                {currentDashboard.name}
+                {(gridDashboard || currentDashboard)!.name}
               </Text>
               <View style={styles.toolbarMeta}>
-                {currentDashboard.scope === 'global' ? (
+                {(gridDashboard || currentDashboard)!.scope === 'global' ? (
                   <View style={styles.scopeBadge}>
                     <FontAwesome name="globe" size={10} color={theme.textTertiary} />
                     <Text style={[styles.scopeText, { color: theme.textTertiary }]}>Global</Text>
@@ -114,7 +139,7 @@ export default function DynamicDashboard({
                   </View>
                 )}
                 <Text style={[styles.laneCount, { color: theme.textTertiary }]}>
-                  {currentDashboard.rows.length} lanes
+                  {(gridDashboard || currentDashboard)!.rows.length} lanes
                 </Text>
               </View>
             </View>
@@ -158,16 +183,16 @@ export default function DynamicDashboard({
         contentContainerStyle={styles.gridContentContainer}
         showsVerticalScrollIndicator
       >
-        {currentDashboard ? (
+        {gridDashboard ? (
           <DashboardGrid
-            layout={currentDashboard}
+            layout={gridDashboard}
             tasks={tasks}
             projects={projects}
             resources={resources}
             onTaskClick={onTaskClick}
             onProjectClick={onProjectClick}
           />
-        ) : dashboards.length === 0 ? (
+        ) : visibleDashboards.length === 0 ? (
           <View style={[styles.emptyState, { borderColor: theme.border }]}>
             <FontAwesome name="dashboard" size={48} color={theme.textTertiary} />
             <Text style={[styles.emptyTitle, { color: theme.textSecondary }]}>
@@ -204,6 +229,7 @@ export default function DynamicDashboard({
         onCreated={handleDashboardCreated}
         projects={projects}
         userId={userId}
+        defaultProjectId={projectId}
       />
     </View>
   );

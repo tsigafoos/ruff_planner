@@ -6,9 +6,9 @@ import Sidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_EXPANDED_WIDTH } from './Side
 import Footer, { FOOTER_HEIGHT } from './Footer';
 
 // Layout constants
-export const NAVBAR_HEIGHT = 56;
-export const CONTENT_MARGIN_TOP = 10;
-export const CONTENT_MARGIN_LEFT = 20;
+export const NAVBAR_HEIGHT = 52;
+export const CONTENT_MARGIN_TOP = 8;
+export const CONTENT_MARGIN_LEFT = 14;
 
 interface AppLayoutProps {
   children: ReactNode;

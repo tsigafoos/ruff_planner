@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -6,27 +7,30 @@ import { useProfileStore } from '@/store/profileStore';
 import { useTeamStore } from '@/store/teamStore';
 
 // Layout constants
-export const SIDEBAR_COLLAPSED_WIDTH = 60;
-export const SIDEBAR_EXPANDED_WIDTH = 240;
+export const SIDEBAR_COLLAPSED_WIDTH = 52;
+export const SIDEBAR_EXPANDED_WIDTH = 220;
 
 interface NavItem {
   name: string;
   route: string;
   icon: string;
-  section?: string; // Group header
-  teamOnly?: boolean; // Only show when team mode is enabled
+  teamOnly?: boolean;
 }
 
-const navItems: NavItem[] = [
-  { name: 'Dashboard', route: '/(tabs)/dashboard', icon: 'home' },
-  { name: 'Today', route: '/(tabs)/today', icon: 'calendar', section: 'Tasks' },
-  { name: 'Upcoming', route: '/(tabs)/upcoming', icon: 'calendar-check-o' },
-  { name: 'All Tasks', route: '/(tabs)/tasks', icon: 'list' },
-  { name: 'Projects', route: '/(tabs)/projects', icon: 'folder', section: 'Organize' },
+/** Core project workflow — always visible first */
+const primaryNav: NavItem[] = [
+  { name: 'Projects', route: '/(tabs)/projects', icon: 'folder' },
+  { name: 'Tasks', route: '/(tabs)/tasks', icon: 'list' },
   { name: 'Calendar', route: '/(tabs)/calendar', icon: 'calendar-o' },
-  { name: 'Resources', route: '/(tabs)/projects', icon: 'file-o', section: 'Manage' }, // Placeholder route
+];
+
+/** Power-user / legacy views — tucked under “More tools” */
+const moreNav: NavItem[] = [
+  { name: 'Insights', route: '/(tabs)/dashboard', icon: 'th-large' },
+  { name: 'Today', route: '/(tabs)/today', icon: 'calendar' },
+  { name: 'Upcoming', route: '/(tabs)/upcoming', icon: 'calendar-check-o' },
   { name: 'Labels', route: '/(tabs)/labels', icon: 'tags' },
-  { name: 'Team', route: '/team', icon: 'users', section: 'Collaborate', teamOnly: true },
+  { name: 'Team', route: '/team', icon: 'users', teamOnly: true },
 ];
 
 interface SidebarProps {
@@ -36,11 +40,15 @@ interface SidebarProps {
   onTogglePin: () => void;
 }
 
-export default function Sidebar({ 
-  collapsed, 
-  pinned, 
-  onToggleCollapse, 
-  onTogglePin 
+function filterTeam(items: NavItem[], teamModeEnabled: boolean | undefined) {
+  return items.filter((item) => !item.teamOnly || teamModeEnabled);
+}
+
+export default function Sidebar({
+  collapsed,
+  pinned,
+  onToggleCollapse,
+  onTogglePin,
 }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -48,74 +56,64 @@ export default function Sidebar({
   const theme = themes[resolvedTheme];
   const { profile } = useProfileStore();
   const { currentTeam } = useTeamStore();
+  const [moreOpen, setMoreOpen] = useState(false);
 
-  // Check if team mode is enabled
   const teamModeEnabled = profile?.team_mode_enabled;
+  const primary = filterTeam(primaryNav, teamModeEnabled);
+  const more = filterTeam(moreNav, teamModeEnabled);
 
-  // Only render on web
   if (Platform.OS !== 'web') {
     return null;
   }
 
-  // Filter nav items based on team mode
-  const filteredNavItems = navItems.filter(item => !item.teamOnly || teamModeEnabled);
-
   const isActive = (route: string) => {
-    return pathname === route || pathname?.startsWith(route.replace('/(tabs)', ''));
+    const normalized = route.replace('/(tabs)', '');
+    if (pathname === route) return true;
+    if (pathname?.startsWith(normalized) && normalized.length > 1) return true;
+    return false;
   };
 
-  const renderNavItem = (item: NavItem, index: number) => {
+  const renderNavItem = (item: NavItem) => {
     const active = isActive(item.route);
-    const showSection = item.section && !collapsed;
-    const prevItem = filteredNavItems[index - 1];
-    const isFirstInSection = item.section && (!prevItem || prevItem.section !== item.section);
-
     return (
-      <View key={item.route + item.name}>
-        {/* Section Header */}
-        {isFirstInSection && showSection && (
-          <Text style={[styles.sectionHeader, { color: theme.textTertiary }]}>
-            {item.section}
+      <TouchableOpacity
+        key={item.route + item.name}
+        style={[
+          styles.navItem,
+          {
+            backgroundColor: active ? theme.surfaceTertiary : 'transparent',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            paddingHorizontal: collapsed ? 0 : 16,
+          },
+        ]}
+        onPress={() => router.push(item.route as any)}
+        accessibilityLabel={collapsed ? item.name : undefined}
+      >
+        <View style={[styles.iconContainer, collapsed && styles.iconContainerCollapsed]}>
+          <FontAwesome
+            name={item.icon as any}
+            size={18}
+            color={active ? theme.primary : theme.sidebarText}
+          />
+        </View>
+        {!collapsed && (
+          <Text
+            style={[
+              styles.navText,
+              {
+                color: active ? theme.text : theme.sidebarText,
+                fontWeight: active ? '600' : '500',
+              },
+            ]}
+          >
+            {item.name}
           </Text>
         )}
-        
-        {/* Nav Item */}
-        <TouchableOpacity
-          style={[
-            styles.navItem,
-            {
-              backgroundColor: active ? theme.surfaceTertiary : 'transparent',
-              justifyContent: collapsed ? 'center' : 'flex-start',
-              paddingHorizontal: collapsed ? 0 : 16,
-            },
-          ]}
-          onPress={() => router.push(item.route as any)}
-          accessibilityLabel={collapsed ? item.name : undefined}
-        >
-          <View style={[styles.iconContainer, collapsed && styles.iconContainerCollapsed]}>
-            <FontAwesome
-              name={item.icon as any}
-              size={18}
-              color={active ? theme.primary : theme.sidebarText}
-            />
-          </View>
-          {!collapsed && (
-            <Text
-              style={[
-                styles.navText,
-                {
-                  color: active ? theme.text : theme.sidebarText,
-                  fontWeight: active ? '600' : '500',
-                },
-              ]}
-            >
-              {item.name}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
     );
   };
+
+  const collapsedMore = collapsed ? more : [];
 
   return (
     <View
@@ -128,7 +126,6 @@ export default function Sidebar({
         },
       ]}
     >
-      {/* Sidebar Header with Toggle */}
       <View style={[styles.sidebarHeader, collapsed && styles.sidebarHeaderCollapsed]}>
         {!collapsed && (
           <TouchableOpacity
@@ -137,7 +134,7 @@ export default function Sidebar({
             accessibilityLabel={pinned ? 'Unpin sidebar' : 'Pin sidebar open'}
           >
             <FontAwesome
-              name={pinned ? 'thumb-tack' : 'thumb-tack'}
+              name="thumb-tack"
               size={12}
               color={pinned ? theme.primary : theme.textTertiary}
               style={pinned ? {} : { transform: [{ rotate: '45deg' }] }}
@@ -157,15 +154,47 @@ export default function Sidebar({
         </TouchableOpacity>
       </View>
 
-      {/* Navigation Items */}
       <View style={styles.navSection}>
-        {filteredNavItems.map((item, index) => renderNavItem(item, index))}
+        {!collapsed && (
+          <Text style={[styles.sectionHeader, { color: theme.textTertiary }]}>Workspace</Text>
+        )}
+        {primary.map((item) => renderNavItem(item))}
+
+        {collapsed && collapsedMore.map((item) => renderNavItem(item))}
+
+        {!collapsed && (
+          <>
+            <TouchableOpacity
+              style={styles.moreToggle}
+              onPress={() => setMoreOpen((o) => !o)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: moreOpen }}
+            >
+              <FontAwesome
+                name={moreOpen ? 'chevron-down' : 'chevron-right'}
+                size={12}
+                color={theme.textTertiary}
+              />
+              <Text style={[styles.moreToggleText, { color: theme.textTertiary }]}>
+                {moreOpen ? 'Hide extra tools' : 'More tools'}
+              </Text>
+            </TouchableOpacity>
+
+            {moreOpen ? (
+              <View style={styles.moreBlock}>
+                {more.map((item) => renderNavItem(item))}
+              </View>
+            ) : null}
+          </>
+        )}
       </View>
 
-      {/* Team indicator when team mode enabled */}
       {teamModeEnabled && currentTeam && !collapsed && (
         <TouchableOpacity
-          style={[styles.teamIndicator, { backgroundColor: theme.surfaceTertiary, borderColor: theme.border }]}
+          style={[
+            styles.teamIndicator,
+            { backgroundColor: theme.surfaceTertiary, borderColor: theme.border },
+          ]}
           onPress={() => router.push('/team')}
         >
           <FontAwesome name="building" size={14} color={theme.primary} />
@@ -178,9 +207,7 @@ export default function Sidebar({
         </TouchableOpacity>
       )}
 
-      {/* Sidebar Footer */}
       <View style={[styles.sidebarFooter, { borderTopColor: theme.border }]}>
-        {/* Theme Toggle */}
         <TouchableOpacity
           style={[
             styles.footerItem,
@@ -217,9 +244,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    gap: 6,
   },
   sidebarHeaderCollapsed: {
     justifyContent: 'center',
@@ -242,9 +269,27 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginTop: 16,
-    marginBottom: 8,
-    marginLeft: 16,
+    marginTop: 2,
+    marginBottom: 6,
+    marginLeft: 14,
+  },
+  moreToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    marginBottom: 4,
+    marginLeft: 14,
+    paddingVertical: 4,
+  },
+  moreToggleText: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  moreBlock: {
+    paddingBottom: 4,
   },
   navSection: {
     flex: 1,
@@ -253,12 +298,12 @@ const styles = StyleSheet.create({
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginHorizontal: 8,
-    marginBottom: 2,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    marginHorizontal: 6,
+    marginBottom: 1,
     borderRadius: 8,
-    gap: 12,
+    gap: 10,
   },
   iconContainer: {
     width: 24,
@@ -272,15 +317,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   sidebarFooter: {
-    padding: 12,
+    padding: 8,
     borderTopWidth: 1,
   },
   footerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    gap: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
     borderRadius: 8,
   },
   footerText: {

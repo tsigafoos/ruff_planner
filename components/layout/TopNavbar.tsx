@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
+import { useProfileStore } from '@/store/profileStore';
 import { useThemeStore, themes } from '@/store/themeStore';
 import { useState, useRef, useEffect } from 'react';
 import Svg, { Path } from 'react-native-svg';
@@ -80,16 +81,16 @@ const DropdownMenu = ({ items, isOpen, onClose, theme }: DropdownMenuProps) => {
 
 export default function TopNavbar() {
   const router = useRouter();
-  const { user, signOut } = useAuthStore();
+  const { signOut } = useAuthStore();
+  const { profile } = useProfileStore();
   const { resolvedTheme } = useThemeStore();
   const theme = themes[resolvedTheme];
-  
+  const teamModeEnabled = profile?.team_mode_enabled;
+
   const [teamMenuOpen, setTeamMenuOpen] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  
+
   const teamMenuRef = useRef<View>(null);
-  const profileMenuRef = useRef<View>(null);
   const accountMenuRef = useRef<View>(null);
 
   // Only render on web
@@ -102,9 +103,6 @@ export default function TopNavbar() {
     const handleClickOutside = (event: any) => {
       if (teamMenuRef.current && !(teamMenuRef.current as any).contains(event.target)) {
         setTeamMenuOpen(false);
-      }
-      if (profileMenuRef.current && !(profileMenuRef.current as any).contains(event.target)) {
-        setProfileMenuOpen(false);
       }
       if (accountMenuRef.current && !(accountMenuRef.current as any).contains(event.target)) {
         setAccountMenuOpen(false);
@@ -124,7 +122,6 @@ export default function TopNavbar() {
 
   const closeAllMenus = () => {
     setTeamMenuOpen(false);
-    setProfileMenuOpen(false);
     setAccountMenuOpen(false);
   };
 
@@ -133,51 +130,38 @@ export default function TopNavbar() {
     setTeamMenuOpen(!teamMenuOpen);
   };
 
-  const toggleProfileMenu = () => {
-    closeAllMenus();
-    setProfileMenuOpen(!profileMenuOpen);
-  };
-
   const toggleAccountMenu = () => {
     closeAllMenus();
     setAccountMenuOpen(!accountMenuOpen);
   };
 
   const teamItems: DropdownItem[] = [
-    { 
-      label: 'Manage Teams', 
-      icon: 'users', 
-      onPress: () => router.push('/team') 
+    {
+      label: 'Manage Teams',
+      icon: 'users',
+      onPress: () => router.push('/team'),
     },
-    { 
-      label: 'Invite Member', 
-      icon: 'user-plus', 
-      onPress: () => router.push('/team/invite') 
-    },
-  ];
-
-  const profileItems: DropdownItem[] = [
-    { 
-      label: 'View Profile', 
-      icon: 'user-circle-o', 
-      onPress: () => router.push('/profile') 
-    },
-    { 
-      label: 'Edit Profile', 
-      icon: 'pencil', 
-      onPress: () => router.push('/profile') 
+    {
+      label: 'Invite Member',
+      icon: 'user-plus',
+      onPress: () => router.push('/team/invite'),
     },
   ];
 
   const accountItems: DropdownItem[] = [
-    { 
-      label: 'Account Settings', 
-      icon: 'cog', 
-      onPress: () => router.push('/profile') 
+    {
+      label: 'Profile',
+      icon: 'user-circle-o',
+      onPress: () => router.push('/profile'),
     },
-    { 
-      label: 'Sign Out', 
-      icon: 'sign-out', 
+    {
+      label: 'Insights (widgets)',
+      icon: 'th-large',
+      onPress: () => router.push('/(tabs)/dashboard'),
+    },
+    {
+      label: 'Sign out',
+      icon: 'sign-out',
       onPress: handleSignOut,
       danger: true,
     },
@@ -189,63 +173,39 @@ export default function TopNavbar() {
       borderBottomColor: theme.border 
     }]}>
       {/* Left Section - Logo + Title */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.logoSection}
-        onPress={() => router.push('/(tabs)/dashboard')}
+        onPress={() => router.push('/(tabs)/projects')}
       >
         <HouseLogo size={24} color={theme.primary} />
         <Text style={[styles.appTitle, { color: theme.text }]}>BarkItDone</Text>
       </TouchableOpacity>
 
-      {/* Right Section - Dropdowns */}
       <View style={styles.navSection}>
-        {/* Team Dropdown */}
-        <View ref={teamMenuRef} style={styles.dropdownContainer}>
-          <TouchableOpacity
-            style={[styles.navItem, teamMenuOpen && { backgroundColor: theme.surfaceTertiary }]}
-            onPress={toggleTeamMenu}
-          >
-            <FontAwesome name="users" size={15} color={theme.textSecondary} />
-            <Text style={[styles.navText, { color: theme.textSecondary }]}>Team</Text>
-            <FontAwesome 
-              name={teamMenuOpen ? 'chevron-up' : 'chevron-down'} 
-              size={10} 
-              color={theme.textTertiary} 
-              style={styles.chevron}
+        {teamModeEnabled ? (
+          <View ref={teamMenuRef} style={styles.dropdownContainer}>
+            <TouchableOpacity
+              style={[styles.navItem, teamMenuOpen && { backgroundColor: theme.surfaceTertiary }]}
+              onPress={toggleTeamMenu}
+            >
+              <FontAwesome name="users" size={15} color={theme.textSecondary} />
+              <Text style={[styles.navText, { color: theme.textSecondary }]}>Team</Text>
+              <FontAwesome
+                name={teamMenuOpen ? 'chevron-up' : 'chevron-down'}
+                size={10}
+                color={theme.textTertiary}
+                style={styles.chevron}
+              />
+            </TouchableOpacity>
+            <DropdownMenu
+              items={teamItems}
+              isOpen={teamMenuOpen}
+              onClose={() => setTeamMenuOpen(false)}
+              theme={theme}
             />
-          </TouchableOpacity>
-          <DropdownMenu 
-            items={teamItems} 
-            isOpen={teamMenuOpen} 
-            onClose={() => setTeamMenuOpen(false)}
-            theme={theme}
-          />
-        </View>
+          </View>
+        ) : null}
 
-        {/* Profile Dropdown */}
-        <View ref={profileMenuRef} style={styles.dropdownContainer}>
-          <TouchableOpacity
-            style={[styles.navItem, profileMenuOpen && { backgroundColor: theme.surfaceTertiary }]}
-            onPress={toggleProfileMenu}
-          >
-            <FontAwesome name="id-card-o" size={15} color={theme.textSecondary} />
-            <Text style={[styles.navText, { color: theme.textSecondary }]}>Profile</Text>
-            <FontAwesome 
-              name={profileMenuOpen ? 'chevron-up' : 'chevron-down'} 
-              size={10} 
-              color={theme.textTertiary} 
-              style={styles.chevron}
-            />
-          </TouchableOpacity>
-          <DropdownMenu 
-            items={profileItems} 
-            isOpen={profileMenuOpen} 
-            onClose={() => setProfileMenuOpen(false)}
-            theme={theme}
-          />
-        </View>
-
-        {/* Account Dropdown */}
         <View ref={accountMenuRef} style={styles.dropdownContainer}>
           <TouchableOpacity
             style={[styles.navItem, accountMenuOpen && { backgroundColor: theme.surfaceTertiary }]}
@@ -253,16 +213,16 @@ export default function TopNavbar() {
           >
             <FontAwesome name="user-o" size={15} color={theme.textSecondary} />
             <Text style={[styles.navText, { color: theme.textSecondary }]}>Account</Text>
-            <FontAwesome 
-              name={accountMenuOpen ? 'chevron-up' : 'chevron-down'} 
-              size={10} 
-              color={theme.textTertiary} 
+            <FontAwesome
+              name={accountMenuOpen ? 'chevron-up' : 'chevron-down'}
+              size={10}
+              color={theme.textTertiary}
               style={styles.chevron}
             />
           </TouchableOpacity>
-          <DropdownMenu 
-            items={accountItems} 
-            isOpen={accountMenuOpen} 
+          <DropdownMenu
+            items={accountItems}
+            isOpen={accountMenuOpen}
             onClose={() => setAccountMenuOpen(false)}
             theme={theme}
           />
@@ -274,11 +234,11 @@ export default function TopNavbar() {
 
 const styles = StyleSheet.create({
   container: {
-    height: 56,
+    height: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     zIndex: 1000,
   },

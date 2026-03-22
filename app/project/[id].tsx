@@ -1,3 +1,4 @@
+import { DynamicDashboard } from '@/components/dashboard';
 import AgileDashboard from '@/components/dashboards/AgileDashboard';
 import MaintenanceDashboard from '@/components/dashboards/MaintenanceDashboard';
 import WaterfallDashboard from '@/components/dashboards/WaterfallDashboard';
@@ -20,7 +21,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-type ProjectView = 'dashboard' | 'dependencies' | 'resources';
+type ProjectView = 'widgets' | 'board' | 'planning' | 'dependencies' | 'resources';
 
 type TaskStatus = 'to_do' | 'in_progress' | 'blocked' | 'on_hold' | 'completed' | 'cancelled';
 
@@ -45,7 +46,7 @@ export default function ProjectDetailScreen() {
   const [projectFormVisible, setProjectFormVisible] = useState(false);
   const [shareModalVisible, setShareModalVisible] = useState(false);
   const [csvImportModalVisible, setCsvImportModalVisible] = useState(false);
-  const [currentView, setCurrentView] = useState<ProjectView>('dashboard');
+  const [currentView, setCurrentView] = useState<ProjectView>('widgets');
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverLane, setDragOverLane] = useState<TaskStatus | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
@@ -445,6 +446,59 @@ export default function ProjectDetailScreen() {
                 {incompleteTasks.length} {isMaintenance ? 'open issue' : 'active task'}{incompleteTasks.length !== 1 ? 's' : ''}
               </Text>
             </View>
+            <View style={[styles.viewModeRow, { borderColor: theme.border }]}>
+              <TouchableOpacity
+                style={[
+                  styles.viewModeChip,
+                  { borderColor: theme.border },
+                  currentView === 'widgets' && { backgroundColor: theme.primary + '22' },
+                ]}
+                onPress={() => setCurrentView('widgets')}
+              >
+                <Text
+                  style={[
+                    styles.viewModeChipText,
+                    { color: currentView === 'widgets' ? theme.primary : theme.textSecondary },
+                  ]}
+                >
+                  Dashboard
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.viewModeChip,
+                  { borderColor: theme.border },
+                  currentView === 'board' && { backgroundColor: theme.primary + '22' },
+                ]}
+                onPress={() => setCurrentView('board')}
+              >
+                <Text
+                  style={[
+                    styles.viewModeChipText,
+                    { color: currentView === 'board' ? theme.primary : theme.textSecondary },
+                  ]}
+                >
+                  Board
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.viewModeChip,
+                  { borderColor: theme.border },
+                  currentView === 'planning' && { backgroundColor: theme.primary + '22' },
+                ]}
+                onPress={() => setCurrentView('planning')}
+              >
+                <Text
+                  style={[
+                    styles.viewModeChipText,
+                    { color: currentView === 'planning' ? theme.primary : theme.textSecondary },
+                  ]}
+                >
+                  Planning
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
         <View style={styles.headerActions}>
@@ -470,7 +524,7 @@ export default function ProjectDetailScreen() {
                 styles.actionButton, 
                 { borderColor: theme.border, backgroundColor: currentView === 'dependencies' ? theme.primary : theme.surfaceSecondary }
               ]}
-              onPress={() => setCurrentView(currentView === 'dependencies' ? 'dashboard' : 'dependencies')}
+              onPress={() => setCurrentView(currentView === 'dependencies' ? 'widgets' : 'dependencies')}
             >
               <FontAwesome name="sitemap" size={12} color={currentView === 'dependencies' ? '#fff' : theme.text} />
               <Text style={[styles.actionButtonText, { color: currentView === 'dependencies' ? '#fff' : theme.text }]}>
@@ -484,7 +538,7 @@ export default function ProjectDetailScreen() {
                 styles.actionButton, 
                 { borderColor: theme.border, backgroundColor: currentView === 'resources' ? theme.primary : theme.surfaceSecondary }
               ]}
-              onPress={() => setCurrentView(currentView === 'resources' ? 'dashboard' : 'resources')}
+              onPress={() => setCurrentView(currentView === 'resources' ? 'widgets' : 'resources')}
             >
               <FontAwesome name="folder-open-o" size={12} color={currentView === 'resources' ? '#fff' : theme.text} />
               <Text style={[styles.actionButtonText, { color: currentView === 'resources' ? '#fff' : theme.text }]}>
@@ -519,7 +573,7 @@ export default function ProjectDetailScreen() {
             onSave={async (resources) => {
               await handleProjectUpdate({ resources });
             }}
-            onBack={() => setCurrentView('dashboard')}
+            onBack={() => setCurrentView('widgets')}
           />
         </View>
       ) : currentView === 'dependencies' ? (
@@ -529,6 +583,21 @@ export default function ProjectDetailScreen() {
             projectId={id || ''}
             onTaskClick={handleEditTask}
           />
+        </View>
+      ) : currentView === 'widgets' && user?.id && id ? (
+        <View style={[styles.widgetsShell, { backgroundColor: theme.background }]}>
+          <DynamicDashboard
+            projectId={id}
+            userId={user.id}
+            tasks={tasks}
+            projects={projects}
+            resources={Array.isArray(project.resources) ? project.resources : []}
+            onTaskClick={handleEditTask}
+          />
+        </View>
+      ) : currentView === 'board' ? (
+        <View style={[styles.boardOnly, { backgroundColor: theme.background }]}>
+          {renderTaskLanes(true)}
         </View>
       ) : (
         <ScrollView style={styles.mainContent} showsVerticalScrollIndicator={true}>
@@ -649,6 +718,35 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
+  },
+  boardOnly: {
+    flex: 1,
+    minHeight: 0,
+  },
+  widgetsShell: {
+    flex: 1,
+    minHeight: 0,
+  },
+  viewModeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    padding: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  viewModeChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  viewModeChipText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   header: {
     padding: Platform.OS === 'web' ? 24 : 20,

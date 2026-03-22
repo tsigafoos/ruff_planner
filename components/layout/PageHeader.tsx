@@ -158,10 +158,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    minHeight: 60,
+    minHeight: 52,
   },
   titleSection: {
     flex: 1,

@@ -341,7 +341,9 @@ interface DashboardStore {
   // Persistence
   saveDashboard: () => Promise<void>;
   loadDashboards: (userId: string) => Promise<void>;
-  
+  /** After load, focus first dashboard scoped to this project (for project detail screen). */
+  selectFirstProjectDashboard: (projectId: string) => void;
+
   // Home dashboard
   getHomeDashboard: () => DashboardLayout | null;
 }
@@ -723,7 +725,18 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       set({ loading: false });
     }
   },
-  
+
+  selectFirstProjectDashboard: (projectId) => {
+    const list = get()
+      .dashboards.filter((d) => d.scope === 'project' && d.projectId === projectId)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+    const first = list[0];
+    set({
+      activeDashboardId: first?.id ?? null,
+      currentDashboard: first ?? null,
+    });
+  },
+
   getHomeDashboard: () => {
     return get().dashboards.find(d => d.isDefault) || get().dashboards[0] || null;
   },

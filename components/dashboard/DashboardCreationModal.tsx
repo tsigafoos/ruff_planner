@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, Platform, ScrollView } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '@/components/useTheme';
@@ -12,6 +12,8 @@ interface DashboardCreationModalProps {
   onCreated?: (dashboardId: string) => void;
   projects?: { id: string; name: string; icon?: string; color?: string }[];
   userId: string;
+  /** When opening from a project screen, pre-select project scope */
+  defaultProjectId?: string;
 }
 
 const EMOJI_OPTIONS = ['📊', '📈', '📋', '🎯', '🚀', '💼', '🔧', '📁', '⭐', '🌐', '🏠', '📌'];
@@ -32,6 +34,7 @@ export default function DashboardCreationModal({
   onCreated,
   projects = [],
   userId,
+  defaultProjectId,
 }: DashboardCreationModalProps) {
   const theme = useTheme();
   const { createDashboard, setEditMode } = useDashboardStore();
@@ -43,6 +46,17 @@ export default function DashboardCreationModal({
   const [template, setTemplate] = useState<DashboardTemplate>('blank');
   const [laneCount, setLaneCount] = useState(3);
   const [step, setStep] = useState<'basic' | 'lanes'>('basic');
+
+  useEffect(() => {
+    if (visible && defaultProjectId) {
+      setScope('project');
+      setSelectedProjectId(defaultProjectId);
+    }
+    if (visible && !defaultProjectId) {
+      setScope('global');
+      setSelectedProjectId('');
+    }
+  }, [visible, defaultProjectId]);
 
   const resetForm = () => {
     setName('');

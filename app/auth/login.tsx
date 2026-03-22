@@ -1,8 +1,19 @@
 import { useTheme } from '@/components/useTheme';
 import { useAuthStore } from '@/store/authStore';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+function formatAuthError(error: any): string {
+  const msg = error?.message || String(error);
+  if (/email not confirmed|confirm your email/i.test(msg)) {
+    return 'Email not confirmed yet. Check your inbox or turn off “Confirm email” under Supabase → Authentication → Providers (for local dev).';
+  }
+  if (/invalid login credentials/i.test(msg)) {
+    return 'Wrong email or password, or the account needs email confirmation before sign-in.';
+  }
+  return msg;
+}
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -10,6 +21,9 @@ export default function LoginScreen() {
   const [magicLinkEmail, setMagicLinkEmail] = useState('');
   const [showMagicLink, setShowMagicLink] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const params = useLocalSearchParams<{ notice?: string | string[] }>();
+  const notice = Array.isArray(params.notice) ? params.notice[0] : params.notice;
   
   const router = useRouter();
   const { signIn, signInWithMagicLink } = useAuthStore();
@@ -17,16 +31,23 @@ export default function LoginScreen() {
 
   const handleEmailLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter email and password');
+      const msg = 'Please enter email and password';
+      setFormError(msg);
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Error', msg);
       return;
     }
-    
+
+    setFormError(null);
     setLoading(true);
     try {
       await signIn(email, password);
-      router.replace('/(tabs)/dashboard');
+      router.replace('/(tabs)/projects');
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'Invalid email or password');
+      const msg = formatAuthError(error);
+      setFormError(msg);
+      if (Platform.OS === 'web') window.alert(`Login failed\n\n${msg}`);
+      else Alert.alert('Login Failed', msg);
     } finally {
       setLoading(false);
     }
@@ -61,6 +82,18 @@ export default function LoginScreen() {
           {showMagicLink ? 'Enter your email to receive a magic link' : 'Enter your credentials to continue'}
         </Text>
 
+        {notice === 'verify' ? (
+          <Text style={[styles.banner, { color: theme.textSecondary, borderColor: theme.border, backgroundColor: theme.surface }]}>
+            Account created. Confirm the email Supabase sent you, then sign in below. For dev, you can disable email confirmation in the Supabase dashboard.
+          </Text>
+        ) : null}
+
+        {formError ? (
+          <Text style={styles.errorText} accessibilityLiveRegion="polite">
+            {formError}
+          </Text>
+        ) : null}
+
         {!showMagicLink ? (
           <View style={styles.form}>
             <TextInput
@@ -75,7 +108,10 @@ export default function LoginScreen() {
               placeholder="Email"
               placeholderTextColor={theme.textTertiary}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(t) => {
+                setEmail(t);
+                setFormError(null);
+              }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
@@ -92,7 +128,10 @@ export default function LoginScreen() {
               placeholder="Password"
               placeholderTextColor={theme.textTertiary}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(t) => {
+                setPassword(t);
+                setFormError(null);
+              }}
               secureTextEntry
               autoCapitalize="none"
             />
@@ -223,5 +262,20 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 14,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 14,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  banner: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    textAlign: 'left',
   },
 });

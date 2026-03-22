@@ -11,7 +11,7 @@ export default function HomeScreen() {
   useEffect(() => {
     // If user is authenticated, redirect to dashboard
     if (initialized && user) {
-      router.replace('/(tabs)/dashboard');
+      router.replace('/(tabs)/projects');
     }
   }, [user, initialized, router]);
 
@@ -34,18 +34,18 @@ export default function HomeScreen() {
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.button}
-            onPress={() => router.push('/(tabs)/tasks')}
-          >
-            <FontAwesome name="list" size={20} color="#FFFFFF" />
-            <Text style={styles.buttonText}>Go to Tasks</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.button, styles.buttonSecondary]}
             onPress={() => router.push('/(tabs)/projects')}
           >
-            <FontAwesome name="folder" size={20} color="#3B82F6" />
-            <Text style={[styles.buttonText, styles.buttonTextSecondary]}>View Projects</Text>
+            <FontAwesome name="folder" size={20} color="#FFFFFF" />
+            <Text style={styles.buttonText}>Your projects</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.buttonSecondary]}
+            onPress={() => router.push('/(tabs)/tasks')}
+          >
+            <FontAwesome name="list" size={20} color="#3B82F6" />
+            <Text style={[styles.buttonText, styles.buttonTextSecondary]}>All tasks</Text>
           </TouchableOpacity>
         </View>
       </View>

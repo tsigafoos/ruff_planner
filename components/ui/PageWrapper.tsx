@@ -67,8 +67,8 @@ export default function PageWrapper({
 
   // Content wrapper style with padding and max-width
   const contentWrapperStyle = Platform.OS === 'web' && padded ? {
-    paddingHorizontal: 40,
-    paddingTop: 24,
+    paddingHorizontal: 28,
+    paddingTop: 18,
     maxWidth: maxWidth,
   } : padded ? {
     paddingHorizontal: 16,

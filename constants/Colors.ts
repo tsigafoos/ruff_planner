@@ -19,7 +19,7 @@ export default {
     text: '#f0f0f5',
     textSecondary: '#c7c7d1',
     textTertiary: '#8f8fa3',
-    background: '#0f0f11',
+    background: '#0c0c0f',
     backgroundAlt: '#16161a',
     surface: '#16161a',
     tint: tintColorDark,

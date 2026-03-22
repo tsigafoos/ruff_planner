@@ -14,7 +14,7 @@
   --color-text:      #1a1a1a;
   --color-text-light:#4a4a4a;
   --color-text-lighter:#717171;
-  --color-border:    #e2e2e7;
+  --color-border:    #d6d8e0;
   --color-accent:    #0066ff;
   --color-accent-hover:#0055d4;
   --color-selection: rgba(0, 102, 255, 0.18);
@@ -25,13 +25,13 @@
   --surface-3: #f0f1f5;
 
   /* Layout dimensions */
-  --navbar-height: 56px;
-  --sidebar-collapsed-width: 60px;
-  --sidebar-expanded-width: 240px;
+  --navbar-height: 52px;
+  --sidebar-collapsed-width: 52px;
+  --sidebar-expanded-width: 220px;
   --footer-height: 18px;
-  --content-margin-top: 10px;
-  --content-margin-left: 20px;
-  --page-header-height: 60px;
+  --content-margin-top: 8px;
+  --content-margin-left: 14px;
+  --page-header-height: 52px;
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -77,19 +77,19 @@
 /* Dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg:        #0f0f11;
-    --color-bg-alt:    #16161a;
+    --color-bg:        #0c0c0f;
+    --color-bg-alt:    #141418;
     --color-text:      #f0f0f5;
     --color-text-light:#c7c7d1;
     --color-text-lighter:#8f8fa3;
-    --color-border:    #2a2a32;
+    --color-border:    #34343f;
     --color-accent:    #4d9aff;
     --color-accent-hover:#3d7fe6;
     --color-selection: rgba(77, 154, 255, 0.22);
 
     --surface-1: var(--color-bg);
     --surface-2: var(--color-bg-alt);
-    --surface-3: #222228;
+    --surface-3: #1e1e26;
   }
 }
 
@@ -101,7 +101,7 @@
   --color-text:      #1a1a1a !important;
   --color-text-light:#4a4a4a !important;
   --color-text-lighter:#717171 !important;
-  --color-border:    #e2e2e7 !important;
+  --color-border:    #d6d8e0 !important;
   --color-accent:    #0066ff !important;
   --color-accent-hover:#0055d4 !important;
   --surface-1: #ffffff !important;
@@ -111,17 +111,17 @@
 
 .dark-theme,
 .dark {
-  --color-bg:        #0f0f11 !important;
-  --color-bg-alt:    #16161a !important;
+  --color-bg:        #0c0c0f !important;
+  --color-bg-alt:    #141418 !important;
   --color-text:      #f0f0f5 !important;
   --color-text-light:#c7c7d1 !important;
   --color-text-lighter:#8f8fa3 !important;
-  --color-border:    #2a2a32 !important;
+  --color-border:    #34343f !important;
   --color-accent:    #4d9aff !important;
   --color-accent-hover:#3d7fe6 !important;
-  --surface-1: #0f0f11 !important;
-  --surface-2: #16161a !important;
-  --surface-3: #222228 !important;
+  --surface-1: #0c0c0f !important;
+  --surface-2: #141418 !important;
+  --surface-3: #1e1e26 !important;
 }
 
 /* ==========================================================================

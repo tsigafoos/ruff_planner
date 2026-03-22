@@ -6,14 +6,20 @@ import { DashboardLayout } from '@/types';
 
 interface DashboardTabsProps {
   onAddDashboard: () => void;
+  /** When set, only show dashboards scoped to this project */
+  projectIdFilter?: string | null;
 }
 
 /**
  * DashboardTabs - Tab bar for multiple dashboards
  */
-export default function DashboardTabs({ onAddDashboard }: DashboardTabsProps) {
+export default function DashboardTabs({ onAddDashboard, projectIdFilter }: DashboardTabsProps) {
   const theme = useTheme();
   const { dashboards, activeDashboardId, setActiveDashboard, editMode } = useDashboardStore();
+
+  const visibleDashboards = projectIdFilter
+    ? dashboards.filter((d) => d.scope === 'project' && d.projectId === projectIdFilter)
+    : dashboards;
 
   const renderTab = (dashboard: DashboardLayout, index: number) => {
     const isActive = dashboard.id === activeDashboardId;
@@ -75,7 +81,7 @@ export default function DashboardTabs({ onAddDashboard }: DashboardTabsProps) {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.tabsContent}
       >
-        {dashboards
+        {visibleDashboards
           .sort((a, b) => (a.order || 0) - (b.order || 0))
           .map((dashboard, index) => renderTab(dashboard, index))}
         

@@ -31,10 +31,10 @@ export default function TabLayout() {
             },
       }}>
       <Tabs.Screen
-        name="dashboard"
+        name="projects"
         options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+          title: 'Projects',
+          tabBarIcon: ({ color }) => <TabBarIcon name="folder" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -45,19 +45,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="projects"
+        name="tasks"
         options={{
-          title: 'Projects',
-          tabBarIcon: ({ color }) => <TabBarIcon name="folder" color={color} />,
+          title: 'Tasks',
+          tabBarIcon: ({ color }) => <TabBarIcon name="list" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="dashboard"
+        options={{
+          href: null,
+          title: 'Insights',
         }}
       />
       {/* Hidden tabs - kept for routing but not shown in tab bar */}
-      <Tabs.Screen
-        name="tasks"
-        options={{
-          href: null, // Hide from tab bar
-        }}
-      />
       <Tabs.Screen
         name="today"
         options={{
