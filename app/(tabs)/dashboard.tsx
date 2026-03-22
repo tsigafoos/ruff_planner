@@ -51,8 +51,6 @@ export default function DashboardScreen() {
   const [creationModalVisible, setCreationModalVisible] = useState(false);
 
   const dashboards = useDashboardStore((s) => s.dashboards);
-  const loadDashboards = useDashboardStore((s) => s.loadDashboards);
-  const setActiveDashboard = useDashboardStore((s) => s.setActiveDashboard);
   const setEditMode = useDashboardStore((s) => s.setEditMode);
   const saveDashboard = useDashboardStore((s) => s.saveDashboard);
   const addRow = useDashboardStore((s) => s.addRow);
@@ -82,10 +80,10 @@ export default function DashboardScreen() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (user?.id) {
-      loadDashboards(user.id);
-    }
-  }, [user?.id, loadDashboards]);
+    if (!user?.id) return;
+    // Call via getState so this effect does not depend on `loadDashboards` identity (avoids re-run loops).
+    useDashboardStore.getState().loadDashboards(user.id);
+  }, [user?.id]);
 
   useEffect(() => {
     const t = params.tab;
@@ -102,28 +100,34 @@ export default function DashboardScreen() {
     }
   }, [createSignal]);
 
+  /** Sync store active layout to selected tab — only depend on `insightsTab` (stable). */
   useEffect(() => {
     if (insightsTab === 'overview') {
-      setEditMode(false);
+      const { editMode: em } = useDashboardStore.getState();
+      if (em) useDashboardStore.getState().setEditMode(false);
       return;
     }
-    setActiveDashboard(insightsTab);
-  }, [insightsTab, setActiveDashboard, setEditMode]);
+    useDashboardStore.getState().setActiveDashboard(insightsTab);
+  }, [insightsTab]);
 
+  /** If the tab id is not a global dashboard, fall back to Overview (e.g. stale URL or race before load). */
   useEffect(() => {
     if (insightsTab === 'overview') return;
-    if (!globalDashboards.some((d) => d.id === insightsTab)) {
+    if (dashboardsLoading) return;
+    const globals = dashboards.filter((d) => d.scope === 'global');
+    if (globals.length === 0) return;
+    if (!globals.some((d) => d.id === insightsTab)) {
       setInsightsTab('overview');
     }
-  }, [globalDashboards, insightsTab]);
+  }, [dashboards, dashboardsLoading, insightsTab]);
 
-  /** loadDashboards() resets active dashboard to home; restore the tab the user picked. */
+  /** After load finishes, loadDashboards() resets active id to home — re-select the custom tab. */
   useEffect(() => {
     if (dashboardsLoading || insightsTab === 'overview') return;
-    if (globalDashboards.some((d) => d.id === insightsTab)) {
-      setActiveDashboard(insightsTab);
-    }
-  }, [dashboardsLoading, globalDashboards, insightsTab, setActiveDashboard]);
+    const globals = dashboards.filter((d) => d.scope === 'global');
+    if (!globals.some((d) => d.id === insightsTab)) return;
+    useDashboardStore.getState().setActiveDashboard(insightsTab);
+  }, [dashboardsLoading, insightsTab, dashboards]);
 
   // Derive task status
   const getTaskStatus = (task: any): TaskStatus => {

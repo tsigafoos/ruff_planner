@@ -52,11 +52,9 @@ export default function DynamicDashboard({
     editMode, 
     loading,
     setEditMode, 
-    loadDashboards, 
     createDashboard,
     saveDashboard,
     addRow,
-    selectFirstProjectDashboard,
   } = useDashboardStore();
 
   const [creationModalVisible, setCreationModalVisible] = useState(false);
@@ -77,18 +75,21 @@ export default function DynamicDashboard({
       : null;
 
   useEffect(() => {
+    if (embedded) return;
     if (!userId) return;
     let cancelled = false;
     (async () => {
-      await loadDashboards(userId);
+      const { loadDashboards: load, selectFirstProjectDashboard: selectFirst } =
+        useDashboardStore.getState();
+      await load(userId);
       if (!cancelled && projectId) {
-        selectFirstProjectDashboard(projectId);
+        selectFirst(projectId);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [userId, projectId]);
+  }, [userId, projectId, embedded]);
 
   const handleSave = async () => {
     await saveDashboard();
