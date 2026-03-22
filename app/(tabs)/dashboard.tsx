@@ -124,7 +124,7 @@ export default function DashboardScreen() {
     }
   }, [dashboards, dashboardsLoading, insightsTab]);
 
-  /** After load finishes, loadDashboards() resets active id to home — re-select the custom tab. */
+  /** After load, store leaves no active custom dash (Overview default); sync when a custom tab is selected. */
   useEffect(() => {
     if (dashboardsLoading || insightsTab === 'overview') return;
     const globals = dashboards.filter((d) => d.scope === 'global');

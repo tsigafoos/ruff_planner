@@ -440,8 +440,9 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       const wasActive = state.activeDashboardId === dashboardId;
       return {
         dashboards,
-        currentDashboard: wasActive ? dashboards[0] || null : state.currentDashboard,
-        activeDashboardId: wasActive ? dashboards[0]?.id || null : state.activeDashboardId,
+        // Default after closing a tab is Overview (no active custom dashboard)
+        currentDashboard: wasActive ? null : state.currentDashboard,
+        activeDashboardId: wasActive ? null : state.activeDashboardId,
       };
     });
   },
@@ -698,11 +699,11 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       
       if (stored) {
         const dashboards = JSON.parse(stored) as DashboardLayout[];
-        const homeDashboard = dashboards.find(d => d.isDefault) || dashboards[0];
-        set({ 
-          dashboards, 
-          currentDashboard: homeDashboard || null,
-          activeDashboardId: homeDashboard?.id || null,
+        // Default main experience is Overview (not a stored layout). Do not auto-select a custom tab.
+        set({
+          dashboards,
+          currentDashboard: null,
+          activeDashboardId: null,
           loading: false,
         });
       } else {
@@ -731,7 +732,6 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     });
   },
 
-  getHomeDashboard: () => {
-    return get().dashboards.find(d => d.isDefault) || get().dashboards[0] || null;
-  },
+  /** Main app default is Overview (not in this list). No stored layout is implied as “home”. */
+  getHomeDashboard: () => null,
 }));

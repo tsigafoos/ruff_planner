@@ -247,7 +247,8 @@ export interface DashboardLayout {
   rows: DashboardRow[];
   createdAt: Date;
   updatedAt: Date;
-  isDefault?: boolean; // Is this the home/default dashboard
+  /** Legacy flag; main default view is Overview (see app/(tabs)/dashboard), not a stored layout */
+  isDefault?: boolean;
   order?: number; // Tab order
 }
 
